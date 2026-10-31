@@ -1,57 +1,80 @@
 # Implementation status
 
-Snapshot: 2026-10-31. This file records implemented behavior. Requirements for future subsystems are in the [design contract](design-contract.md).
+Snapshot: 2026-10-31. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
-## Implemented
+## Memory and boot
 
-- Limine boot requests for the memory map, HHDM, executable addresses, framebuffer, and four-level paging.
-- GDT and CS/SS setup; TSS/TR and a double-fault IST; IDT, breakpoint return, and GP/PF diagnostics.
-- Checked physical ranges, page alignment, reservation merging/subtraction, and Usable RAM normalization.
-- A dense bitmap frame pool with summary bits, allocation hints, one-time activation, and explicit return.
-- Non-cloneable, lifetime-bound `OwnedFrame` tokens and wrong-pool return rejection.
-- Checked HHDM address conversion and owned-frame zeroing.
-- `BootPageSlot`: a BSP mapping in a dedicated, initially unused PML4 branch.
-- Supervisor RW+NX leaf mapping, local TLB invalidation, branch removal, and table-frame reclamation.
-- Early debug output and a 32bpp RGB framebuffer writer.
+- Limine memory/HHDM/image/framebuffer requests, four-level paging, and a 256 KiB bootstrap stack.
+- GDT/TSS/IST and IDT setup, emergency diagnostics, breakpoint return, debug output, and a 32bpp framebuffer writer.
+- Checked physical ranges, reservation subtraction, and a one-time bitmap frame pool with allocation tokens.
+- HHDM access, zeroing, and BSP scratch mappings.
+- Bounded user spaces owning their root, intermediate tables, and data frames.
+- RO/RW/RX mappings, initialization before publication, inactive-space mutation, and explicit cleanup.
+- Supervisor-only kernel mappings, HHDM NX policy, and read-only aliases for executable/read-only user frames.
+- Huge HHDM splitting with retained kernel table ownership.
+- A supervisor-only kernel region for uncached APIC access and guarded per-task entry stacks.
 
-Core owns physical allocations. HAL performs memory and page-table access. Image interprets boot responses and connects initialization.
+Core remains HAL-independent through the unsafe VmBackend contract. Image code connects the concrete HAL to core.
 
-## Recorded verification
+## Execution and authority
 
-The [evidence manifest](validation/2026-10-31-memory/evidence.json) contains the environment and results.
+The BSP can resume scalar Ring 3 contexts in separate user spaces. All general registers, RIP/RSP/RFLAGS, and FS/GS bases are saved. Each test task owns a 16 KiB kernel entry stack with an unmapped lower guard. The HAL updates TSS.RSP0 for entry and restores kernel execution state before returning to the scheduler.
+
+A local xAPIC timer preempts user execution. A fixed-capacity round-robin task table tracks one Running task and retains Dying resources until explicit cleanup succeeds. Invalid saved user state and fatal user exceptions stop the affected task.
+
+The object arena retains strong references. Process-local handles validate generation, kind, and rights; close releases one reference and duplicate only preserves or reduces authority. Experimental int 0x80 calls provide yield, exit, task status/stop, close, and duplicate alongside the IPC operations below.
+
+Bounded endpoint IPC adds Send/Receive/Call/Reply with 32 inline bytes, single-use reply tokens, cancellation, closure, and peer-death cleanup. Notifications coalesce signals. Generational waits preserve completions during Parking and publish saved return values before waking a task. SEND/RECEIVE/WAIT/SIGNAL rights are checked at entry.
+
+When all test tasks block, the BSP uses `sti; hlt; cli` and returns on an interrupt. The timer handler records delivery without taking normal kernel locks; deferred image code signals the waiting object. This is an idle mechanism, not a measurement of power use.
+
+These paths are connected by `boot-tests`. Normal boots do not yet load or schedule services. [ADR 0002](decisions/0002-user-address-spaces.md) describes memory ownership, [ADR 0003](decisions/0003-preemption-and-capabilities.md) task execution, and [ADR 0004](decisions/0004-waits-ipc-and-idle.md) waits, IPC, and idle handoff.
+
+## Verification
+
+Latest [evidence](validation/2026-10-31-ipc/evidence.json) and logs:
+[debug](validation/2026-10-31-ipc/debug.log),
+[release](validation/2026-10-31-ipc/release.log).
 
 | Check | Result |
 | --- | --- |
-| no_std workspace check | Passed |
-| Rust format check | Passed |
-| Clippy with all features and warnings denied | Passed |
-| Host tests | 33 passed: ranges 5, normalization 11, pool 12, HAL paging 5 |
-| Normalization model | 2,000 generated maps compared with an independent page oracle |
-| Frame model | 20,000 operations, exhaustion, return, reservations, failed initialization, and host-thread exclusion |
-| Ownership compile checks | Rejected cloning, private-field construction, double return, and a token outliving its pool |
-| QEMU TCG, debug and release | One boot each; frame checks, full-page zeroing, 128 map/unmap cycles, and final ABC passed |
-| Normal debug boot | Pool activation and ABC passed with boot tests disabled |
+| no_std workspace check and Rust formatting | Passed |
+| Workspace Clippy, all features, warnings denied | Passed |
+| Host tests | 114 passed: core 92, HAL 21, interfaces 1 |
+| Core task/object/capability tests | 23 tests cover ownership, cleanup retry, exhaustion, stale generations, slot retirement, reference limits, and rights |
+| Existing VM failure models | Allocation/publication failures, alias quarantine, inactive-state checks, and retirement ordering passed |
+| QEMU TCG debug/release | All boot markers passed in each profile |
+| User memory and entry regressions | 16 prior user cases and 128 mapping cycles passed |
+| Noncooperative preemption | Two infinite-loop tasks each received four slices without a yield; caller/callee register and memory counters progressed |
+| Capability calls | Three forbidden operations and one closed-handle lookup rejected; reduced duplication, close, yield, target stop, and exit completed |
+| Invalid saved context | A task set RSP=0 and looped; resume rejected it while its peer continued |
+| Pending timer shutdown | A one-shot timer queued vector 0xe0 with IRQs off; shutdown drained it before MMIO removal |
+| Task reclamation | User mappings, entry stacks, objects/handles, and region tables reclaimed; task-stage frame count restored |
+| Wait lifetime | 10 new host tests cover early/late completion, first-result wins, ownership, exhaustion, reuse, abandonment, and generation retirement |
+| Endpoint/notification models | 17 new host tests cover rendezvous, FIFO, bounds, reply identity, cancellation, owner/caller death, closure, and coalescing |
+| Guest IPC | Eight scenarios passed, including 32-byte request/reply, Send, denied Receive, reply replay, queued/accepted cancellation, closure, and owner death |
+| Guest idle | Two notification cases blocked all remaining tasks, halted, then woke on an IRQ and resumed; a pending-before-HLT case also passed |
+| Kernel continuation | Existing user-stage accounting, framebuffer path, and final ABC completed |
 
-The mapping test retains three table frames and alternates two data frames. It writes all 512 u64 words through the scratch address and checks them through the HHDM alias. It also checks duplicate mapping, unmapping an empty slot, and construction in an occupied PML4 slot.
+The full memory/user sequence retains one explicitly owned HHDM split-table frame. The new task stage returns every allocation it adds. Table permissions and guard presence are checked by the guest fixtures.
 
-Eight branch creation/removal cycles perform 128 mappings in total. The free-frame count returns to its initial value, including table frames. The zeroing test fills an entire frame with nonzero data before checking that every byte was cleared.
+An initial task run timed out after the capability checks while a count-1 periodic timer was used to force pending delivery. The final regression uses a bounded one-shot timer and passes both profiles. The [earlier log](validation/2026-10-31-tasks/prior-timeout.log) is retained; the exact cause of that timeout was not established.
 
-Logs: [debug](validation/2026-10-31-memory/debug.log), [release](validation/2026-10-31-memory/release.log), and [normal debug](validation/2026-10-31-memory/normal-debug.log). The runner terminated its own QEMU after observing ABC; these results do not establish guest shutdown or hardware performance.
-
-The earlier layout-only regression is recorded in the [2026-10-30 notes](validation/2026-10-30-layout-notes.md).
+Historical records remain available for [task execution](validation/2026-10-31-tasks/evidence.json), [user entry](validation/2026-10-31-userspace/evidence.json), [memory bootstrap](validation/2026-10-31-memory/evidence.json), and the [layout migration](validation/2026-10-30-layout-notes.md). Host tests, QEMU execution, and hardware measurements are separate evidence. The runner stops QEMU from the host after the final marker; it does not verify guest shutdown.
 
 ## Limits
 
-Boot mappings require one CPU, disabled maskable IRQs, an unchanged CR3, and exclusive page-table access. PCID and five-level paging are rejected.
-
-The static pool configuration supports 288 normalized ranges and up to 4 GiB of managed RAM in total. This is a metadata capacity limit, not a physical-address limit. Capacity overflow is an error.
-
-Only the new scratch leaf is NX. Inherited HHDM permissions remain unchanged, including RWX aliases. Full backing-frame W^X is not implemented.
-
-`BootPageSlot` is a boot primitive, not a general address space. Bootloader-reclaimable memory, ACPI memory, and active boot page tables remain reserved.
-
-Kernel heap allocation, general VM, user entry, syscalls, scheduling, capabilities, IPC, and DMA support are pending. ICE execution and BetAFS I/O are not integrated.
+- BSP only, four-level paging, PCID off, and exclusive page-table access. Kernel maskable IRQs remain disabled except controlled idle and shutdown-drain windows; user execution enables them for the local timer.
+- xAPIC only. Timer counts are uncalibrated and do not establish a millisecond quantum, timeout clock, or performance result.
+- Scalar user contexts only. FP/SIMD remains trapped; general runtime, TLS setup, and broader CPU-state support are pending.
+- Guest fixture capacities: two tasks/waits, eight objects, eight handles per task, two queued senders and two accepted replies per endpoint. One task owns RECEIVE and one owns each notification's WAIT. There is no general process/thread hierarchy or dynamic service startup.
+- Static boot pool: 288 ranges and 4 GiB of managed RAM. User spaces: 16 mappings and 64 intermediate tables each.
+- Initial mappings have unique ownership. Shared memory, pin accounting, quotas, and revocation are pending.
+- HHDM split tables remain kernel-owned, with a 32-frame boot budget and no coalescing. Bootloader-reclaimable/ACPI memory and active boot tables remain reserved.
+- Kernel heap, stable calls, timed/multi-object waits, capability transfer, DMA isolation, and SMP remain pending. IPC currently carries inline data only. Wait/object changes require serialized ownership of one persistent wait table; SMP synchronization is not implemented.
+- Idle tests use a one-shot count. Clock calibration, deadline queues, device IRQ routing, NMI work scheduling, general tickless/C-state policy, and physical power measurements remain pending.
+- ICE execution, BetAFS I/O, terminal/Velocity, and KDE integration remain unimplemented.
 
 ## Next work
 
-Implement address-space and mapping ownership, user/kernel separation, and executable-memory permissions across aliases. Verify protection and reclamation before adding Ring 3 entry and user fault isolation.
+Add shared-memory objects and bounded capability transfer with receiver capacity reserved before acceptance. Preserve accepted resource lifetimes through cancellation and peer death. Calibrated time and FP/SIMD support remain prerequisites for general applications; service startup follows the required image/runtime integration.

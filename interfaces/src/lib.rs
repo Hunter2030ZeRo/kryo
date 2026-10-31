@@ -1,3 +1,5 @@
 #![no_std]
 
-//! Native ABI and service contracts. No wire format is defined yet.
+//! Native call representations and service contracts.
+
+pub mod syscall;

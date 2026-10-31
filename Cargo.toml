@@ -11,18 +11,22 @@ publish = false
 [workspace.dependencies]
 kryo-hal = { path = "hal" }
 kryo-core = { path = "kernel/core" }
+kryo-interfaces = { path = "interfaces" }
 limine = "=0.6.5"
 spin = "0.12.3"
 x86_64 = "0.15.5"
 
 [profile.dev]
 panic = "abort"
+codegen-units = 16
 opt-level = 0
 debug = true
 
 [profile.release]
 panic = "abort"
 lto = "thin"
-codegen-units = 16
+codegen-units = 1
 debug = 1
 opt-level = 3
+
+

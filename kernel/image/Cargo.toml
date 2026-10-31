@@ -11,10 +11,11 @@ test = false
 bench = false
 
 [features]
-boot-tests = []
+boot-tests = ["dep:kryo-interfaces"]
 
 [dependencies]
 kryo-core.workspace = true
+kryo-interfaces = { workspace = true, optional = true }
 kryo-hal.workspace = true
 limine.workspace = true
 x86_64.workspace = true

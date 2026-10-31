@@ -15,6 +15,16 @@ MARKERS = {
     "frames": "FRAME: alloc/release OK",
     "zeroing": "RAM: zero OK",
     "paging": "PAGING: map/unmap OK cycles=128",
+    "user_spaces": "USER: separate address spaces OK",
+    "user_isolation": "USER: isolation OK cases=16",
+    "vm_rollback": "VM: alias preparation rollback OK",
+    "preemption": "TIMER: preemption OK switches=8",
+    "capabilities": "CAP: checks OK denied=3 stale=1",
+    "timer_drain": "TIMER: pending interrupt drained",
+    "task_teardown": "TASK: teardown OK",
+    "invalid_context": "TASK: invalid saved state isolated",
+    "ipc": "IPC: rendezvous and lifetime OK cases=8",
+    "idle": "IDLE: halt and wake OK cases=3",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
 

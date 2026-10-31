@@ -2,7 +2,7 @@
 
 Version 0.1, 2026-10-31.
 
-This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Syscall numbers, wire layouts, and published ABI versions remain undecided.
+This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
 ## Resource ownership
 
@@ -106,7 +106,7 @@ Revocation blocks new work. Already accepted operations, mappings, and pins foll
 
 ### Control messages
 
-Start with synchronous endpoint send/receive/call/reply. The initial proposal allows 32 inline bytes and at most two capabilities. Confirm limits and their discovery mechanism before publishing an ABI. Register layout remains undecided.
+Start with synchronous endpoint send/receive/call/reply. Experimental version 0 implements 32 inline bytes without capability transfer. The proposal for at most two transferred capabilities remains pending. Confirm limits and discovery before publishing a stable ABI; current experimental registers are documented in [interfaces](interfaces.md).
 
 Store small pending messages in waiting-thread state and transfer them at rendezvous. Avoid unbounded mailboxes and a heap allocation per RPC. Waits and receiver capacity are subject to task/process quotas.
 

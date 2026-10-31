@@ -58,7 +58,7 @@ check:
 	cargo check --workspace --locked --offline
 
 test:
-	cargo test -p kryo-core -p kryo-hal --target x86_64-unknown-linux-gnu --locked --offline
+	cargo test -p kryo-core -p kryo-hal -p kryo-interfaces --target x86_64-unknown-linux-gnu --locked --offline
 
 smoke:
 	python3 tools/boot_smoke.py --profile "$(PROFILE)"

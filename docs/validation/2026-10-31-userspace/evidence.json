@@ -1,0 +1,168 @@
+{
+  "date": "2026-10-31",
+  "scope": "Owned user VM and synchronous scalar BSP Ring 3; no preemption or service capability ABI",
+  "host_tests": {
+    "range": 5,
+    "normalization": 11,
+    "pool": 12,
+    "vm": 14,
+    "hal": 13,
+    "total": 55
+  },
+  "checks": {
+    "workspace": "passed",
+    "format": "passed",
+    "clippy_all_features_deny_warnings": "passed"
+  },
+  "qemu": {
+    "debug": {
+      "status": "passed",
+      "user_cases": 16,
+      "user_runs": 17,
+      "baseline_free": 129654,
+      "final_free": 129653,
+      "kernel_owned_split_tables": 1,
+      "mapping_cycles": 128,
+      "checks": {
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "breakpoint": true
+      },
+      "faults": {
+        "kernel-read": {
+          "vector": 14,
+          "error": 5
+        },
+        "hhdm-read": {
+          "vector": 14,
+          "error": 5
+        },
+        "rx-write": {
+          "vector": 14,
+          "error": 7
+        },
+        "ro-write": {
+          "vector": 14,
+          "error": 7
+        },
+        "nx-execute": {
+          "vector": 14,
+          "error": 21
+        },
+        "stack-guard": {
+          "vector": 14,
+          "error": 6
+        },
+        "privileged-cli": {
+          "vector": 13,
+          "error": 0
+        },
+        "port-io": {
+          "vector": 13,
+          "error": 0
+        },
+        "invalid-opcode": {
+          "vector": 6,
+          "error": 0
+        },
+        "unsupported-fpu": {
+          "vector": 7,
+          "error": 0
+        }
+      },
+      "boot_seconds": 5.535,
+      "log": "debug.log",
+      "qemu_stop": "host_sigterm",
+      "guest_exit_verified": false
+    },
+    "release": {
+      "status": "passed",
+      "user_cases": 16,
+      "user_runs": 17,
+      "baseline_free": 130346,
+      "final_free": 130345,
+      "kernel_owned_split_tables": 1,
+      "mapping_cycles": 128,
+      "checks": {
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "breakpoint": true
+      },
+      "faults": {
+        "kernel-read": {
+          "vector": 14,
+          "error": 5
+        },
+        "hhdm-read": {
+          "vector": 14,
+          "error": 5
+        },
+        "rx-write": {
+          "vector": 14,
+          "error": 7
+        },
+        "ro-write": {
+          "vector": 14,
+          "error": 7
+        },
+        "nx-execute": {
+          "vector": 14,
+          "error": 21
+        },
+        "stack-guard": {
+          "vector": 14,
+          "error": 6
+        },
+        "privileged-cli": {
+          "vector": 13,
+          "error": 0
+        },
+        "port-io": {
+          "vector": 13,
+          "error": 0
+        },
+        "invalid-opcode": {
+          "vector": 6,
+          "error": 0
+        },
+        "unsupported-fpu": {
+          "vector": 7,
+          "error": 0
+        }
+      },
+      "boot_seconds": 5.374,
+      "log": "release.log",
+      "qemu_stop": "host_sigterm",
+      "guest_exit_verified": false
+    }
+  },
+  "real_hardware_verified": false,
+  "bootstrap_stack_bytes": 262144,
+  "initial_failure": {
+    "type": "bootstrap stack overflow before user entry",
+    "cr3": "0x1ff83000",
+    "rsp": "0xffff80001ff83ff8",
+    "record": "bootstrap-overflow.log",
+    "corrected": true,
+    "format": "CPU trace excerpt with trailing whitespace removed; original retained in build/failures/"
+  },
+  "source_sha256": {
+    "kernel/core/src/mm/vm/backend.rs": "014478ba8a8164c1562a8c953732b8e1fe2b5d5c1395883d1b2691bc295c4cfc",
+    "kernel/core/src/mm/vm/space.rs": "c2eb405ad32d963d897ff043fac967d965fe14685d9ab8f59355b0cf3d7461b3",
+    "hal/src/arch/x86_64/context/mod.rs": "bb292edf12008f54812d64e8f2ad8fa0a187720f700aa420ffa9c842662409ad",
+    "hal/src/arch/x86_64/context/entry.S": "acc54f654242af053f33812c7ef3b91d48295276d03500b32e3c98981a3b616f",
+    "hal/src/arch/x86_64/context/traps.rs": "7960273c164a548fb84e43963c840a88da7ea60fae374c3b4cad3284ab03c2a4",
+    "hal/src/arch/x86_64/paging/user.rs": "1a81899867cd0eb4f5a580b10837bdfb9a0b65b9c2a2048ad81f2a5ced549e05",
+    "hal/src/arch/x86_64/paging/kernel_map.rs": "a94cd710a9a04b5ba008502f04a01754acb59b4dea5b775c70e8f905e31cce6c",
+    "kernel/image/src/boot/vm_backend.rs": "b40d6d48fb12ab981219f295263d4eccde9066c38a98a5a9631274bbc4befc43",
+    "kernel/image/src/boot/user_checks.rs": "d60d679399e390d53713d07d51d11f76db38dddc106aa323038d86ccaa85ef26"
+  }
+}

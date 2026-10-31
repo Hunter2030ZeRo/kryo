@@ -26,6 +26,7 @@ version = "0.1.0"
 dependencies = [
  "kryo-core",
  "kryo-hal",
+ "kryo-interfaces",
  "limine",
  "spin",
  "x86_64",

@@ -12,6 +12,10 @@ Interrupt controllers, the MMU, and early debug output remain kernel mechanisms.
 
 The design targets low overhead and fault isolation. Small requests use kernel IPC; bulk transfers use registered shared memory. Performance decisions require measurements of copying, scheduling, and wakeup costs.
 
+The initial IPC path carries four u64 words through bounded synchronous endpoints. Wait completion is separate from scheduler publication: a completion during Parking remains hidden until execution handoff finishes. Object code records results; image wiring writes the saved return context and then wakes the task after object access ends. Coalescing notifications retain early signals.
+
+When no task is runnable, the BSP idle primitive enables interrupts and halts in one instruction sequence, then returns with interrupts disabled. IRQ handlers record events; deferred kernel work completes waits. This is the basis for event-driven idleness. Timer calibration, deadline selection, and hardware power measurements remain separate work.
+
 ## Packages
 
 | Package | Responsibility |
@@ -26,8 +30,7 @@ Current internal Cargo dependencies:
 ```text
 kernel/image --> kernel/core
              --> hal
-
-interfaces       no consumers yet
+             --> interfaces (boot-tests)
 ```
 
 Core currently uses only `spin`; it has no HAL or interfaces dependency. Hardware operations are connected by the image package. Future core-to-HAL interfaces must preserve this separation and must not introduce a HAL-to-core dependency cycle. Prefer static dispatch where it keeps the interface simple.
@@ -64,6 +67,8 @@ Kernel memory access uses small, documented unsafe boundaries. Safe wrappers mus
 
 ## Open decisions
 
-The following remain unresolved: native syscall numbers and register layout, published IPC layout, user-space target and runtime, heap and contiguous-frame allocation, scheduling policy, SMP details, and optional FRED support.
+The bootstrap memory model is specified in [ADR 0002](decisions/0002-user-address-spaces.md). [ADR 0003](decisions/0003-preemption-and-capabilities.md) adds task execution and authority; [ADR 0004](decisions/0004-waits-ipc-and-idle.md) adds waits, IPC, and idle handoff. The image connects those mechanisms in guest checks; it does not start services during a normal boot.
+
+Experimental native calls use version 0 of the int 0x80 register interface. Their numbers and layout are not stable. Published IPC layout, user-space target and runtime, heap and contiguous-frame allocation, scheduling priorities, SMP details, and optional FRED support remain unresolved. The current scheduler uses bounded round-robin selection.
 
 The kernel currently uses the built-in `x86_64-unknown-none` target without an `x86-64-v3` requirement. Kernel hot replacement is a separate research topic from user-space service replacement.

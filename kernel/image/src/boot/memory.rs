@@ -123,6 +123,19 @@ pub(crate) fn init_physical_memory() {
         let direct_map =
             unsafe { kryo_hal::DirectMap::new(hhdm.offset) }.expect("Invalid Limine direct map");
         super::checks::run(&FRAMES, direct_map);
+        let physical_end = map
+            .entries()
+            .iter()
+            .filter(|entry| entry.type_ == lm::MEMMAP_USABLE)
+            .map(|entry| {
+                entry
+                    .base
+                    .checked_add(entry.length)
+                    .expect("Overflow in usable RAM")
+            })
+            .max()
+            .expect("No usable RAM");
+        super::user_checks::run(&FRAMES, direct_map, physical_end);
     }
 }
 

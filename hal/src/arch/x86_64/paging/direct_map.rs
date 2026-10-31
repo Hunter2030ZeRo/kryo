@@ -9,6 +9,10 @@ pub struct DirectMap {
 }
 
 impl DirectMap {
+    pub const fn offset(&self) -> u64 {
+        self.offset
+    }
+
     /// # Safety
     /// RAM passed to this map must remain mapped at the supplied offset for
     /// every access. This object does not grant ownership of physical memory.
@@ -49,12 +53,67 @@ impl DirectMap {
         Ok(true)
     }
 
+    /// # Safety
+    /// The caller owns writable initialized RAM without incompatible aliases.
+    /// The source must not overlap the destination frame.
+    pub unsafe fn write_frame(
+        &self,
+        physical: u64,
+        offset: usize,
+        bytes: &[u8],
+    ) -> Result<(), PagingError> {
+        check_bounds(offset, bytes.len())?;
+        let address = self.frame_address(physical)?;
+        if bytes.is_empty() {
+            return Ok(());
+        }
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                bytes.as_ptr(),
+                (address as *mut u8).add(offset),
+                bytes.len(),
+            )
+        };
+        Ok(())
+    }
+
+    /// # Safety
+    /// The frame is initialized mapped RAM and cannot change while read.
+    /// The output must not overlap the source frame.
+    pub unsafe fn read_frame(
+        &self,
+        physical: u64,
+        offset: usize,
+        output: &mut [u8],
+    ) -> Result<(), PagingError> {
+        check_bounds(offset, output.len())?;
+        let address = self.frame_address(physical)?;
+        if output.is_empty() {
+            return Ok(());
+        }
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                (address as *const u8).add(offset),
+                output.as_mut_ptr(),
+                output.len(),
+            )
+        };
+        Ok(())
+    }
+
     pub(super) fn table_address(
         &self,
         physical: u64,
     ) -> Result<NonNull<x86_64::structures::paging::PageTable>, PagingError> {
         let address = self.frame_address(physical)?;
         NonNull::new(address as *mut _).ok_or(PagingError::InvalidAddress)
+    }
+}
+
+fn check_bounds(offset: usize, length: usize) -> Result<(), PagingError> {
+    match offset.checked_add(length) {
+        Some(end) if end <= PAGE_SIZE as usize => Ok(()),
+        _ => Err(PagingError::InvalidAddress),
     }
 }
 
@@ -88,6 +147,17 @@ pub(super) fn kernel_page(address: u64) -> Result<VirtAddr, PagingError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn frame_copy_bounds_reject_overflow_and_cross_page_access() {
+        assert_eq!(check_bounds(4095, 1), Ok(()));
+        assert_eq!(check_bounds(4096, 0), Ok(()));
+        assert_eq!(check_bounds(4096, 1), Err(PagingError::InvalidAddress));
+        assert_eq!(
+            check_bounds(usize::MAX, 2),
+            Err(PagingError::InvalidAddress)
+        );
+    }
 
     #[test]
     fn direct_map_checks_full_frame() {

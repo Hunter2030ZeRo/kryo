@@ -2,9 +2,16 @@
 mod checks;
 mod framebuffer;
 mod memory;
+#[cfg(feature = "boot-tests")]
+mod task_checks;
+#[cfg(feature = "boot-tests")]
+mod user_checks;
+#[cfg(feature = "boot-tests")]
+mod vm_backend;
 
 use limine::request::{
     ExecutableAddressRequest, FramebufferRequest, HhdmRequest, MemmapRequest, PagingModeRequest,
+    StackSizeRequest,
 };
 use limine::{BaseRevision, RequestsEndMarker, RequestsStartMarker, paging::PagingMode};
 
@@ -35,6 +42,11 @@ static EXECUTABLE_ADDRESS: ExecutableAddressRequest = ExecutableAddressRequest::
 #[unsafe(link_section = ".requests")]
 static PAGING_MODE: PagingModeRequest = PagingModeRequest::new_exact(PagingMode::X86_64_4LVL);
 
+// Debug initialization moves bounded VM metadata on the bootstrap stack.
+#[used]
+#[unsafe(link_section = ".requests")]
+static STACK_SIZE: StackSizeRequest = StackSizeRequest::new(256 * 1024);
+
 #[used]
 #[unsafe(link_section = ".requests")]
 static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new();
@@ -44,6 +56,10 @@ static FRAMEBUFFER_REQUEST: FramebufferRequest = FramebufferRequest::new();
 static REQUESTS_END: RequestsEndMarker = RequestsEndMarker::new();
 
 fn check_protocol() {
+    assert!(
+        STACK_SIZE.response().is_some(),
+        "Missing bootstrap stack response"
+    );
     assert!(
         BASE_REVISION.is_supported(),
         "Unsupported Limine base revision"

@@ -157,7 +157,7 @@ impl Drop for BootPageSlot {
     }
 }
 
-fn check_cpu() -> Result<(), PagingError> {
+pub(super) fn check_cpu() -> Result<(), PagingError> {
     if interrupts::are_enabled() {
         return Err(PagingError::InterruptsEnabled);
     }
@@ -169,7 +169,7 @@ fn check_cpu() -> Result<(), PagingError> {
     Ok(())
 }
 
-fn physical_width() -> u8 {
+pub(super) fn physical_width() -> u8 {
     let maximum = core::arch::x86_64::__cpuid(0x8000_0000).eax;
     if maximum >= 0x8000_0008 {
         (core::arch::x86_64::__cpuid(0x8000_0008).eax & 0xff) as u8
