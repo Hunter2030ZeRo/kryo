@@ -1,0 +1,21 @@
+[package]
+name = "kryo"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "kryo"
+path = "src/main.rs"
+test = false
+bench = false
+
+[features]
+boot-tests = []
+
+[dependencies]
+kryo-core.workspace = true
+kryo-hal.workspace = true
+limine.workspace = true
+x86_64.workspace = true
+spin.workspace = true

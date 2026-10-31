@@ -1,0 +1,9 @@
+[package]
+name = "kryo-hal"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+spin.workspace = true
+x86_64.workspace = true

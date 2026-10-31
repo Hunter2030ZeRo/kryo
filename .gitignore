@@ -1,0 +1,29 @@
+/target/
+/build/
+/iso_root/
+*.iso
+
+# Agent instructions, local tool settings and session caches
+AGENTS.md
+AGENTS.override.md
+CLAUDE.md
+CLAUDE.local.md
+GEMINI.md
+.agents/
+.codex/
+.claude/
+.gemini/
+.cursor/
+.codegraph/
+.cursorrules
+.cursorignore
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache*/
+.github/copilot-instructions.md
+.github/instructions/
+.github/prompts/
+
+# Python build artifacts
+__pycache__/
+*.py[cod]

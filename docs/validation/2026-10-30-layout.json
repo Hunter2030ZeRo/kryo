@@ -1,0 +1,170 @@
+{
+  "recorded_at": "2026-10-30T03:10:52.016681+00:00",
+  "repository": "/home/entity27th/kryo",
+  "scope": "Directory and Cargo wiring migration; no new kernel functionality",
+  "builds": [
+    {
+      "name": "check",
+      "command": [
+        "cargo",
+        "check",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "returncode": 0,
+      "seconds": 1.75,
+      "log": "/tmp/kryo-layout-kfmyk088/check.log"
+    },
+    {
+      "name": "debug-build",
+      "command": [
+        "make",
+        "iso",
+        "BUILD_DIR=/tmp/kryo-layout-kfmyk088/final-debug",
+        "KERNEL=/tmp/kryo-layout-kfmyk088/final-target/x86_64-unknown-none/debug/kryo"
+      ],
+      "returncode": 0,
+      "seconds": 1.54,
+      "log": "/tmp/kryo-layout-kfmyk088/debug-build.log"
+    },
+    {
+      "name": "release-build",
+      "command": [
+        "make",
+        "iso",
+        "PROFILE=release",
+        "BUILD_DIR=/tmp/kryo-layout-kfmyk088/final-release",
+        "KERNEL=/tmp/kryo-layout-kfmyk088/final-target/x86_64-unknown-none/release/kryo"
+      ],
+      "returncode": 0,
+      "seconds": 2.21,
+      "log": "/tmp/kryo-layout-kfmyk088/release-build.log"
+    }
+  ],
+  "boots": {
+    "debug": {
+      "iso": "/tmp/kryo-layout-kfmyk088/final-debug/kryo.iso",
+      "kernel": "/tmp/kryo-layout-kfmyk088/final-target/x86_64-unknown-none/debug/kryo",
+      "kernel_sha256": "7b2629f80ebd86a8f2f13cfbc6f45144435825e20201c005e178e6f9d5e1f74e",
+      "debugcon": "ABC",
+      "checks": {
+        "debugcon_ABC": true,
+        "CS_0008": true,
+        "SS_0010": true,
+        "GDT_base_matches_symbol": true,
+        "GDT_limit_0017": true,
+        "IDT_limit_0fff": true,
+        "halted": true,
+        "interrupts_disabled": true
+      },
+      "registers": "\nCPU#0\nRAX=ffffffff80003043 RBX=0000000000000000 RCX=ffff80001ff97fb6 RDX=ffffffff800000e9\nRSI=0000000000000fff RDI=ffff80001ff97fb6 RBP=0000000000000000 RSP=ffff80001ff97ff0\nR8 =0000000000000000 R9 =0000000000000000 R10=0000000000000000 R11=0000000000000000\nR12=0000000000000000 R13=0000000000000000 R14=0000000000000000 R15=0000000000000000\nRIP=ffffffff80000030 RFL=00000082 [--S----] CPL=0 II=0 A20=1 SMM=0 HLT=1\nES =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nCS =0008 0000000000000000 ffffffff 00af9b00 DPL=0 CS64 [-RA]\nSS =0010 0000000000000000 ffffffff 00cf9300 DPL=0 DS   [-WA]\nDS =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nFS =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nGS =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nLDT=0000 0000000000000000 00000000 00008200 DPL=0 LDT\nTR =0038 0000000000000000 00000000 00008900 DPL=0 TSS64-avl\nGDT=     ffffffff80003000 00000017\nIDT=     ffffffff80003050 00000fff\nCR0=80010011 CR2=0000000000000000 CR3=000000001ff9a000 CR4=00000020\nDR0=0000000000000000 DR1=0000000000000000 DR2=0000000000000000 DR3=0000000000000000 \nDR6=00000000ffff0ff0 DR7=0000000000000400\nEFER=0000000000000d00\nFCW=037f FSW=0000 [ST=0] FTW=00 MXCSR=00001f80\nFPR0=0000000000000000 0000 FPR1=0000000000000000 0000\nFPR2=0000000000000000 0000 FPR3=0000000000000000 0000\nFPR4=0000000000000000 0000 FPR5=0000000000000000 0000\nFPR6=0000000000000000 0000 FPR7=0000000000000000 0000\nXMM00=0000000000000000 0000000000000000 XMM01=0000000000000000 0000000000000000\nXMM02=0000000000000000 0000000000000000 XMM03=0000000000000000 0000000000000000\nXMM04=0000000000000000 0000000000000000 XMM05=0000000000000000 0000000000000000\nXMM06=0000000000000000 0000000000000000 XMM07=0000000000000000 0000000000000000\nXMM08=0000000000000000 0000000000000000 XMM09=0000000000000000 0000000000000000\nXMM10=0000000000000000 0000000000000000 XMM11=0000000000000000 0000000000000000\nXMM12=0000000000000000 0000000000000000 XMM13=0000000000000000 0000000000000000\nXMM14=0000000000000000 0000000000000000 XMM15=0000000000000000 0000000000000000\n",
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35",
+        "-m",
+        "512M",
+        "-accel",
+        "tcg",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-qmp",
+        "stdio",
+        "-no-reboot",
+        "-nic",
+        "none",
+        "-debugcon",
+        "file:/tmp/kryo-layout-kfmyk088/qemu-debug/debug.log",
+        "-cdrom",
+        "/tmp/kryo-layout-kfmyk088/final-debug/kryo.iso",
+        "-boot",
+        "d"
+      ]
+    },
+    "release": {
+      "iso": "/tmp/kryo-layout-kfmyk088/final-release/kryo.iso",
+      "kernel": "/tmp/kryo-layout-kfmyk088/final-target/x86_64-unknown-none/release/kryo",
+      "kernel_sha256": "16f9553812444e32be4580d7873345645d478befaf8f03133700fed0748b82d5",
+      "debugcon": "ABC",
+      "checks": {
+        "debugcon_ABC": true,
+        "CS_0008": true,
+        "SS_0010": true,
+        "GDT_base_matches_symbol": true,
+        "GDT_limit_0017": true,
+        "IDT_limit_0fff": true,
+        "halted": true,
+        "interrupts_disabled": true
+      },
+      "registers": "\nCPU#0\nRAX=ffff80001ff97f43 RBX=0000800000000000 RCX=0000000000000000 RDX=00000000000000e9\nRSI=ffff80001ff97f90 RDI=ffffffff80003050 RBP=0000000000000000 RSP=ffff80001ff97fd0\nR8 =0000000000000000 R9 =0000000000000000 R10=0000000000000000 R11=0000000000000000\nR12=0000000000000000 R13=0000000000000000 R14=0001000000000000 R15=0000000000000000\nRIP=ffffffff800000d2 RFL=00000087 [--S--PC] CPL=0 II=0 A20=1 SMM=0 HLT=1\nES =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nCS =0008 0000000000000000 ffffffff 00af9b00 DPL=0 CS64 [-RA]\nSS =0010 0000000000000000 ffffffff 00cf9300 DPL=0 DS   [-WA]\nDS =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nFS =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nGS =0030 0000000000000000 00000000 00009300 DPL=0 DS   [-WA]\nLDT=0000 0000000000000000 00000000 00008200 DPL=0 LDT\nTR =0038 0000000000000000 00000000 00008900 DPL=0 TSS64-avl\nGDT=     ffffffff80002000 00000017\nIDT=     ffffffff80002050 00000fff\nCR0=80010011 CR2=0000000000000000 CR3=000000001ff9a000 CR4=00000020\nDR0=0000000000000000 DR1=0000000000000000 DR2=0000000000000000 DR3=0000000000000000 \nDR6=00000000ffff0ff0 DR7=0000000000000400\nEFER=0000000000000d00\nFCW=037f FSW=0000 [ST=0] FTW=00 MXCSR=00001f80\nFPR0=0000000000000000 0000 FPR1=0000000000000000 0000\nFPR2=0000000000000000 0000 FPR3=0000000000000000 0000\nFPR4=0000000000000000 0000 FPR5=0000000000000000 0000\nFPR6=0000000000000000 0000 FPR7=0000000000000000 0000\nXMM00=0000000000000000 0000000000000000 XMM01=0000000000000000 0000000000000000\nXMM02=0000000000000000 0000000000000000 XMM03=0000000000000000 0000000000000000\nXMM04=0000000000000000 0000000000000000 XMM05=0000000000000000 0000000000000000\nXMM06=0000000000000000 0000000000000000 XMM07=0000000000000000 0000000000000000\nXMM08=0000000000000000 0000000000000000 XMM09=0000000000000000 0000000000000000\nXMM10=0000000000000000 0000000000000000 XMM11=0000000000000000 0000000000000000\nXMM12=0000000000000000 0000000000000000 XMM13=0000000000000000 0000000000000000\nXMM14=0000000000000000 0000000000000000 XMM15=0000000000000000 0000000000000000\n",
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35",
+        "-m",
+        "512M",
+        "-accel",
+        "tcg",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-qmp",
+        "stdio",
+        "-no-reboot",
+        "-nic",
+        "none",
+        "-debugcon",
+        "file:/tmp/kryo-layout-kfmyk088/qemu-release/debug.log",
+        "-cdrom",
+        "/tmp/kryo-layout-kfmyk088/final-release/kryo.iso",
+        "-boot",
+        "d"
+      ]
+    }
+  },
+  "source_sha256": {
+    "Cargo.toml": "50e756ecb58308ba628439dd971f9f28699ac4a3e7887b05104b3aa884d0623e",
+    "Cargo.lock": "cf3d378438fcd1ede24fb59fc5f8faff726b761f4eb7661f778393fa0ede6f13",
+    "Makefile": "831c09d4e3d8c4b1bf0a5baed5e106e7cf1aaba124fe966bd09373d0a0dd8296",
+    "rust-toolchain.toml": "05516db9c09caeb6e0ebb8fc2bd1b7411cefa78e13464f154b8b0d65474beb96",
+    "interfaces/Cargo.toml": "e8d184eabf5f7b667178402c3dd40531644fc9fbbd85a7ef11f500eaaf3e3b39",
+    "boot/limine.conf": "80da8fd8b92832c851532c5d94fd985ba815d7b1759e8ced780dae212a64dcdf",
+    "boot/linker.ld": "37c31c6dcb309f2ef77b198814dd60e8e2c2b48c86152ee1deeba7a640732c54",
+    "hal/Cargo.toml": "f68ab358fd1f6f6fe6391f7c4b265598fcc25130697d1033e034c548dcbbaf5a",
+    ".cargo/config.toml": "8f64d2a11fbafb9e4bdb0b79756d6e1e7d9bec828f019fc74afe58e34f38d816",
+    "kernel/core/Cargo.toml": "4a5cfccf4bfb3d1eba046284d25764d83a0568de27eeac63ee279e58683c1325",
+    "kernel/image/build.rs": "5d9b3744700d39ebf8a2d2af35c0676b0afd7adfd059c3cef3210b018a570e11",
+    "kernel/image/Cargo.toml": "70c3b0c47d40814ca0a4e36d179bbc7c6ef12f6db90bddd152b90f752fb7a3d4",
+    "kernel/image/src/main.rs": "6e711f62023ab8f74dd11d704ea4992acc2097adcbb31d94a56a3977feb99755",
+    "kernel/core/src/lib.rs": "8f74f20687103980e0f2b26704441dd2522eb83b37eaf3fb67b2d0a6b6d23888",
+    "hal/src/lib.rs": "ac395ee7f6575a09111b89745736cd8482cdbc947710ef6a0374fa5d1e3db901",
+    "hal/src/debug/console.rs": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hal/src/debug/mod.rs": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hal/src/arch/mod.rs": "2b5bd60485d969a9252ecdd435def27728fe2fae4bf8a4396b675cc16e436adc",
+    "hal/src/arch/x86_64/cpu.rs": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "hal/src/arch/x86_64/tss.rs": "e44cd9810ff735d2bc5c8b7a292a1aa1d2c559fff57572488deec2266cc63cdf",
+    "hal/src/arch/x86_64/gdt.rs": "fca94afdcf858ca9fe6caa3d5ea6b5e80614b961acc37faaac510099e62f1746",
+    "hal/src/arch/x86_64/mod.rs": "b00e74558bd81aaa90a158868decb8591bf44485d3d9e3cd56166a546b3719f3",
+    "hal/src/arch/x86_64/interrupts/fred.rs": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "hal/src/arch/x86_64/interrupts/traps.rs": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "hal/src/arch/x86_64/interrupts/idt.rs": "0381cad232e820371523c55887437cb1892611a908bd93b0bac754571a726f8a",
+    "hal/src/arch/x86_64/interrupts/mod.rs": "cef8224c3f62e4784b1a5fb32553ed5dbf9afff5d324298a8dda265d29299a0f",
+    "interfaces/src/lib.rs": "9450bf52333593a3f0055386fae040100743c33f743660e5a7511c48dc9356f1"
+  },
+  "external_dependency_versions_and_checksums_preserved": true,
+  "previous_build_artifacts_preserved": true,
+  "backup": "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/backups/kryo-before-layout-2026-10-30.tar.gz",
+  "limitations": [
+    "QEMU TCG only, no real-hardware or performance proof",
+    "TSS/IST and user-space subsystems remain unimplemented",
+    "Existing TSS unused warnings and reserved dependency warnings remain"
+  ]
+}

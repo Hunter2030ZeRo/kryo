@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-31",
+  "scope": "P02 frame ownership and BSP scratch mapping; no user VM or SMP",
+  "environment": {
+    "rust": "rustc 1.99.0 (b940084d7 2026-09-28)",
+    "qemu": "QEMU emulator version 11.1.2",
+    "limine": "Limine 12.9.4\nCopyright (C) 2019-2026 Mintsuki, 2026 Kamila Szewczyk, and contributors.\nLimine is distributed under the terms of the BSD-2-Clause license.\nThere is ABSOLUTELY NO WARRANTY, to the extent permitted by law.",
+    "machine": "q35",
+    "acceleration": "TCG",
+    "memory": "512M"
+  },
+  "host_tests": {
+    "range": 5,
+    "normalize": 11,
+    "pool": 12,
+    "hal_paging": 5,
+    "total": 33
+  },
+  "model_checks": {
+    "normalization_maps": 2000,
+    "frame_operations": 20000
+  },
+  "compile_rejections": [
+    "clone",
+    "private field construction",
+    "reuse after release",
+    "owner outlives pool"
+  ],
+  "checks": {
+    "workspace_check": "passed",
+    "format": "passed",
+    "clippy_all_features_deny_warnings": "passed"
+  },
+  "qemu": {
+    "debug": {
+      "status": "passed",
+      "boot_tests": true,
+      "boot_seconds": 5.377,
+      "normalized_frames": 129872,
+      "free_after_all_checks": 129872,
+      "mapping_cycles": 128,
+      "branch_cycles": 8,
+      "checks": {
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "breakpoint": true
+      },
+      "qemu_stop": "host_sigterm",
+      "guest_exit_verified": false,
+      "log": "debug.log"
+    },
+    "release": {
+      "status": "passed",
+      "boot_tests": true,
+      "boot_seconds": 5.277,
+      "normalized_frames": 130478,
+      "free_after_all_checks": 130478,
+      "mapping_cycles": 128,
+      "branch_cycles": 8,
+      "checks": {
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "breakpoint": true
+      },
+      "qemu_stop": "host_sigterm",
+      "guest_exit_verified": false,
+      "log": "release.log"
+    },
+    "normal_debug": {
+      "status": "passed",
+      "profile": "debug",
+      "boot_tests": false,
+      "frame_pool_ready": true,
+      "breakpoint": true,
+      "boot_seconds": 5.371,
+      "guest_exit_verified": false
+    }
+  },
+  "real_hardware_verified": false,
+  "source_sha256": {
+    "hal/src/arch/x86_64/paging/boot.rs": "8f5a13c5d9f3335c348bb76cb12f56e3a24c15658cb3b3fa1f587cd8f0513d08",
+    "hal/src/arch/x86_64/paging/direct_map.rs": "b9d62b661041e6bd9829aaacff9de2f56562581816e5ecda4d9c4b725ee4da0d",
+    "kernel/core/src/mm/frame/pool.rs": "17eee1c3fc83400dfb0637376441806aeef7c1ad65b89742d955c2cea6b90818",
+    "kernel/image/src/boot/checks.rs": "30f2d35bb4bdc8bc09852343728efbffe8abf28fa140d343ce6aef2226b2a9f6"
+  }
+}

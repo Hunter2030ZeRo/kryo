@@ -1,0 +1,28 @@
+[workspace]
+resolver = "3"
+members = ["hal", "interfaces", "kernel/core", "kernel/image"]
+default-members = ["kernel/image"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+kryo-hal = { path = "hal" }
+kryo-core = { path = "kernel/core" }
+limine = "=0.6.5"
+spin = "0.12.3"
+x86_64 = "0.15.5"
+
+[profile.dev]
+panic = "abort"
+opt-level = 0
+debug = true
+
+[profile.release]
+panic = "abort"
+lto = "thin"
+codegen-units = 16
+debug = 1
+opt-level = 3
