@@ -1,20 +1,28 @@
-# 구현 순서
+# Roadmap
 
-구현·시험·설계 검토를 완료 기준 하나씩 묶어 진행한다. 사용자는 필요한 코드를 검토·수정한다. 예약 디렉터리를 미리 mod로 연결하거나 성공만 반환하는 API를 만들지 않는다.
+Develop one verifiable capability at a time. The [design contract](design-contract.md) defines the required behavior; [status](status.md) records the completed work.
 
-| 관문 | 현재 상태와 다음 완료 기준 |
-| --- | --- |
-| P01 부팅 메모리 | 구현·검증됨. Limine 응답, 종류별 보존, 주소와 범위 출력 |
-| P02 정규화·프레임 | 구현·검증됨. 예약 차감, 단일 활성화, 프레임 소유권, 소진·반환·실패 경로 |
-| P03 VM·매핑 | BSP 단일 슬롯의 실제 매핑·해제·초기화·회수까지 검증. 일반 AddressSpace, Mapping 수명, 사용자/커널 분리, HHDM 별칭을 포함한 W^X, 보호·guard-page 검증은 다음 작업 |
-| P04 CPU·사용자 진입 | CpuLocal, 사용자·커널 스택, IRETQ 진입/복귀, native syscall, 사용자 오류 격리 |
-| P05 실행·권한·IPC | 타이머·문맥 전환·대기/깨우기, 객체·capability·endpoint·알림·공유 메모리 |
-| P06 서비스·DMA | 초기 이미지와 init, supervisor·장치 관리자, 제한된 IRQ/MMIO/DMA 권한, 사용자 I/O, 종료·복구 |
-| 앱 통합 | ICE의 실제 주소 공간 연결, BetAFS 블록/VFS 어댑터, 런타임·PTY·터미널·Velocity, 이후 KDE |
-| 확장 | SMP, 연속 프레임·큰 페이지·캐시 최적화, 실기 드라이버·성능·전력 |
+| Stage | Completion criterion | Status |
+| --- | --- | --- |
+| P01: Boot memory | Discover boot resources, distinguish address types, and preserve reserved memory | Complete |
+| P02: Physical frames | Normalize usable ranges, subtract reservations, establish ownership, and test allocation, return, exhaustion, and failed initialization | Complete |
+| P03: Virtual memory | Own address spaces and mappings; enforce permissions and alias policy; reclaim frames after TLB completion; test protection and guard pages | Boot mapping primitive complete; general VM pending |
+| P04: User entry | CPU-local state, user/kernel stacks, validated IRETQ entry and return, native calls, and user fault isolation | Pending |
+| P05: Tasks and IPC | Timer, context switching, wait/wakeup, kernel objects, capabilities, endpoints, notifications, and shared memory | Pending |
+| P06: Services and DMA | Boot image, init, supervisor, device authority, DMA lifetime, and service failure recovery | Pending |
 
-단일 CPU로 기능을 검증하되 CPU별 TSS·스택·현재 스레드와 매핑 수명을 처음부터 구분한다. FP/SIMD·일반 런타임은 해당 CPU 상태 저장·복원을 준비한 뒤 활성화한다.
+## Next: Address spaces
 
-ICE와 BetAFS는 독립 프로젝트다. 호스트의 파서·저장 시험을 Kryo 통합 성공으로 취급하지 않는다. 현재 앱 실행 기반이 없으므로 터미널·Velocity·KDE 완료도 주장하지 않는다.
+Build mapping ownership on the existing frame pool and HAL mechanisms. Separate user and kernel mappings. Define executable-memory permissions across all aliases, including the HHDM. Verify read-only/NX protection, guard pages, failed mappings, and reclamation before entering Ring 3.
 
-세부 기준은 [핵심 설계 계약](design-contract.md), 현재 증거는 [상태 문서](status.md)에 둔다.
+## Integration
+
+Connect ICE to actual address spaces and execution. Add the BetAFS block/VFS adapter, then the runtime, PTY, terminal, and Velocity paths. KDE follows the required process, graphics, input, and runtime services.
+
+ICE and BetAFS retain independent host test suites. Their host results do not establish Kryo integration.
+
+## Later work
+
+Add SMP, contiguous allocations, large pages, CPU-local caches, and physical hardware support after the corresponding correctness tests pass. CPU-local TSS, stacks, execution ownership, and memory lifetime must be accounted for before enabling SMP.
+
+Keep kernel FP/SIMD disabled by default. General user runtimes require initialization and preservation of all CPU state used by their ABI.

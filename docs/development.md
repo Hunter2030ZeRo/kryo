@@ -1,11 +1,25 @@
-# 개발 규칙
+# Development guidelines
 
-코드는 짧고 뜻이 드러나는 이름, 한 가지 책임을 가진 함수, 명시적인 실패 경로를 사용한다. 구현하지 않는 기능의 API나 사용하지 않는 추상화를 미리 만들지 않는다.
+Use short, descriptive names and functions with one clear responsibility. Keep failure paths explicit. Add abstractions and APIs when an implemented feature needs them.
 
-주석은 안전 조건, 불변 조건, 코드만으로 알기 어려운 설계 이유를 설명한다. 코드 동작을 그대로 반복하지 않는다. unsafe 경계에는 소유권과 유효한 매핑·참조의 전제를 적는다.
+Comments should explain safety requirements, invariants, or decisions that the code cannot express. Do not repeat the code in prose. Document ownership, mapping validity, and aliasing requirements at unsafe boundaries.
 
-자원 소유권과 회수 순서는 [핵심 설계 계약](design-contract.md), 계층 간 책임은 [아키텍처](architecture.md)를 따른다. 일반 드라이버·파일시스템·네트워크는 Ring 3 서비스로 둔다. ICE의 Linux/NT 경로와 독립 BetAFS 프로젝트의 경계를 유지한다.
+Follow the [design contract](design-contract.md) for resource lifetime and the [architecture](architecture.md) for subsystem boundaries.
 
-작업은 완료 기준 하나씩 구현·시험·검토를 묶어 진행한다. 새 불변 조건과 실패 경로를 검증하고, 호스트 모델·QEMU 동작·실기 성능의 증거를 구분한다. 상태와 한계는 [상태 문서](status.md)에 기록한다.
+## Changes
 
-기본 검사는 make check, make test, make smoke다. 반복 부팅 검사는 boot-tests feature로 분리한다. 정상 메모리 부족과 잘못된 사용자 입력은 오류로 처리하고, 부팅 불변 조건의 위반은 진단 후 정지할 수 있다.
+Each change should implement and verify a concrete completion criterion. Add tests for new invariants and failure paths. Record supported behavior and remaining limits in [status](status.md).
+
+Allocation failure, quota exhaustion, invalid user input, and peer termination are ordinary errors. A violated boot invariant may halt the kernel after reporting diagnostics.
+
+## Checks
+
+```sh
+make check
+make test
+make smoke
+```
+
+Boot regression tests use the `boot-tests` feature. Keep them out of normal startup.
+
+Host tests validate data structures and state transitions. QEMU tests validate guest behavior. Hardware performance, power, and recovery results require separate measurements.

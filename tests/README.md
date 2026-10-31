@@ -1,4 +1,17 @@
-# 검증 영역
+# Tests
 
-하위 디렉터리는 시나리오의 자리이며 아직 테스트 구현이 아니다. 부팅과 CPU 상태는 QEMU에서, 안전한 순수 로직은 host에서, 최종 성능·전력·장치 복구는 실제 하드웨어에서 구분해 검증한다.
-현재 자동 검증은 Cargo check/build, 수동 실행은 루트의 `make run`을 사용한다. 루트 `tests/`는 virtual workspace이므로 Rust 테스트가 자동 등록되는 위치가 아니다. 구현할 때 해당 package 또는 별도 host harness에 연결한다.
+Current tests run from the packages that own the implementation:
+
+| Location | Coverage |
+| --- | --- |
+| `kernel/core/tests/range.rs` | Physical ranges, alignment, and overflow |
+| `kernel/core/tests/normalize.rs` | Region filtering, reservations, and a generated page-level oracle |
+| `kernel/core/tests/pool.rs` | Allocation ownership, exhaustion, reuse, initialization failure, and host-thread exclusion |
+| HAL paging unit tests | Address arithmetic, physical width, table-frame validation, and page indices |
+| `kernel/image/src/boot/checks.rs` | Guest RAM zeroing, mapping, TLB invalidation, reclamation, and failure paths |
+
+Run host tests with `make test`. Run the guest checks with `make smoke`; they are gated by `boot-tests`.
+
+The root `tests/` subdirectories reserve future boot, syscall, IPC, recovery, compatibility, and performance suites. Cargo does not discover tests here automatically.
+
+Host models, QEMU behavior, and hardware measurements are separate forms of evidence. See [status](../docs/status.md) for recorded results.

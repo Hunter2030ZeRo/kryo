@@ -1,196 +1,189 @@
-# Kryo 핵심 설계 계약 v0.1
+# Design contract
 
-기준일: 2026-10-31. 상태: 이번 개발에 사용할 구현 기준안. 소스 구현, 공개 ABI 확정, 성능·복구 보장 완료를 뜻하지 않는다. 기존 네 개 crate와 디렉터리는 유지한다. 사용자의 후속 승인에 따라 구현·검증은 자동 진행하고 사용자가 코드를 검토·수정한다.
+Version 0.1, 2026-10-31.
 
-이 문서는 [구현 순서](roadmap.md)의 다섯 핵심 계약을 구체화한다. syscall 번호, 전체 wire 구조체와 하드웨어별 조립 코드는 구현 관문에서 별도로 검토한다. 아래 내부 타입 이름은 책임을 설명하는 이름이며 빈 API를 일괄 생성하라는 지시가 아니다.
+This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Syscall numbers, wire layouts, and published ABI versions remain undecided.
 
-## 1. 자원과 메모리 소유권
+## Resource ownership
 
-### 책임의 구분
-
-| 자원 | 소유·관리 주체 | 다른 구성 요소의 접근 |
-| --- | --- | --- |
-| 물리 프레임 | core/mm/frame의 프레임 관리자와 할당을 소유한 객체 | 명시적인 소유권 이전 또는 공유 객체 참조 |
-| RAM MemoryObject | core의 커널 객체 | 권한으로 허용된 매핑·공유·대여 |
-| AddressSpace와 Mapping | core/mm/vm | HAL에 페이지 테이블/TLB 조작 요청 |
-| MMIO 영역과 DMA 매핑 | 해당 장치 권한 및 core의 자원 객체 | 장치별 제한된 capability |
-| CPU 상태·TSS·IST | 해당 CpuLocal | 그 CPU에서 정해진 진입·스케줄링 절차로 변경 |
-| 스레드 커널 스택 | 해당 스레드 | 실행 중인 CPU가 임시 실행 소유권을 가짐 |
-| 초기 부팅 정보 | image가 해석하고 core에 넘길 정규화 정보 | Limine 응답 메모리의 수명과 분리하여 소유 |
-
-물리 주소, CPU 가상 주소, DMA 주소를 구분한다. RAM MemoryObject와 MMIO 영역도 구분한다. 임의의 정수를 프레임·매핑 권한으로 승격시키는 안전한 API는 제공하지 않는다. DMA 주소는 CPU 물리 주소와 같다고 가정하지 않는다. [DMA 주소 모델](https://docs.kernel.org/core-api/dma-api-howto.html#cpu-and-dma-addresses).
-
-### 물리 프레임과 매핑
-
-- 범위는 시작 포함·끝 제외이며 start+length는 오버플로를 검사한다. 처음에는 4 KiB 페이지를 사용한다.
-- 일반 할당 후보는 Usable RAM만이다. 그 범위를 페이지 안쪽으로 정렬하고 명시적 예약 영역의 합집합을 뺀다.
-- 예약 영역은 페이지 바깥쪽으로 정렬한다. 같은 페이지가 커널 이미지와 스택 등의 예약에 중복 등장해도 두 번 차감하지 않는다.
-- BootloaderReclaimable, ACPI, executable/modules, framebuffer, reserved/bad/unknown은 초기 일반 할당에서 제외한다. 종류별 해제 관문을 통과한 뒤에만 승격한다.
-- 매핑은 프레임의 참조를 유지한다. 사용자 핸들을 닫아도 다른 매핑·진행 작업·핀 참조가 있으면 프레임은 반환되지 않는다.
-- unmap은 접근 제거와 TLB 무효화 완료를 포함한다. 관련 CPU의 오래된 변환이 남은 동안 같은 프레임을 다른 소유자에게 재할당하지 않는다.
-- DMA 참조는 CPU 매핑 참조와 별도로 추적한다. DMA 중단·정리 완료 전에는 마지막 사용자 매핑이 없어도 반환하지 않는다.
-- 다른 프로세스에 처음 공개하는 프레임은 이전 소유자의 데이터를 노출하지 않도록 초기화한다. 초기화 전 페이지를 사용자나 장치에 공개하지 않는다.
-
-프레임마다 heap 객체나 Arc를 자동으로 하나씩 만드는 설계는 채택하지 않는다. 프레임 할당 메타데이터와 공유 MemoryObject의 수명을 분리하여 저장 비용을 관리한다. 구체적인 참조 카운터·arena·allocator 구현은 이 소유권 규칙을 만족하도록 선택한다.
-
-### 매핑 수명과 unsafe
-
-안전한 픽셀/버퍼 접근 객체는 사용하는 매핑의 소유 또는 유효한 대여를 유지해야 한다. 원시 포인터는 HAL 내부 표현으로 사용할 수 있다. 다만 외부의 안전한 unmap이 그 객체를 무효화하지 못하도록 매핑 객체의 소유권·대여 관계 또는 동등한 강도의 규칙으로 막는다.
-
-현재 Framebuffer32는 부팅 동안 매핑이 유지되고 한 번만 생성한다는 unsafe 전제로 사용할 수 있다. 이 전제는 현재 생성자와 호출부에 문서화해야 한다. 일반 매핑 API를 추가할 때 수명 관계를 연결한다.
-
-메모리 객체는 새 접근 허용, 접근 회수 중, 접근 제거 완료라는 수명 단계를 가진다. 필요한 참조·매핑·핀·TLB 작업이 모두 정리된 뒤에만 해제 가능하다. Drop에서 장치 응답이나 다른 CPU를 기다리는 동작은 하지 않는다. 오래 걸리는 회수는 명시적인 정리 작업으로 넘기고 그동안 자원을 보존한다. 정리 대기 자원도 quota와 진단 대상이다.
-
-### 실행 메모리
-
-커널 매핑은 사용자 접근을 허용하지 않는다. 사용자 실행 페이지는 W^X를 지키고, 같은 backing page의 쓰기 가능한 별칭도 추적한다. 최초 실행 이미지 작성은 비공개 상태에서 끝내고, 쓰기 접근과 진행 중인 장치 쓰기를 제거한 뒤 실행 가능하게 공개한다. 초기 버전은 이 객체의 실행 상태를 불변으로 만드는 정책을 사용한다. JIT와 쓰기/실행 전환은 후속 계약이다.
-
-## 2. CPU · 스레드 · 트랩
-
-### CpuLocal과 Thread의 경계
-
-CpuLocal에는 CPU ID, 현재 스레드, 해당 CPU의 GDT/TSS/IST와 idle/비상 스택, 진입 중인 문맥 및 선점 상태를 둔다. Thread에는 주소 공간 참조, 커널 스택, 저장된 실행 문맥, TLS 및 허용한 FP/SIMD 상태, 대기 등록과 종료 상태를 둔다.
-
-GDT/TSS 저장소의 주소와 수명은 해당 CPU가 사용하는 동안 안정적이어야 한다. IDT는 동일한 게이트를 쓴다면 불변 데이터를 공유할 수 있지만, 각 CPU는 자신의 IDTR/TR 등 필요한 레지스터를 로드한다. 전역 Once가 AP의 레지스터 초기화를 건너뛰게 해서는 안 된다.
-
-현재 BOOT_CPU_LOADED와 BOOT_TSS는 BSP 전용으로 취급한다. 사용자 실행 전에 특권 전환 스택을 준비하고, SMP 전에 CPU별 저장소로 확장한다. 스케줄러가 스레드를 바꿀 때 필요한 커널 진입 스택도 함께 갱신한다.
-
-SYSCALL 진입은 하드웨어가 자동으로 커널 RSP로 바꿔 주는 경로가 아니다. HAL이 신뢰할 수 있는 CPU별 상태를 이용해 스택을 전환한 뒤 Rust 코드로 들어간다. TSS의 특권 전환 스택과 이 경로의 준비를 혼동하지 않는다. [x86-64 진입의 동작 설명](https://github.com/torvalds/linux/blob/master/arch/x86/entry/entry_64.S).
-
-### 실행 소유권과 대기
-
-스레드 상태는 New → Runnable → Running을 기본으로 하고 Parking, Blocked, Dying, Dead를 구분한다.
-
-- 한 스레드는 동시에 두 CPU에서 Running이 될 수 없다.
-- 현재 스레드가 잠들 준비를 하는 Parking 단계와 실제 문맥 저장·실행 소유권 반납을 구분한다.
-- 문맥 저장 전에 깨우기가 오면 wake-pending으로 기록한다. 같은 스레드를 다른 CPU에서 먼저 실행하지 않는다. 수면을 취소하거나 안전한 전환 완료 뒤 Runnable로 공개한다.
-- Running 스레드의 종료는 원격 CPU에서 스택을 즉시 해제하는 일이 아니다. 해당 CPU의 실행 중단·소유권 반납 후 회수한다.
-- 이벤트, timeout, 취소, peer 종료가 경쟁하면 하나만 대기 결과를 확정한다. 나머지는 같은 대기를 다시 완료시키지 않는다.
-
-사용자 ABI가 사용하는 레지스터와 FP/SIMD 상태를 보존해야 한다. 일반 Rust/Go/C 런타임을 실행하기 전에 필요한 CPU 기능 초기화, 새 스레드 상태 초기화와 문맥 전환을 준비한다. 초기 no_std 스칼라 시험의 성공을 일반 런타임 지원으로 확대 해석하지 않는다.
-
-### 트랩의 책임
-
-HAL은 진입/문맥 저장과 하드웨어 정보 해석, core는 원인과 태스크 상태에 따른 처리 결정을 맡는다. 연결은 image의 결합 또는 필요한 정적 HAL 인터페이스로 제공하며 HAL이 core에 의존하는 순환을 만들지 않는다.
-
-| 상황 | 기본 동작 |
+| Resource | Owner |
 | --- | --- |
-| breakpoint 등 명시적으로 허용한 재개 가능 이벤트 | 상태 검증 후 복귀 |
-| 사용자 주소 공간의 복구 가능한 페이지 폴트 | pager/VM 처리 후 재개 |
-| 복구 불가능한 사용자 예외 | 해당 태스크를 종료·격리하고 감독자에게 통지 |
-| 검증한 사용자 복사 구간의 접근 실패 | 제한된 복사 복구 경로로 syscall 오류 반환 |
-| 커널 내부의 예기치 않은 예외·double fault | 비상 진단과 정지/시스템 복구 정책 |
+| Physical frames | Frame pool and the objects holding allocations |
+| RAM memory objects | Core kernel objects |
+| Address spaces and mappings | Core VM subsystem, using HAL page-table and TLB operations |
+| MMIO and DMA mappings | Core resource objects under device authority |
+| CPU state, TSS, and IST | The owning CPU's local state |
+| Thread kernel stack | The thread, with temporary execution ownership held by its CPU |
+| Boot information | Image code until transferred into core-owned metadata |
 
-사용자 데이터 복사 중 fault는 CPL=0에서 발생할 수 있다. 사용자/커널 구분을 CS 하나에만 의존하지 않고, 등록된 제한적 사용자 복사 구간의 복구 가능 여부도 확인한다. 커널 fault를 임의로 무시하는 일반 복구 기능은 제공하지 않는다.
+Physical, virtual, and DMA addresses are distinct. RAM memory objects and MMIO regions are distinct. A safe API must not turn an arbitrary integer into frame or mapping authority.
 
-초기 사용자 복귀는 검증 가능한 공통 IRETQ 경로를 우선하고, 사용자 주소·selector·flags를 검증한다. SYSRET 최적화는 안전한 복귀 조건을 별도로 검증한 뒤 도입한다.
+### Physical memory
 
-## 3. 커널 객체 · 핸들 · 권한
+Ranges are half-open. Check address arithmetic for overflow. The initial page size is 4 KiB.
 
-내부 ObjectId와 프로세스별 사용자 Handle을 구분한다. 사용자 Handle은 불투명한 64비트 값이며 0은 무효다. 내부 슬롯/세대의 구체적인 비트 분할을 사용자 ABI로 공개하지 않는다.
+Only Usable RAM enters the initial frame pool. Align usable ranges inward, align reservations outward, merge reservations, and subtract their union. Exclude bootloader-reclaimable, ACPI, executable/module, framebuffer, reserved, bad, and unknown regions until their reclamation requirements are met.
 
-- 객체 테이블은 객체 정체성과 수명, 프로세스별 핸들 테이블은 참조와 권한을 담당한다.
-- 조회는 슬롯/세대, 객체 종류, 필요한 권한을 검사하고 안정적인 객체 참조를 확보하는 하나의 동기화 절차다. 참조 확보 전에 잠금을 풀고 포인터를 사용하는 코드는 허용하지 않는다.
-- 세대 값이 순환하면 해당 슬롯을 그대로 재사용하지 않는다. 오래된 핸들이 다시 유효해지는 ABA를 막는 정책을 구현한다.
-- close는 핸들 하나를 폐기한다. 이미 수락한 작업의 취소나 모든 매핑의 제거를 의미하지 않는다.
-- duplicate는 명시적 권한이 필요하고 권한을 줄일 수만 있다. 새 권한을 합성하거나 확대하지 않는다.
-- transfer는 수신 측 수용 자원을 먼저 확보한다. IPC 수락 전에 실패하면 원본 핸들이 유지되고, 수락과 함께 이전하면 수신 메시지/태스크가 소유권을 가진다.
-- 권한의 이름과 객체별 허용 조합을 정의한다. READ/WRITE/MAP, SEND/RECEIVE, WAIT/SIGNAL, DUP/TRANSFER, CONTROL은 서로 자동으로 대체되지 않는다.
-- 일반 MemoryObject의 MAP 권한으로 임의 MMIO나 물리 RAM 전체를 매핑할 수 없다. 장치 권한과 DMA 권한은 별도 객체로 제한한다.
+Initialize allocation ownership once. Recomputing a memory plan must not mark live allocations free.
 
-객체 단위의 강제 회수는 별도의 CONTROL 권한으로 수행한다. 핸들의 세대 검사나 close를 전체 권한 철회라고 부르지 않는다. 최초 버전은 close와 객체 단위 회수의 의미부터 제공하고, capability 파생 트리의 선택적 하위 철회는 미지원으로 명시한다.
+Mappings retain backing-frame references. Closing a handle does not release a frame still used by a mapping, request, or pin. Unmap includes removal of access and completion of required TLB invalidation on every relevant CPU. Reuse is forbidden while stale translations can still access the frame.
 
-객체가 회수 중으로 전환된 뒤 새 작업은 거부한다. 이미 수락한 작업·매핑·핀을 종료하는 절차는 자원 종류별로 다르다. 서버가 종료되어도 클라이언트나 다른 객체가 유지하는 공유 MemoryObject를 자동으로 소멸시키지 않는다.
+DMA references are tracked separately. Device access must end before a pinned frame can be reclaimed.
 
-## 4. IPC · 알림 · 공유 데이터
+Initialize a frame before exposing it to another process or device. Keep frame-allocation metadata separate from shared memory-object lifetime; a heap allocation or `Arc` per frame is not required.
 
-### 최초 제어 경로
+### Mapping lifetime
 
-최초 커널 IPC는 endpoint를 통한 동기 send/receive/call/reply로 시작한다. 첫 정책 한도는 inline payload 32바이트와 capability 최대 2개로 제안한다. 이 값은 초기 구현 한도이며 공개 ABI를 배포하기 전에 확정·조회 방법을 검토한다. capability 이전이 없는 짧은 메시지를 빠른 경로의 첫 대상으로 삼는다. 레지스터 개수에 맞춘 최종 배치는 아직 약속하지 않는다.
+A safe buffer or pixel-access object must retain ownership or a valid borrow of its mapping. Another safe operation must not invalidate that mapping while the object can access it.
 
-처음에는 대기하는 스레드의 기록에 작은 메시지를 보관하고 rendezvous 시 전달한다. 무제한 메시지 mailbox나 매 요청 heap 할당을 기본으로 하지 않는다. 모든 대기와 수용 자원에는 태스크/프로세스 quota가 있다.
+The current `Framebuffer32` constructor requires one writer and a retained boot mapping. General VM interfaces must encode the corresponding lifetime.
 
-Endpoint의 최초 RECEIVE 소유자는 한 프로세스다. 그 안의 여러 스레드가 수신할 수 있다. SEND 권한은 다른 프로세스에 위임한다. 최초 버전에서 RECEIVE 소유 프로세스를 이전하지 않는다. 소유 프로세스 종료 또는 명시적 폐쇄는 endpoint를 Closed로 전환하고 수신·송신·reply 대기를 정리한다. capability 참조가 남아 있어도 닫힌 endpoint는 새 작업을 받지 않는다.
+Memory reclamation separates accepting new access, revoking access, and completing revocation. Release storage only after mapping, reference, pin, TLB, and device cleanup has finished. Do not wait for hardware or another CPU in `Drop`; use explicit cleanup and retain resources while it is pending. Pending resources remain subject to accounting and quotas.
 
-| 시점 | 실패 의미 |
+### Executable memory
+
+Kernel mappings are supervisor-only. User executable memory must satisfy W^X across aliases of the same backing frame.
+
+Prepare executable images privately. Remove write access and finish device writes before publishing executable mappings. The initial design keeps the resulting execution state immutable. JIT and later permission transitions need a separate contract.
+
+## CPU and thread state
+
+CPU-local state owns the CPU ID, current thread, GDT/TSS/IST, idle and emergency stacks, entry context, and preemption state.
+
+A thread owns its address-space reference, kernel stack, saved context, TLS, allowed FP/SIMD state, wait registrations, and termination state.
+
+GDT/TSS storage must remain at stable addresses while in use. CPUs may share an immutable IDT, but each CPU must load its own required registers. A global initialization guard must not skip an AP's register setup.
+
+The current `BOOT_CPU_LOADED` and `BOOT_TSS` are BSP-only. Provide a privilege-entry stack before user execution and CPU-local storage before SMP. Update the kernel entry stack as part of switching threads.
+
+SYSCALL does not switch to a kernel stack automatically. HAL entry code must obtain a trusted CPU-local stack before calling Rust code. TSS privilege-entry setup and SYSCALL entry setup are separate requirements.
+
+### Execution and waiting
+
+Thread states distinguish New, Runnable, Running, Parking, Blocked, Dying, and Dead.
+
+- A thread may run on at most one CPU.
+- Parking starts before context saving and execution handoff have completed.
+- A wakeup during Parking records a pending wake. It must not allow another CPU to run the thread before the handoff. Cancel the sleep or publish Runnable after the handoff.
+- Reclaim a dying thread's stack only after its CPU stops using it.
+- Event, timeout, cancellation, and peer-termination races must produce one completion for a wait.
+
+Preserve the registers and FP/SIMD state required by the user ABI. Initialize CPU features and new-thread state before running general Rust, Go, or C runtimes.
+
+### Traps and return
+
+HAL handles entry, context saving, and hardware-state decoding. Core selects policy from the cause and task state. Image code or a static interface connects the two without a HAL-to-core dependency.
+
+| Condition | Policy |
 | --- | --- |
-| 수신자가 요청을 수락하기 전 | 전달되지 않음. timeout/취소/peer 종료 시 원본 이전 자원 유지 |
-| 수신자가 요청을 수락한 뒤 | 실행됐을 수 있음. timeout이나 서버 종료가 작업 롤백을 뜻하지 않음 |
-| 유효한 reply가 확정된 뒤 | 같은 요청을 다시 완료하지 않음 |
+| Permitted resumable event | Validate state and resume |
+| Recoverable user page fault | Resolve through VM/pager and resume |
+| Fatal user exception | Terminate the task and notify its supervisor |
+| Fault in a registered user-copy operation | Return a syscall error through a bounded fixup path |
+| Unexpected kernel fault or double fault | Emergency diagnostics and halt/recovery policy |
 
-Call의 reply 권한은 한 번만 사용할 수 있는 token으로 제한하고 대상 대기와 세대를 확인한다. token을 임의로 복제하지 않는다. caller가 이미 취소/종료했다면 늦은 reply는 거부하고 보유 자원을 정리한다.
+User-copy faults can occur at CPL 0. Recovery requires a registered copy/fixup region; CS privilege alone is insufficient.
 
-구체적인 숫자 오류 코드는 ABI 단계에서 정한다. 의미상 InvalidHandle, WrongType, PermissionDenied, InvalidRange, OutOfMemory/QuotaExceeded, WouldBlock, TimedOut, Cancelled, PeerClosed와 전달 후 결과 불확실을 구분한다.
+Use a validated IRETQ return path first. Check user addresses, selectors, and flags. SYSRET optimization requires its own return-state validation.
 
-### 알림과 수면
+## Objects, handles, and rights
 
-최초 Notification은 하나의 소비자를 위한 병합 가능한 pending 상태다. 메시지 개수나 완료 개수를 대신하지 않는다.
+Internal object IDs and process-local handles have different roles. A user handle is an opaque 64-bit value; zero is invalid. Slot and generation encoding are internal.
 
-1. 생산자는 공유 큐에 데이터를 발행한 뒤 signal한다.
-2. 소비자는 큐를 비울 때까지 처리한 뒤 wait한다.
-3. 커널 wait는 같은 객체 잠금 아래에서 pending 확인·소비 또는 대기 등록을 수행한다. 사용자에게 별도 무조건 clear 연산을 제공하지 않는다.
-4. signal은 pending을 남기거나 등록된 대기 하나를 완료한다. 수면 전환은 앞의 Parking/실행 소유권 규칙을 따른다.
+The object table owns identity and lifetime. Each process's handle table owns references and rights.
 
-큐 확인 직후 signal이 먼저 오면 pending을 소비하고 즉시 돌아온다. 대기 등록이 먼저면 signal이 깨운다. 오래된 pending 때문에 한 번 더 돌아오는 것은 허용하지만 알림을 잃고 영구 수면하는 것은 허용하지 않는다.
+A lookup validates the slot, generation, type, and required rights, then acquires a stable reference under synchronization. Keep the lock until that reference is secured. Retire slots before generation wrap can make old handles valid again.
 
-최초 native wait는 단일 객체부터 구현한다. 내부 대기 등록과 완료 소유권을 Linux FD/poll 전용으로 고정하지 않는다. NT의 원자적 다중 대기 의미는 별도 확장 관문이며 단순 poll 반복으로 지원했다고 간주하지 않는다.
+Close removes one handle. It does not cancel all accepted operations or revoke every mapping. Duplication requires authority and can only preserve or reduce rights. Transfer reserves receiver capacity first: failure before acceptance leaves the sender's resource intact; acceptance commits ownership to the message or receiver.
 
-### 공유 메모리 경로
+READ, WRITE, MAP, SEND, RECEIVE, WAIT, SIGNAL, DUP, TRANSFER, and CONTROL are separate rights. Define valid combinations per object type. Ordinary memory MAP rights do not grant arbitrary RAM or MMIO access.
 
-큰 본문은 등록된 MemoryObject의 offset/length와 제한된 권한으로 전달한다. 주소 공간마다 가상 주소가 달라질 수 있으므로 프로세스 간 원시 포인터를 wire 값으로 사용하지 않는다.
+Object-wide revocation requires CONTROL. The initial design covers close and object-wide revocation; selective descendant revocation through a capability derivation tree is deferred.
 
-첫 요청/완료 큐는 각각 SPSC다. capacity와 포화 처리를 명시하고 가득 차면 WouldBlock 또는 정의된 대기로 처리한다. 생산자의 데이터 작성→Release 발행, 소비자의 Acquire 확인→읽기와 슬롯 반환의 순서를 정한다. volatile은 이 동기화를 대신하지 않는다. [Rust atomic ordering](https://doc.rust-lang.org/core/sync/atomic/enum.Ordering.html).
+Revocation blocks new work. Already accepted operations, mappings, and pins follow resource-specific cleanup. Server termination does not destroy shared memory objects still referenced elsewhere.
 
-공유 큐의 인덱스·길이·offset은 비신뢰 입력이다. 권한과 overflow·경계 검증 후 사용할 메타데이터를 로컬 값으로 고정한다. 검사 뒤 공격자가 바꿀 수 있는 값을 다시 읽어 권한 판단에 사용하지 않는다. 적법한 대여·동기화 없이 공유 영역에 Rust의 독점 참조를 만들지 않는다.
+## IPC and shared memory
 
-timeout이 발생해도 이미 수락된 서버 작업과 장치가 버퍼를 사용 중일 수 있다. caller의 대기와 데이터 대여의 종료를 분리하고, 관련 참조가 모두 정리되기 전 물리 메모리를 재사용하지 않는다.
+### Control messages
 
-## 5. 서비스 · 장치 · 복구
+Start with synchronous endpoint send/receive/call/reply. The initial proposal allows 32 inline bytes and at most two capabilities. Confirm limits and their discovery mechanism before publishing an ABI. Register layout remains undecided.
 
-안정적인 ServiceId는 사용자 공간 registry/supervisor가 관리하고, 실제 프로세스·endpoint·instance generation과 구분한다. 커널은 객체·권한·종료·알림 기구를 제공한다.
+Store small pending messages in waiting-thread state and transfer them at rendezvous. Avoid unbounded mailboxes and a heap allocation per RPC. Waits and receiver capacity are subject to task/process quotas.
 
-요청 식별은 클라이언트 인스턴스, 요청 ID, 대상 서비스 세대를 구분한다. 세대/식별자 재사용 규칙을 명시하고 이전 인스턴스의 완료를 새 요청으로 받아들이지 않는다. 이를 exactly-once나 진행 상태 자동 복원으로 확대 해석하지 않는다.
+One process owns an endpoint's RECEIVE right initially; its threads may receive concurrently. SEND rights may be delegated. Moving RECEIVE ownership to another process is deferred.
 
-정상 교체는 새 요청 제한→진행 작업 정리→필요한 상태 인계→새 인스턴스 준비→registry 전환→클라이언트 재연결로 구성한다. 드라이버 교체에는 아래 장치 정지·권한 회수 관문이 추가된다.
+Endpoint owner termination or explicit closure marks the endpoint Closed and resolves send, receive, and reply waits. Remaining capabilities do not reopen it.
 
-충돌 복구의 책임은 다음과 같다.
-
-| 책임자 | 해야 할 일 |
+| Request state | Failure meaning |
 | --- | --- |
-| kernel | 태스크 실행 중단, 핸들/대기 정리, 새 접근 제한, 보존해야 할 객체 참조 유지 |
-| supervisor/registry | 장애 기록, 재시작 정책·세대 전환, 클라이언트 재연결 |
-| device-manager와 승인된 장치 제어 경로 | 장치 정지/reset과 필요한 DMA 차단 확인 |
-| 해당 서비스 | 가능한 상태 복구, 업무 요청의 성공/실패/불확실 결과 결정 |
+| Before receiver acceptance | Not delivered; timeout, cancellation, or closure preserves original transfer resources |
+| After acceptance | Work may have executed; timeout or server failure does not imply rollback |
+| Reply committed | The request cannot complete again |
 
-DMA 자원의 단계는 Registered → InFlight → Quiescing → Quiescent → Unmapped → Unpinned → Reclaimable로 구분한다. 실제 상태 전이는 장치·IOMMU 동작에 따라 확인한다.
+A call's reply token is single-use and tied to the correct wait and generation. Reject late replies after caller cancellation or termination and clean up retained resources.
 
-- 프로세스 종료와 IRQ 마스킹만으로 장치 DMA가 끝났다고 간주하지 않는다.
-- 새 장치 접근을 막고, 장치 정지·필요한 reset과 진행 중 트랜잭션의 정리를 확인한다.
-- 관련 IOMMU/IOTLB 정리가 완료된 뒤에만 DMA 매핑/핀을 해제한다.
-- 안전한 정지를 확인할 수 없으면 장치를 offline으로 두고 관련 페이지를 격리·보존한다. 부족한 메모리를 회수하려고 여전히 접근 가능한 페이지를 재사용하지 않는다.
-- IOMMU와 이 수명 관리가 구현되기 전에는 비신뢰 DMA 드라이버의 완전한 격리를 지원한다고 표시하지 않는다.
+Distinguish invalid handles, wrong types, permission failures, invalid ranges, memory/quota exhaustion, WouldBlock, timeout, cancellation, peer closure, and uncertain outcomes after delivery. Numeric error codes remain undecided.
 
-읽기/쓰기가 이미 확정됐는지 모르는 작업은 불확실 결과로 보고한다. 자동 재시도는 서비스가 멱등성·중복 제거·영속성 계약을 제공하는 작업부터 허용한다.
+### Notifications
 
-## 6. 동기화 · 검사 경계
+The initial notification is a coalescing pending state for one consumer, not a message or completion counter.
 
-핸들 테이블 조회에서는 안정 참조를 확보한 뒤 잠금을 해제한다. 여러 프로세스의 핸들 테이블을 함께 잠글 때는 ProcessId 순서, 여러 커널 객체를 함께 잠글 때는 ObjectId 순서를 사용한다. 핸들 테이블→객체 순서의 역방향 획득은 허용하지 않는다.
+1. The producer publishes queue data, then signals.
+2. The consumer drains the queue, then waits.
+3. Under one object lock, wait either consumes pending state or registers the waiter.
+4. Signal records pending state or completes one registered wait.
 
-객체 상태에서 대기 완료를 확정한 뒤 안정적인 스레드 참조를 확보하여 잠금을 풀고 scheduler에 깨우기를 전달한다. capability/객체 잠금을 잡고 문맥 전환하거나 잠들지 않는다. 다중 큐 이동과 Parking의 정확한 handoff 구현은 SMP 관문에서 검증한다. 전역 커널 잠금 하나를 최종 구조의 전제로 삼지 않는다.
+Do not expose a separate unconditional clear operation. A signal before waiter registration remains pending; a signal after registration wakes the waiter. A redundant wake is acceptable; a lost wake is not.
 
-IRQ와 공유하는 잠금에는 로컬 IRQ 재진입 방지를 포함한다. 로컬 IRQ 비활성화는 다른 CPU와의 상호 배제가 아니다. NMI/비상 경로는 일반 allocator·scheduler·객체 잠금에 의존하지 않는다.
+Native waits initially cover one object. Do not constrain the internal model to Linux FD/poll. Atomic NT multi-object waits require a separate extension.
 
-할당 실패·quota 초과·peer 종료는 정상 실패 경로다. 사용자 입력으로 커널 panic을 유발하지 않는다. 도중 실패는 아직 공개하지 않은 객체·매핑·capability를 되돌리고, 하드웨어 정리가 필요한 자원은 보존 상태로 전환한다.
+### Shared buffers
 
-## 7. 구현 및 검증 관문
+Bulk requests name a registered memory object, offset, length, and permitted access. Raw pointers are not process-independent wire values.
 
-| 관문 | 구현 전에 필요한 계약 | 완료 증거 |
-| --- | --- | --- |
-| P01 부팅 메모리 조사 | 물리/가상 주소 구분, 초기 종류별 보존 | 응답·범위 로그와 예약 이유. 아직 할당/회수하지 않음 |
-| P02 정규화·프레임 소유권 | 구간 검증·정렬·예약 합집합, 부팅 정보 수명 | 겹침/overflow·잘못된 반환 거부, 예약 영역 미할당 |
-| P03 VM·매핑 | 참조, 권한, TLB 완료와 회수 순서 | 반복 map/unmap·누수, 읽기 전용/NX·경계 오류 |
-| P04 CPU/사용자 진입 | CpuLocal, 사용자·커널 스택, 트랩 정책 | Ring 3 출력/종료와 잘못된 사용자 접근의 격리 |
-| P05 태스크·권한·IPC | 실행 소유권, close/transfer/대기 의미 | 두 프로세스의 통신·종료·취소·peer 종료 |
-| P06 서비스·DMA | 세대, 장치 권한, quiesce와 회수 | 서버 강제 종료, 늦은 완료, 장치 정지 실패 시 보존 |
+Initial request and completion queues are SPSC and bounded. Full queues return WouldBlock or enter a defined wait. Publish data with Release and observe it with Acquire; define slot-return ordering as well. Volatile access does not provide this synchronization.
 
-호스트 모델 시험은 동시성 의미와 자료구조를 확인하는 도구이며 실제 CPU 문맥 전환·DMA의 증거가 아니다. QEMU 기능 시험과 실기 성능·복구 시험도 구분한다. 첫 버전의 짧은 IPC 경로·공유 큐 선택은 성능 가설이며 cycle·지연·복사·깨우기 비용을 측정하여 검증한다.
+Treat shared indices, lengths, and offsets as untrusted. Check rights, overflow, and bounds, then snapshot the metadata used for access. Do not re-read mutable fields as authority after validation. Shared access must not create incompatible Rust references.
+
+A timed-out caller may still have a server or device using its buffer. Ending a wait and ending a data loan are separate operations. Retain the physical memory until all uses end.
+
+## Services and devices
+
+A user-space registry/supervisor manages stable service IDs. Distinguish service identity, process identity, endpoints, and instance generations.
+
+Requests distinguish the client instance, request ID, and target generation. Define identifier reuse and reject stale completions. Generations alone do not provide exactly-once execution or state restoration.
+
+Orderly replacement stops new requests, resolves in-flight work, transfers required state, prepares a new instance, switches the registry, and reconnects clients. Driver replacement also requires device quiescence and authority revocation.
+
+| Component | Failure responsibility |
+| --- | --- |
+| Kernel | Stop task execution, resolve handles/waits, restrict new access, retain live resource references |
+| Supervisor/registry | Record failures, select restart policy, advance generations, reconnect clients |
+| Device manager and authorized control path | Stop/reset devices and verify DMA isolation |
+| Service | Recover available state and report successful, failed, or uncertain operations |
+
+### DMA reclamation
+
+Track Registered, InFlight, Quiescing, Quiescent, Unmapped, Unpinned, and Reclaimable states. Confirm transitions against device and IOMMU behavior.
+
+Process termination and IRQ masking do not prove DMA has stopped. Block new device access, stop or reset the device as required, and drain in-flight transactions. Complete IOMMU/IOTLB work before releasing mapping and pin resources.
+
+If quiescence cannot be established, offline the device and quarantine its pages. Do not reuse memory that a device can still access. Untrusted DMA-driver isolation requires both IOMMU support and this lifetime management.
+
+Report uncertain writes as uncertain. Automatic retry requires a service contract for idempotence, deduplication, or durable request tracking.
+
+## Synchronization and failure
+
+Acquire multiple process handle tables in ProcessId order and multiple object locks in ObjectId order. Use handle-table-to-object lock order consistently.
+
+Commit a wait completion and retain a stable thread reference before releasing the object lock and requesting a wakeup. Do not block or switch context while holding capability/object locks. SMP work must verify Parking handoff and multi-queue transitions.
+
+Locks shared with IRQ handlers must prevent local IRQ reentry. Disabling local IRQs does not exclude another CPU. NMI/emergency paths must not depend on normal allocator, scheduler, or object locks.
+
+Allocation failure, quota exhaustion, and peer termination are ordinary errors. User input must not panic the kernel. Roll back unpublished objects, mappings, and capabilities on failure; retain resources that require deferred hardware cleanup.
+
+## Verification
+
+Use [roadmap completion criteria](roadmap.md) for each subsystem. Test invalid input, overlap, overflow, exhaustion, stale rights, request races, and peer failure alongside successful behavior.
+
+Host models verify structures and state transitions. QEMU verifies guest execution and hardware-facing paths. Physical hardware is required for performance, power, and device recovery measurements.
