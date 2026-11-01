@@ -1,9 +1,25 @@
 use super::{FrameAllocator, Permissions, VmBackend, VmError};
 use crate::mm::frame::{FRAME_SIZE, OwnedFrame};
+use crate::mm::shared::{NoSharedPage, SharedPage};
+use crate::storage::Slots;
 
-struct Mapping<'pool> {
+enum Backing<'pool, S: SharedPage> {
+    Private(OwnedFrame<'pool>),
+    Shared(S),
+}
+
+impl<S: SharedPage> Backing<'_, S> {
+    fn physical(&self) -> u64 {
+        match self {
+            Self::Private(frame) => frame.address(),
+            Self::Shared(page) => page.physical(),
+        }
+    }
+}
+
+struct Mapping<'pool, S: SharedPage> {
     address: u64,
-    frame: OwnedFrame<'pool>,
+    backing: Backing<'pool, S>,
     permissions: Permissions,
     published: bool,
 }
@@ -14,21 +30,43 @@ pub struct AddressSpace<
     B: VmBackend,
     const MAPPINGS: usize,
     const TABLES: usize,
+    S: SharedPage = NoSharedPage,
 > {
     allocator: &'pool F,
     backend: B,
     root: Option<OwnedFrame<'pool>>,
-    mappings: [Option<Mapping<'pool>>; MAPPINGS],
-    tables: [Option<OwnedFrame<'pool>>; TABLES],
+    mappings: Slots<Option<Mapping<'pool, S>>, MAPPINGS>,
+    tables: Slots<Option<OwnedFrame<'pool>>, TABLES>,
     table_count: usize,
 }
 
-impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES: usize>
-    AddressSpace<'pool, F, B, MAPPINGS, TABLES>
+impl<
+    'pool,
+    F: FrameAllocator,
+    B: VmBackend,
+    const MAPPINGS: usize,
+    const TABLES: usize,
+    S: SharedPage,
+> AddressSpace<'pool, F, B, MAPPINGS, TABLES, S>
 {
     pub fn new(
         allocator: &'pool F,
         create: impl FnOnce(u64) -> Result<B, B::Error>,
+    ) -> Result<Self, VmError<B::Error>> {
+        Self::create(allocator, create, false)
+    }
+
+    pub fn new_growing(
+        allocator: &'pool F,
+        create: impl FnOnce(u64) -> Result<B, B::Error>,
+    ) -> Result<Self, VmError<B::Error>> {
+        Self::create(allocator, create, true)
+    }
+
+    fn create(
+        allocator: &'pool F,
+        create: impl FnOnce(u64) -> Result<B, B::Error>,
+        growing: bool,
     ) -> Result<Self, VmError<B::Error>> {
         let root = allocator.allocate().map_err(VmError::Allocation)?;
         let backend = match create(root.address()) {
@@ -53,8 +91,16 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
             allocator,
             backend,
             root: Some(root),
-            mappings: [const { None }; MAPPINGS],
-            tables: [const { None }; TABLES],
+            mappings: if growing {
+                Slots::growing()
+            } else {
+                Slots::new([const { None }; MAPPINGS])
+            },
+            tables: if growing {
+                Slots::growing()
+            } else {
+                Slots::new([const { None }; TABLES])
+            },
             table_count: 0,
         })
     }
@@ -79,43 +125,36 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
         }
         let slot = self
             .mappings
-            .iter()
-            .position(Option::is_none)
-            .ok_or(VmError::MappingCapacity)?;
+            .vacant(Option::is_none, || None)
+            .map_err(|_| VmError::MappingCapacity)?;
         let needed = self
             .backend
             .tables_needed(address)
             .map_err(VmError::Backend)?;
         assert!(needed <= 3, "VM backend table count invariant");
-        if needed > TABLES - self.table_count {
-            return Err(VmError::TableCapacity);
-        }
+        let length = self
+            .table_count
+            .checked_add(needed)
+            .ok_or(VmError::TableCapacity)?;
+        self.tables
+            .reserve_len(length, || None)
+            .map_err(|_| VmError::TableCapacity)?;
         let frame = self.allocator.allocate().map_err(VmError::Allocation)?;
-        let mut prepared = [const { None }; 3];
-        for index in 0..needed {
-            match self.allocator.allocate() {
-                Ok(table) => prepared[index] = Some(table),
-                Err(error) => {
-                    // No hardware operation has seen these frames.
-                    for table in prepared.into_iter().flatten() {
-                        unsafe { release(self.allocator, table) };
-                    }
-                    unsafe { release(self.allocator, frame) };
-                    return Err(VmError::Allocation(error));
-                }
+        let prepared = match self.prepare_tables(needed) {
+            Ok(tables) => tables,
+            Err(error) => {
+                unsafe { release(self.allocator, frame) };
+                return Err(error);
             }
-        }
-        let mut physical = [0; 3];
-        for index in 0..needed {
-            physical[index] = prepared[index].as_ref().unwrap().address();
-        }
+        };
+        let physical = table_addresses(&prepared);
         self.mappings[slot] = Some(Mapping {
             address,
-            frame,
+            backing: Backing::Private(frame),
             permissions,
             published: false,
         });
-        let data = self.mappings[slot].as_ref().unwrap().frame.address();
+        let data = self.mappings[slot].as_ref().unwrap().backing.physical();
         let result = unsafe {
             self.backend
                 .initialize_frame(data, contents)
@@ -128,16 +167,7 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
         match result {
             Ok(used) => {
                 assert!(used <= needed, "VM backend retained table count invariant");
-                for (index, table) in prepared.into_iter().enumerate() {
-                    let Some(table) = table else { continue };
-                    if index < used {
-                        self.tables[self.table_count] = Some(table);
-                        self.table_count += 1;
-                    } else {
-                        // The backend did not publish unused prepared tables.
-                        unsafe { release(self.allocator, table) };
-                    }
-                }
+                self.retain_tables(prepared, used);
                 self.mappings[slot].as_mut().unwrap().published = true;
                 Ok(())
             }
@@ -149,8 +179,74 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
                 // Keep the data owner for close retry if alias restoration fails.
                 if unsafe { self.backend.restore_frame(data) }.is_ok() {
                     let mapping = self.mappings[slot].take().unwrap();
-                    unsafe { release(self.allocator, mapping.frame) };
+                    let Backing::Private(frame) = mapping.backing else {
+                        unreachable!("Private mapping backing invariant");
+                    };
+                    unsafe { release(self.allocator, frame) };
                 }
+                Err(VmError::Backend(error))
+            }
+        }
+    }
+
+    /// Retains the page's strong object lease until unmap completes its TLB work.
+    /// Shared backing is initialized once by its owner and can never be executable.
+    pub fn map_shared_page(
+        &mut self,
+        address: u64,
+        permissions: Permissions,
+        page: S,
+    ) -> Result<(), VmError<B::Error>> {
+        self.check_inactive()?;
+        validate_address(address).ok_or(VmError::InvalidAddress)?;
+        if permissions.executable() {
+            return Err(VmError::InvalidPermissions);
+        }
+        if self.find(address).is_some() {
+            return Err(VmError::AlreadyMapped);
+        }
+        let slot = self
+            .mappings
+            .vacant(Option::is_none, || None)
+            .map_err(|_| VmError::MappingCapacity)?;
+        let needed = self
+            .backend
+            .tables_needed(address)
+            .map_err(VmError::Backend)?;
+        assert!(needed <= 3, "VM backend table count invariant");
+        let length = self
+            .table_count
+            .checked_add(needed)
+            .ok_or(VmError::TableCapacity)?;
+        self.tables
+            .reserve_len(length, || None)
+            .map_err(|_| VmError::TableCapacity)?;
+        let prepared = self.prepare_tables(needed)?;
+        let physical = table_addresses(&prepared);
+        self.mappings[slot] = Some(Mapping {
+            address,
+            backing: Backing::Shared(page),
+            permissions,
+            published: false,
+        });
+        let data = self.mappings[slot].as_ref().unwrap().backing.physical();
+        // Mapping shared RAM never changes its global alias or its contents.
+        let result = unsafe {
+            self.backend
+                .map(address, data, permissions, &physical[..needed])
+        };
+        match result {
+            Ok(used) => {
+                assert!(used <= needed, "VM backend retained table count invariant");
+                self.retain_tables(prepared, used);
+                self.mappings[slot].as_mut().unwrap().published = true;
+                Ok(())
+            }
+            Err(error) => {
+                for table in prepared.into_iter().flatten() {
+                    unsafe { release(self.allocator, table) };
+                }
+                self.mappings[slot].take();
                 Err(VmError::Backend(error))
             }
         }
@@ -180,10 +276,10 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
         if !mapping.published {
             return Err(VmError::NotMapped);
         }
-        // Inactivity excludes user writes; the mapping retains this initialized frame.
+        // The backend excludes writers across all roots, including shared aliases.
         unsafe {
             self.backend
-                .read_frame(mapping.frame.address(), offset, output)
+                .read_frame(mapping.backing.physical(), offset, output)
         }
         .map_err(VmError::Backend)
     }
@@ -220,7 +316,7 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
     /// Dropping an unclosed space leaks ownership rather than reclaiming active memory.
     pub fn close(&mut self) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
-        for slot in 0..MAPPINGS {
+        for slot in 0..self.mappings.len() {
             if self.mappings[slot].is_some() {
                 self.remove_mapping(slot)?;
             }
@@ -232,6 +328,8 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
         }
         self.table_count = 0;
         unsafe { release(self.allocator, self.root.take().unwrap()) };
+        self.mappings.release();
+        self.tables.release();
         Ok(())
     }
 
@@ -248,9 +346,42 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
         })
     }
 
+    fn prepare_tables(
+        &self,
+        count: usize,
+    ) -> Result<[Option<OwnedFrame<'pool>>; 3], VmError<B::Error>> {
+        let mut tables = [const { None }; 3];
+        for index in 0..count {
+            match self.allocator.allocate() {
+                Ok(table) => tables[index] = Some(table),
+                Err(error) => {
+                    // Hardware has not seen any of these frames.
+                    for table in tables.into_iter().flatten() {
+                        unsafe { release(self.allocator, table) };
+                    }
+                    return Err(VmError::Allocation(error));
+                }
+            }
+        }
+        Ok(tables)
+    }
+
+    fn retain_tables(&mut self, tables: [Option<OwnedFrame<'pool>>; 3], used: usize) {
+        for (index, table) in tables.into_iter().enumerate() {
+            let Some(table) = table else { continue };
+            if index < used {
+                self.tables[self.table_count] = Some(table);
+                self.table_count += 1;
+            } else {
+                // A successful backend map did not publish this unused frame.
+                unsafe { release(self.allocator, table) };
+            }
+        }
+    }
+
     fn remove_mapping(&mut self, slot: usize) -> Result<(), VmError<B::Error>> {
         let mapping = self.mappings[slot].as_mut().unwrap();
-        let physical = mapping.frame.address();
+        let physical = mapping.backing.physical();
         if mapping.published {
             // unmap completes the TLB work before the alias can become writable.
             let removed =
@@ -258,16 +389,38 @@ impl<'pool, F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES
             assert_eq!(removed, physical, "VM backend unmapped frame invariant");
             mapping.published = false;
         }
-        unsafe { self.backend.restore_frame(physical) }.map_err(VmError::Backend)?;
+        if matches!(mapping.backing, Backing::Private(_)) {
+            unsafe { self.backend.restore_frame(physical) }.map_err(VmError::Backend)?;
+        }
         let mapping = self.mappings[slot].take().unwrap();
-        unsafe { release(self.allocator, mapping.frame) };
+        if let Backing::Private(frame) = mapping.backing {
+            unsafe { release(self.allocator, frame) };
+        }
         Ok(())
+    }
+}
+
+impl<F: FrameAllocator, B: VmBackend, const MAPPINGS: usize, const TABLES: usize, S: SharedPage>
+    Drop for AddressSpace<'_, F, B, MAPPINGS, TABLES, S>
+{
+    fn drop(&mut self) {
+        for mapping in &mut self.mappings {
+            if let Some(mapping) = mapping.take() {
+                // Unclosed page tables may still reference this backing. A
+                // forgotten strong lease must retain the entire shared object.
+                core::mem::forget(mapping);
+            }
+        }
     }
 }
 
 fn validate_address(address: u64) -> Option<()> {
     ((FRAME_SIZE..0x0000_8000_0000_0000).contains(&address) && address.is_multiple_of(FRAME_SIZE))
         .then_some(())
+}
+
+fn table_addresses(tables: &[Option<OwnedFrame<'_>>; 3]) -> [u64; 3] {
+    core::array::from_fn(|index| tables[index].as_ref().map_or(0, OwnedFrame::address))
 }
 
 unsafe fn release<F: FrameAllocator>(allocator: &F, frame: OwnedFrame<'_>) {

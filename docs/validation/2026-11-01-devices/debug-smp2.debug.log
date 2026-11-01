@@ -1,0 +1,115 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001f204000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007f000) bytes=516096
+MEM[1]: kind=0 [0x000000000007f000, 0x000000000009f000) bytes=131072
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001f0bb000) bytes=519811072
+MEM[7]: kind=5 [0x000000001f0bb000, 0x000000001f1bb000) bytes=1048576
+MEM[8]: kind=6 [0x000000001f1bb000, 0x000000001f1cb000) bytes=65536
+MEM[9]: kind=0 [0x000000001f1cb000, 0x000000001f1cd000) bytes=8192
+MEM[10]: kind=6 [0x000000001f1cd000, 0x000000001f1dc000) bytes=61440
+MEM[11]: kind=0 [0x000000001f1dc000, 0x000000001f1dd000) bytes=4096
+MEM[12]: kind=5 [0x000000001f1dd000, 0x000000001f1de000) bytes=4096
+MEM[13]: kind=6 [0x000000001f1de000, 0x000000001f1ec000) bytes=57344
+MEM[14]: kind=5 [0x000000001f1ec000, 0x000000001f1ee000) bytes=8192
+MEM[15]: kind=6 [0x000000001f1ee000, 0x000000001f1f5000) bytes=28672
+MEM[16]: kind=5 [0x000000001f1f5000, 0x000000001f204000) bytes=61440
+MEM[17]: kind=6 [0x000000001f204000, 0x000000001f568000) bytes=3555328
+MEM[18]: kind=5 [0x000000001f568000, 0x000000001ff50000) bytes=10387456
+MEM[19]: kind=0 [0x000000001ff50000, 0x000000001ff73000) bytes=143360
+MEM[20]: kind=5 [0x000000001ff73000, 0x000000001ffdf000) bytes=442368
+MEM[21]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[22]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[23]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[24]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[25]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[26]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[27]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[28]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+MEM normalized: ranges=5 frames=126977
+AVAILABLE[0]: [0x000000000007f000, 0x000000000009f000) frames=32
+AVAILABLE[1]: [0x0000000000100000, 0x000000001f0bb000) frames=126907
+AVAILABLE[2]: [0x000000001f1cb000, 0x000000001f1cd000) frames=2
+AVAILABLE[3]: [0x000000001f1dc000, 0x000000001f1dd000) frames=1
+AVAILABLE[4]: [0x000000001ff50000, 0x000000001ff73000) frames=35
+FRAME: ready total=126977 free=126977
+FRAME: alloc/release OK total=126977 free=126977
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=126977
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+CLOCK: HPET monotonic ready lapic_counts=622742 sample_ns=10182600
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+ELF: module validated bytes=26192 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=255 xsave=false avx=false
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=20
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+SMP: online=2 discovered=2 limit=64
+DEVICE: queued IRQ retired before reuse
+DEVICE: expired wait precedes queued IRQ
+DEVICE: retirement retry retains owners
+THREAD: created id=0x100000002 process=0x100000001
+DEVICE: register authority and IRQ wakeup OK cases=4
+SMP: remote TLB retirement OK
+SMP: missing ACK retains backing OK
+SMP: fatal process policy precedes peer call OK
+SMP: blocked thread wakeup OK
+SMP: parallel shared-space OK
+USERLOG: process=0x100000001 event=1 value=0
+PROCESS: spawned id=0x100000002 parent=0x100000001
+USERLOG: process=0x100000002 event=4 value=0
+THREAD: created id=0x100000003 process=0x100000002
+THREAD: created id=0x200000003 process=0x100000002
+USERLOG: process=0x100000001 event=2 value=42
+PROCESS: spawned id=0x200000002 parent=0x100000001
+USERLOG: process=0x200000002 event=4 value=0
+THREAD: created id=0x300000003 process=0x200000002
+THREAD: created id=0x400000003 process=0x200000002
+USERLOG: process=0x100000001 event=2 value=42
+USERLOG: process=0x100000001 event=3 value=2
+THREAD: shared-process state OK threads=4 preempted=4
+INIT: user supervision and restart OK generations=2
+SMP: AP resources retired
+TIMER: pending interrupt drained
+TASK: teardown OK
+USER: isolation OK cases=16 kernel_tables=1 free=126976
+
+FB: addr=0xffff8000fd000000 1280x800 pitch=5120 bpp=32 model=1
+FB masks: R=8@16 G=8@8 B=8@0
+Kryo: value=42, hex=0x2a
+0x000000000000002a
+ABC

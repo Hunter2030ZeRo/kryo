@@ -1,3 +1,4 @@
+use crate::storage::Slots;
 use crate::task::TaskId;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -47,6 +48,7 @@ struct Wait<T> {
     task: TaskId,
     phase: Phase,
     completion: Option<T>,
+    deadline: Option<u64>,
 }
 
 struct Slot<T> {
@@ -63,7 +65,7 @@ struct Slot<T> {
 /// Retain this table while any external queue still contains one of its IDs.
 /// SMP users need an outer synchronization and execution-ownership protocol.
 pub struct WaitTable<T, const WAITS: usize> {
-    slots: [Slot<T>; WAITS],
+    slots: Slots<Slot<T>, WAITS>,
 }
 
 impl<T, const WAITS: usize> Default for WaitTable<T, WAITS> {
@@ -75,17 +77,43 @@ impl<T, const WAITS: usize> Default for WaitTable<T, WAITS> {
 impl<T, const WAITS: usize> WaitTable<T, WAITS> {
     pub const fn new() -> Self {
         Self {
-            slots: [const {
-                Slot {
-                    generation: 1,
-                    retired: false,
-                    wait: None,
-                }
-            }; WAITS],
+            slots: Slots::new(
+                [const {
+                    Slot {
+                        generation: 1,
+                        retired: false,
+                        wait: None,
+                    }
+                }; WAITS],
+            ),
+        }
+    }
+
+    pub const fn growing() -> Self {
+        Self::limited(u32::MAX as usize)
+    }
+
+    pub const fn limited(limit: usize) -> Self {
+        Self {
+            slots: Slots::limited(limit),
         }
     }
 
     pub fn begin(&mut self, task: TaskId) -> Result<WaitId, WaitError> {
+        self.begin_with_deadline(task, None)
+    }
+
+    /// Registers an absolute deadline in the runtime's monotonic nanoseconds.
+    /// Expiry selection does not complete the wait or detach its object queues.
+    pub fn begin_until(&mut self, task: TaskId, deadline: u64) -> Result<WaitId, WaitError> {
+        self.begin_with_deadline(task, Some(deadline))
+    }
+
+    fn begin_with_deadline(
+        &mut self,
+        task: TaskId,
+        deadline: Option<u64>,
+    ) -> Result<WaitId, WaitError> {
         if self
             .slots
             .iter()
@@ -95,15 +123,22 @@ impl<T, const WAITS: usize> WaitTable<T, WAITS> {
         }
         let index = self
             .slots
-            .iter()
-            .position(|slot| !slot.retired && slot.wait.is_none())
-            .ok_or(WaitError::Capacity)?;
+            .vacant(
+                |slot| !slot.retired && slot.wait.is_none(),
+                || Slot {
+                    generation: 1,
+                    retired: false,
+                    wait: None,
+                },
+            )
+            .map_err(|_| WaitError::Capacity)?;
         let slot = &mut self.slots[index];
         let id = WaitId::new(index, slot.generation).ok_or(WaitError::Capacity)?;
         slot.wait = Some(Wait {
             task,
             phase: Phase::Parking,
             completion: None,
+            deadline,
         });
         Ok(id)
     }
@@ -112,11 +147,39 @@ impl<T, const WAITS: usize> WaitTable<T, WAITS> {
         Ok(self.slot(id)?.wait.as_ref().unwrap().task)
     }
 
+    pub fn live_count(&self) -> usize {
+        self.slots.iter().filter(|slot| slot.wait.is_some()).count()
+    }
+
     /// False after any completion wins, even before Parking has ended.
     pub fn is_pending(&self, id: WaitId) -> bool {
         self.slot(id).is_ok_and(|slot| {
             let wait = slot.wait.as_ref().unwrap();
             wait.completion.is_none() && wait.phase != Phase::Ready
+        })
+    }
+
+    pub fn next_deadline(&self) -> Option<u64> {
+        self.pending_deadlines().map(|(_, deadline)| deadline).min()
+    }
+
+    /// The caller must detach object queues before completing this wait.
+    /// Equal deadlines are selected in slot order; Parking waits remain hidden
+    /// from scheduler publication even if timeout completes them here.
+    pub fn next_expired(&self, now: u64) -> Option<WaitId> {
+        self.pending_deadlines()
+            .filter(|(_, deadline)| *deadline <= now)
+            .min_by_key(|(id, deadline)| (*deadline, id.as_raw() as u32))
+            .map(|(id, _)| id)
+    }
+
+    fn pending_deadlines(&self) -> impl Iterator<Item = (WaitId, u64)> + '_ {
+        self.slots.iter().enumerate().filter_map(|(index, slot)| {
+            let wait = slot.wait.as_ref()?;
+            if wait.completion.is_some() || wait.phase == Phase::Ready {
+                return None;
+            }
+            Some((WaitId::new(index, slot.generation)?, wait.deadline?))
         })
     }
 
@@ -147,6 +210,7 @@ impl<T, const WAITS: usize> WaitTable<T, WAITS> {
             return Err(WaitError::AlreadyCompleted);
         }
         wait.completion = Some(value);
+        wait.deadline = None;
         if wait.phase == Phase::Blocked {
             wait.phase = Phase::Ready;
             Ok(Some(wait.task))
@@ -176,6 +240,21 @@ impl<T, const WAITS: usize> WaitTable<T, WAITS> {
                 return None;
             }
             Some((WaitId::new(index, slot.generation)?, wait.task))
+        })
+    }
+
+    pub fn ready(&self) -> impl Iterator<Item = (WaitId, TaskId, &T)> {
+        self.slots.iter().enumerate().filter_map(|(index, slot)| {
+            let wait = slot.wait.as_ref()?;
+            (wait.phase == Phase::Ready).then(|| {
+                (
+                    WaitId::new(index, slot.generation).unwrap(),
+                    wait.task,
+                    wait.completion
+                        .as_ref()
+                        .expect("Ready wait completion invariant"),
+                )
+            })
         })
     }
 

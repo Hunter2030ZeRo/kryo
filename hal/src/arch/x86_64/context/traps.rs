@@ -1,4 +1,4 @@
-use super::{RUN_STATE, UserOutcome, UserReason, finish};
+use super::{RunState, UserOutcome, UserReason, finish, local_state};
 use crate::{emergency_write_hex as hex, emergency_write_str as text};
 use core::arch::asm;
 use x86_64::registers::model_specific::{FsBase, GsBase};
@@ -17,9 +17,14 @@ pub(super) struct TrapFrame {
     stack_selector: u64,
 }
 
+pub(super) const FRAME_CODE_OFFSET: usize = core::mem::offset_of!(TrapFrame, code);
+
 unsafe extern "C" {
     fn kryo_user_exit();
+    fn kryo_device_interrupt();
     fn kryo_timer_interrupt();
+    fn kryo_reschedule_interrupt();
+    fn kryo_shootdown_interrupt();
     fn kryo_spurious_interrupt();
     fn kryo_fault_0();
     fn kryo_fault_1();
@@ -103,7 +108,10 @@ pub(crate) fn install_handlers(table: &mut InterruptDescriptorTable) {
         table
             .security_exception
             .set_handler_addr(VirtAddr::from_ptr(kryo_fault_30 as *const ()));
+        table[0xd0].set_handler_addr(VirtAddr::from_ptr(kryo_device_interrupt as *const ()));
         table[0xe0].set_handler_addr(VirtAddr::from_ptr(kryo_timer_interrupt as *const ()));
+        table[0xe1].set_handler_addr(VirtAddr::from_ptr(kryo_reschedule_interrupt as *const ()));
+        table[0xe2].set_handler_addr(VirtAddr::from_ptr(kryo_shootdown_interrupt as *const ()));
         table[0xff].set_handler_addr(VirtAddr::from_ptr(kryo_spurious_interrupt as *const ()));
         table[0x80]
             .set_handler_addr(VirtAddr::from_ptr(kryo_user_exit as *const ()))
@@ -113,7 +121,7 @@ pub(crate) fn install_handlers(table: &mut InterruptDescriptorTable) {
 
 pub(super) unsafe extern "C" fn exit_dispatch(frame: *const TrapFrame) -> ! {
     let frame = unsafe { &*frame };
-    let state = RUN_STATE.0.get();
+    let state = state_pointer();
     if frame.code & 3 == 3 && unsafe { (*state).active } {
         unsafe {
             save_context(frame);
@@ -135,14 +143,36 @@ pub(super) unsafe extern "C" fn exit_dispatch(frame: *const TrapFrame) -> ! {
     halt()
 }
 
+pub(super) unsafe extern "C" fn device_dispatch(frame: *const TrapFrame) {
+    super::super::hpet_device::record_interrupt();
+    crate::timer_acknowledge();
+    unsafe { preempt(frame) };
+}
+
 pub(super) unsafe extern "C" fn timer_dispatch(frame: *const TrapFrame) {
     super::super::apic::record_timer_interrupt();
     crate::timer_acknowledge();
+    unsafe { preempt(frame) };
+}
+
+pub(super) unsafe extern "C" fn reschedule_dispatch(frame: *const TrapFrame) {
+    super::super::smp::reschedule_interrupt();
+    unsafe { preempt(frame) };
+}
+
+pub(super) unsafe extern "C" fn shootdown_dispatch(frame: *const TrapFrame) {
+    super::super::smp::shootdown_interrupt();
+    // CPL3 paths saved FP and set TS before dispatch. Return through the normal
+    // scheduler boundary so user state is restored before execution resumes.
+    unsafe { preempt(frame) };
+}
+
+unsafe fn preempt(frame: *const TrapFrame) {
     let frame = unsafe { &*frame };
     if frame.code & 3 == 3 {
-        let state = RUN_STATE.0.get();
+        let state = state_pointer();
         if !unsafe { (*state).active && (*state).preemptible } {
-            text("\nUnexpected user timer interrupt\n");
+            text("\nUnexpected user hardware interrupt\n");
             halt();
         }
         unsafe {
@@ -150,7 +180,7 @@ pub(super) unsafe extern "C" fn timer_dispatch(frame: *const TrapFrame) {
             finish(UserOutcome {
                 reason: UserReason::Preempted,
                 status: 0,
-                vector: 0xe0,
+                vector: frame.vector,
                 error: 0,
                 address: 0,
                 instruction: frame.instruction,
@@ -160,7 +190,7 @@ pub(super) unsafe extern "C" fn timer_dispatch(frame: *const TrapFrame) {
 }
 
 unsafe fn save_context(frame: &TrapFrame) {
-    let context = unsafe { (*RUN_STATE.0.get()).context };
+    let context = unsafe { (*state_pointer()).context };
     assert!(!context.is_null(), "Missing active user context");
     // The register prefix and hardware frame were captured before Rust could clobber them.
     unsafe {
@@ -175,7 +205,7 @@ unsafe fn save_context(frame: &TrapFrame) {
 
 pub(super) unsafe extern "C" fn fault_dispatch(frame: *const TrapFrame, cr2: u64) -> ! {
     let frame = unsafe { &*frame };
-    if frame.vector != 8 && frame.code & 3 == 3 && unsafe { (*RUN_STATE.0.get()).active } {
+    if frame.vector != 8 && frame.code & 3 == 3 && unsafe { (*state_pointer()).active } {
         unsafe {
             save_context(frame);
             finish(UserOutcome {
@@ -219,4 +249,11 @@ fn halt() -> ! {
     loop {
         unsafe { asm!("cli; hlt", options(nomem, nostack)) };
     }
+}
+
+fn state_pointer() -> *mut RunState {
+    local_state().unwrap_or_else(|| {
+        text("\nUnregistered trap CPU\n");
+        halt()
+    })
 }

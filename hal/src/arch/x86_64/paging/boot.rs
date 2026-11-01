@@ -27,7 +27,8 @@ impl BootPageSlot {
     /// # Safety
     /// Run on the BSP before APs or scheduling, with IRQs disabled. Stay on
     /// this CPU and CR3, and exclude other changes to this branch until detach
-    /// or drop. The root and three distinct, exclusively owned table frames
+    /// or drop. No AP may start until this temporary slot is detached/dropped.
+    /// The root and three distinct, exclusively owned table frames
     /// must remain accessible through direct_map for the entire slot lifetime.
     /// Table-frame ownership cannot be released until detach/drop has finished.
     pub unsafe fn new(
@@ -160,6 +161,12 @@ impl Drop for BootPageSlot {
 pub(super) fn check_cpu() -> Result<(), PagingError> {
     if interrupts::are_enabled() {
         return Err(PagingError::InterruptsEnabled);
+    }
+    if !super::super::smp::all_users_quiescent() {
+        return Err(PagingError::UsersActive);
+    }
+    if super::super::cpu::current_cpu().is_none_or(|cpu| cpu.index() != 0) {
+        return Err(PagingError::ContextChanged);
     }
     if Cr4::read().intersects(Cr4Flags::L5_PAGING | Cr4Flags::PCID)
         || !Efer::read().contains(EferFlags::NO_EXECUTE_ENABLE)

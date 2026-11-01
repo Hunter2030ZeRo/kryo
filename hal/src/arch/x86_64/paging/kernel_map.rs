@@ -1,13 +1,12 @@
 use core::ptr::NonNull;
 use core::sync::atomic::{Ordering, compiler_fence};
-use x86_64::instructions::tlb;
-use x86_64::registers::control::{Cr0, Cr0Flags, Cr3, Cr4, Cr4Flags};
+use x86_64::registers::control::{Cr0, Cr0Flags, Cr3};
 use x86_64::structures::paging::{PageTable, PageTableFlags, page_table::PageTableEntry};
 use x86_64::{PhysAddr, VirtAddr};
 
 use super::boot::{check_cpu, physical_width};
 use super::user::validate_new_tables;
-use super::{DirectMap, PagePermissions, PagingError};
+use super::{DirectMap, KernelRegion, PagePermissions, PagingError};
 
 const TWO_MIB: u64 = 1 << 21;
 const ONE_GIB: u64 = 1 << 30;
@@ -37,6 +36,28 @@ impl KernelDirectMap {
     /// image mappings in slot 511 do not alias these Usable frames. Retain
     /// all kernel mappings and supplied split-table frames for kernel lifetime.
     pub unsafe fn new(direct_map: DirectMap, physical_end: u64) -> Result<Self, PagingError> {
+        unsafe { Self::initialize(direct_map, physical_end, None) }
+    }
+
+    /// # Safety
+    /// The requirements of new apply. The additional branch belongs to region
+    /// and currently contains only authorized MMIO, with no Usable RAM aliases.
+    /// Retain its mappings, MMIO authority and table frames for kernel lifetime;
+    /// later RAM mappings must use owned frames under this map's W^X policy.
+    pub unsafe fn with_mmio_region(
+        direct_map: DirectMap,
+        physical_end: u64,
+        region: &KernelRegion,
+    ) -> Result<Self, PagingError> {
+        let index = region.mmio_root_index(direct_map)?;
+        unsafe { Self::initialize(direct_map, physical_end, Some(index)) }
+    }
+
+    unsafe fn initialize(
+        direct_map: DirectMap,
+        physical_end: u64,
+        mmio_index: Option<usize>,
+    ) -> Result<Self, PagingError> {
         check_cpu()?;
         let physical_bits = physical_width();
         if physical_end == 0 {
@@ -52,14 +73,7 @@ impl KernelDirectMap {
         }
         let root_frame = Cr3::read().0.start_address().as_u64();
         let mut root = direct_map.table_address(root_frame)?;
-        for index in 0..512 {
-            if index != 511
-                && !(start..=end).contains(&index)
-                && !unsafe { root.as_ref() }[index].is_unused()
-            {
-                return Err(PagingError::UnsupportedPaging);
-            }
-        }
+        validate_root(unsafe { root.as_ref() }, start, end, mmio_index)?;
 
         // Upper entries are copied into user roots later; set shared policy first.
         unsafe {
@@ -73,7 +87,7 @@ impl KernelDirectMap {
                 }
             }
         }
-        flush_global();
+        flush_global()?;
         Ok(Self {
             direct_map,
             root,
@@ -101,6 +115,8 @@ impl KernelDirectMap {
     /// New table frames are distinct exclusively owned RAM. Retain every used
     /// frame for kernel lifetime, since all child roots share these tables.
     /// The target is an owned managed RAM frame, not a page-table frame.
+    /// ShootdownPending can follow publication; retain ALL supplied frames on
+    /// that error, because the shared tree may already reference them.
     pub unsafe fn prepare_frame(
         &mut self,
         physical: u64,
@@ -143,7 +159,7 @@ impl KernelDirectMap {
             location.table.as_mut()[location.index]
                 .set_addr(PhysAddr::new(new_tables[0]), parent_flags);
         }
-        flush_global();
+        flush_global()?;
         Ok(count)
     }
 
@@ -166,7 +182,7 @@ impl KernelDirectMap {
         flags.set(PageTableFlags::WRITABLE, !read_only);
         entry.set_flags(flags);
         // Invalidate global translations as well as ordinary CR3-local entries.
-        flush_global();
+        flush_global()?;
         Ok(())
     }
 
@@ -241,6 +257,29 @@ impl KernelDirectMap {
     }
 }
 
+fn validate_root(
+    root: &PageTable,
+    start: usize,
+    end: usize,
+    mmio_index: Option<usize>,
+) -> Result<(), PagingError> {
+    if mmio_index
+        .is_some_and(|index| !(256..511).contains(&index) || (start..=end).contains(&index))
+    {
+        return Err(PagingError::UnsupportedPaging);
+    }
+    for (index, entry) in root.iter().enumerate() {
+        if index != 511
+            && !(start..=end).contains(&index)
+            && Some(index) != mmio_index
+            && !entry.is_unused()
+        {
+            return Err(PagingError::UnsupportedPaging);
+        }
+    }
+    Ok(())
+}
+
 fn physical_page_bound(end: u64, bits: u8) -> Result<(), PagingError> {
     if !end.is_multiple_of(4096) {
         return Err(PagingError::UnalignedAddress);
@@ -275,21 +314,38 @@ unsafe fn split_table(
     }
 }
 
-pub(super) fn flush_global() {
-    let flags = Cr4::read();
-    if flags.contains(Cr4Flags::PAGE_GLOBAL) {
-        unsafe {
-            Cr4::write(flags & !Cr4Flags::PAGE_GLOBAL);
-            Cr4::write(flags);
-        }
-    } else {
-        tlb::flush_all();
-    }
+pub(super) fn flush_global() -> Result<(), PagingError> {
+    super::super::smp::global_tlb_flush().map_err(|_| PagingError::ShootdownPending)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_the_verified_additional_root_slot_is_allowed() {
+        let mut root = PageTable::new();
+        let flags = PageTableFlags::PRESENT | PageTableFlags::NO_EXECUTE;
+        root[256].set_addr(PhysAddr::new(0x1000), flags);
+        root[511].set_addr(PhysAddr::new(0x2000), flags);
+        root[510].set_addr(PhysAddr::new(0x3000), flags);
+        assert_eq!(
+            validate_root(&root, 256, 256, None),
+            Err(PagingError::UnsupportedPaging)
+        );
+        assert_eq!(validate_root(&root, 256, 256, Some(510)), Ok(()));
+        for index in [0, 255, 256, 511, 512, usize::MAX] {
+            assert_eq!(
+                validate_root(&root, 256, 256, Some(index)),
+                Err(PagingError::UnsupportedPaging)
+            );
+        }
+        root[509].set_addr(PhysAddr::new(0x4000), flags);
+        assert_eq!(
+            validate_root(&root, 256, 256, Some(510)),
+            Err(PagingError::UnsupportedPaging)
+        );
+    }
 
     #[test]
     fn huge_split_preserves_physical_extent_and_permissions() {

@@ -1,0 +1,42 @@
+{
+  "basis": "Rust -Zprint-type-sizes for x86_64-unknown-none plus unchanged image Mailbox symbol size in prior 4-CPU compiled kernel; Limine stack requests verified against current boot.rs debug/release conditional",
+  "hal_per_cpu": {
+    "default_entry_stack": 16384,
+    "double_fault_stack": 16384,
+    "tss_once": 108,
+    "gdt_once": 96,
+    "gdt_loaded_once": 1,
+    "run_state_slot": 256,
+    "kernel_fp_area": 1024,
+    "local_apic_timer": 112,
+    "tlb_ack": 8,
+    "reschedule_epoch": 8
+  },
+  "hal_per_cpu_total": 34381,
+  "hal_static_4": 137540,
+  "hal_static_64": 2200896,
+  "hal_static_delta": 2063356,
+  "boot_test_miss_ack_bytes": {
+    "four": 4,
+    "sixty_four": 64,
+    "delta": 60
+  },
+  "cpu_registry_bytes": {
+    "old_four": 16,
+    "new_sixty_four": 512,
+    "delta": 496
+  },
+  "image_mailbox_bytes": {
+    "per_cpu": 1408,
+    "four": 5632,
+    "sixty_four": 90112,
+    "delta": 84480
+  },
+  "limine_boot_stacks_requested_bytes": {
+    "debug_per_actual_cpu": 524288,
+    "release_per_actual_cpu": 262144,
+    "debug_64_actual_cpus": 33554432,
+    "release_64_actual_cpus": 16777216
+  },
+  "execution_limit": "64 logical CPU registration slots; root currently schedules at most four threads concurrently"
+}

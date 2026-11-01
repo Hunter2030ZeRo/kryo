@@ -1,4 +1,6 @@
 /target/
+/userspace/target/
+/userspace/native-smoke/target/
 /build/
 /iso_root/
 *.iso

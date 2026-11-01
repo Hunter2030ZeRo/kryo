@@ -1,0 +1,12 @@
+$ cargo fmt --all -- --check
+$ cargo clippy --locked --offline -p kryo --target x86_64-unknown-none -- -D warnings
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/authority-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.26s
+$ cargo clippy --locked --offline -p kryo --target x86_64-unknown-none --all-features -- -D warnings
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/authority-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.37s
+$ cargo clippy --locked --offline -p kryo-core --target x86_64-unknown-linux-gnu --lib --test capability -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
+$ cargo clippy --manifest-path userspace/Cargo.toml --workspace --locked --offline --target x86_64-unknown-none --target-dir build/lint-userspace -- -D warnings
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+$ cargo fmt --manifest-path userspace/Cargo.toml --all -- --check

@@ -1,0 +1,255 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000007ea14000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007f000) bytes=516096
+MEM[1]: kind=0 [0x000000000007f000, 0x000000000009f000) bytes=131072
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000007e968000) bytes=2122743808
+MEM[7]: kind=5 [0x000000007e968000, 0x000000007e9c3000) bytes=372736
+MEM[8]: kind=6 [0x000000007e9c3000, 0x000000007e9d6000) bytes=77824
+MEM[9]: kind=5 [0x000000007e9d6000, 0x000000007e9d8000) bytes=8192
+MEM[10]: kind=6 [0x000000007e9d8000, 0x000000007e9e2000) bytes=40960
+MEM[11]: kind=5 [0x000000007e9e2000, 0x000000007e9e4000) bytes=8192
+MEM[12]: kind=6 [0x000000007e9e4000, 0x000000007e9f0000) bytes=49152
+MEM[13]: kind=5 [0x000000007e9f0000, 0x000000007e9f2000) bytes=8192
+MEM[14]: kind=6 [0x000000007e9f2000, 0x000000007e9fb000) bytes=36864
+MEM[15]: kind=5 [0x000000007e9fb000, 0x000000007e9fd000) bytes=8192
+MEM[16]: kind=6 [0x000000007e9fd000, 0x000000007ea05000) bytes=32768
+MEM[17]: kind=5 [0x000000007ea05000, 0x000000007ea14000) bytes=61440
+MEM[18]: kind=6 [0x000000007ea14000, 0x000000007f362000) bytes=9756672
+MEM[19]: kind=5 [0x000000007f362000, 0x000000007ffdf000) bytes=13094912
+MEM[20]: kind=1 [0x000000007ffdf000, 0x000000007ffe0000) bytes=4096
+MEM[21]: kind=8 [0x000000007ffe0000, 0x000000007ffe3000) bytes=12288
+MEM[22]: kind=1 [0x000000007ffe3000, 0x0000000080000000) bytes=118784
+MEM[23]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[24]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[25]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[26]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[27]: kind=0 [0x0000000100000000, 0x00000020c0000000) bytes=136365211648
+MEM[28]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+FRAME metadata: start=0x100000 end=0x518000 bytes=4292608 bitmap_words=528291 summary_words=8255 usable_frames=33810568 managed_frames=33809520
+MEM normalized: ranges=3 frames=33809520
+AVAILABLE[0]: [0x000000000007f000, 0x000000000009f000) frames=32
+AVAILABLE[1]: [0x0000000000518000, 0x000000007e968000) frames=517200
+AVAILABLE[2]: [0x0000000100000000, 0x00000020c0000000) frames=33292288
+FRAME: metadata reservation excluded
+HEAP: alignment/reuse/failure OK
+FRAME: ready total=33809520 free=33809520
+RAM: high frame OK minimum=0x100000000 physical=0x100000000
+RAM: high frame OK minimum=0x2000000000 physical=0x2000000000
+FRAME: alloc/release OK total=33809520 free=33809520
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=33809520
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+CLOCK: HPET monotonic ready lapic_counts=622051 sample_ns=10074860
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+ELF: module validated bytes=30384 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=273 xsave=true avx=true
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=17
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+SMP: online=2 discovered=2 limit=255
+DEVICE: queued IRQ retired before reuse
+DEVICE: expired wait precedes queued IRQ
+DEVICE: retirement retry retains owners
+THREAD: created id=0x100000002 process=0x100000001
+DEVICE: register authority and IRQ wakeup OK cases=4
+SMP: TLB backing old=0x2000000000 new=0x2000001000
+SMP: remote TLB retirement OK
+SMP: missing ACK retains backing OK
+SMP: fatal process policy precedes peer call OK
+SMP: parallel shared-space OK
+SMP: blocked thread wakeup OK
+USERLOG: process=0x100000001 event=1 value=0
+PROCESS: spawned id=0x100000002 parent=0x100000001
+USERLOG: process=0x100000002 event=4 value=0
+THREAD: created id=0x100000003 process=0x100000002
+THREAD: created id=0x200000003 process=0x100000002
+USERLOG: process=0x100000001 event=2 value=42
+PROCESS: spawned id=0x200000002 parent=0x100000001
+USERLOG: process=0x200000002 event=4 value=0
+THREAD: created id=0x300000003 process=0x200000002
+THREAD: created id=0x400000003 process=0x200000002
+USERLOG: process=0x100000001 event=2 value=42
+USERLOG: process=0x100000001 event=3 value=2
+THREAD: shared-process state OK threads=4 preempted=4
+INIT: user supervision and restart OK generations=2
+SCALE: process publication OOM retained owners
+PROCESS: spawned id=0x100000002 parent=0x100000001
+PROCESS: spawned id=0x100000003 parent=0x100000001
+THREAD: created id=0x100000004 process=0x100000002
+PROCESS: spawned id=0x100000005 parent=0x100000001
+THREAD: created id=0x100000006 process=0x100000003
+THREAD: created id=0x100000007 process=0x100000004
+PROCESS: spawned id=0x100000008 parent=0x100000001
+THREAD: created id=0x100000009 process=0x100000002
+THREAD: created id=0x10000000a process=0x100000003
+THREAD: created id=0x10000000b process=0x100000004
+THREAD: created id=0x10000000c process=0x100000005
+PROCESS: spawned id=0x10000000d parent=0x100000001
+THREAD: created id=0x10000000e process=0x100000003
+THREAD: created id=0x10000000f process=0x100000004
+THREAD: created id=0x100000010 process=0x100000005
+PROCESS: spawned id=0x100000011 parent=0x100000001
+THREAD: created id=0x100000012 process=0x100000002
+THREAD: created id=0x100000013 process=0x100000003
+THREAD: created id=0x100000014 process=0x100000004
+THREAD: created id=0x100000015 process=0x100000005
+THREAD: created id=0x100000016 process=0x100000003
+THREAD: created id=0x100000017 process=0x100000002
+THREAD: created id=0x100000018 process=0x100000004
+THREAD: created id=0x100000019 process=0x100000002
+THREAD: created id=0x10000001a process=0x100000003
+THREAD: created id=0x10000001b process=0x100000005
+THREAD: created id=0x10000001c process=0x100000004
+THREAD: created id=0x10000001d process=0x100000006
+THREAD: created id=0x10000001e process=0x100000003
+THREAD: created id=0x10000001f process=0x100000002
+THREAD: created id=0x100000020 process=0x100000004
+THREAD: created id=0x100000021 process=0x100000005
+THREAD: created id=0x100000022 process=0x100000003
+THREAD: created id=0x100000023 process=0x100000004
+THREAD: created id=0x100000024 process=0x100000006
+THREAD: created id=0x100000025 process=0x100000005
+THREAD: created id=0x100000026 process=0x100000002
+THREAD: created id=0x100000027 process=0x100000003
+THREAD: created id=0x100000028 process=0x100000004
+THREAD: created id=0x100000029 process=0x100000006
+THREAD: created id=0x10000002a process=0x100000005
+THREAD: created id=0x10000002b process=0x100000007
+THREAD: created id=0x10000002c process=0x100000002
+THREAD: created id=0x10000002d process=0x100000004
+THREAD: created id=0x10000002e process=0x100000003
+THREAD: created id=0x10000002f process=0x100000005
+THREAD: created id=0x100000030 process=0x100000006
+THREAD: created id=0x100000031 process=0x100000007
+THREAD: created id=0x100000032 process=0x100000003
+THREAD: created id=0x100000033 process=0x100000005
+THREAD: created id=0x100000034 process=0x100000006
+THREAD: created id=0x100000035 process=0x100000007
+USERLOG: process=0x100000001 event=81 value=6
+THREAD: created id=0x100000036 process=0x100000003
+THREAD: created id=0x100000037 process=0x100000002
+THREAD: created id=0x100000038 process=0x100000004
+THREAD: created id=0x100000039 process=0x100000005
+THREAD: created id=0x10000003a process=0x100000007
+THREAD: created id=0x10000003b process=0x100000006
+THREAD: created id=0x10000003c process=0x100000002
+THREAD: created id=0x10000003d process=0x100000004
+THREAD: created id=0x10000003e process=0x100000003
+THREAD: created id=0x10000003f process=0x100000005
+THREAD: created id=0x100000040 process=0x100000006
+THREAD: created id=0x100000041 process=0x100000007
+THREAD: created id=0x100000042 process=0x100000002
+THREAD: created id=0x100000043 process=0x100000004
+THREAD: created id=0x100000044 process=0x100000003
+THREAD: created id=0x100000045 process=0x100000005
+THREAD: created id=0x100000046 process=0x100000006
+THREAD: created id=0x100000047 process=0x100000007
+THREAD: created id=0x100000048 process=0x100000004
+THREAD: created id=0x100000049 process=0x100000003
+THREAD: created id=0x10000004a process=0x100000006
+THREAD: created id=0x10000004b process=0x100000007
+THREAD: created id=0x10000004c process=0x100000002
+THREAD: created id=0x10000004d process=0x100000003
+THREAD: created id=0x10000004e process=0x100000004
+THREAD: created id=0x10000004f process=0x100000006
+THREAD: created id=0x100000050 process=0x100000007
+THREAD: created id=0x100000051 process=0x100000004
+THREAD: created id=0x100000052 process=0x100000003
+THREAD: created id=0x100000053 process=0x100000005
+THREAD: created id=0x100000054 process=0x100000006
+THREAD: created id=0x100000055 process=0x100000007
+THREAD: created id=0x100000056 process=0x100000004
+THREAD: created id=0x100000057 process=0x100000003
+THREAD: created id=0x100000058 process=0x100000005
+THREAD: created id=0x100000059 process=0x100000006
+THREAD: created id=0x10000005a process=0x100000007
+THREAD: created id=0x10000005b process=0x100000003
+THREAD: created id=0x10000005c process=0x100000002
+THREAD: created id=0x10000005d process=0x100000004
+THREAD: created id=0x10000005e process=0x100000005
+THREAD: created id=0x10000005f process=0x100000007
+THREAD: created id=0x100000060 process=0x100000006
+THREAD: created id=0x100000061 process=0x100000002
+THREAD: created id=0x100000062 process=0x100000003
+THREAD: created id=0x100000063 process=0x100000004
+THREAD: created id=0x100000064 process=0x100000006
+THREAD: created id=0x100000065 process=0x100000007
+THREAD: created id=0x100000066 process=0x100000002
+THREAD: created id=0x100000067 process=0x100000004
+THREAD: created id=0x100000068 process=0x100000005
+THREAD: created id=0x100000069 process=0x100000006
+THREAD: created id=0x10000006a process=0x100000006
+THREAD: created id=0x10000006b process=0x100000005
+THREAD: created id=0x10000006c process=0x100000002
+THREAD: created id=0x10000006d process=0x100000005
+THREAD: created id=0x10000006e process=0x100000006
+THREAD: created id=0x10000006f process=0x100000007
+THREAD: created id=0x100000070 process=0x100000005
+THREAD: created id=0x100000071 process=0x100000006
+THREAD: created id=0x100000072 process=0x100000005
+THREAD: created id=0x100000073 process=0x100000006
+THREAD: created id=0x100000074 process=0x100000002
+THREAD: created id=0x100000075 process=0x100000006
+THREAD: created id=0x100000076 process=0x100000007
+THREAD: created id=0x100000077 process=0x100000007
+THREAD: created id=0x100000078 process=0x100000002
+THREAD: created id=0x100000079 process=0x100000007
+THREAD: created id=0x10000007a process=0x100000002
+THREAD: created id=0x10000007b process=0x100000007
+THREAD: created id=0x10000007c process=0x100000007
+THREAD: created id=0x10000007d process=0x100000007
+THREAD: created id=0x10000007e process=0x100000007
+THREAD: created id=0x10000007f process=0x100000002
+USERLOG: process=0x100000003 event=80 value=20
+USERLOG: process=0x100000005 event=80 value=20
+USERLOG: process=0x100000008 event=80 value=20
+USERLOG: process=0x10000000d event=80 value=20
+USERLOG: process=0x100000011 event=80 value=20
+USERLOG: process=0x100000002 event=80 value=20
+SCALE: native growth OK processes=7 threads=127 waits=127 stack_pages=1024
+SCALE: native waits and process resources retired
+SMP: AP resources retired
+TIMER: pending interrupt drained
+TASK: teardown OK
+USER: isolation OK cases=16 kernel_tables=4 free=33809515
+
+FB: addr=0xffff8000fd000000 1280x800 pitch=5120 bpp=32 model=1
+FB masks: R=8@16 G=8@8 B=8@0
+Kryo: value=42, hex=0x2a
+0x000000000000002a
+ABC

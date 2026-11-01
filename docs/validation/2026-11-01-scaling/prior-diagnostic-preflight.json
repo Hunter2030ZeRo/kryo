@@ -1,0 +1,67 @@
+{
+  "cgroups": {
+    "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.chromium.Chromium-298625.scope": {
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.events.local": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.max": "max\n",
+      "memory.current": "5341020160\n",
+      "memory.high": "max\n",
+      "pids.max": "76233\n",
+      "pids.current": "534\n",
+      "pids.events": "max 0\n"
+    },
+    "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice": {
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.events.local": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.max": "max\n",
+      "memory.current": "40403152896\n",
+      "memory.high": "max\n",
+      "pids.max": "max\n",
+      "pids.current": "1540\n",
+      "pids.events": "max 0\n"
+    },
+    "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service": {
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.events.local": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.max": "max\n",
+      "memory.current": "42358861824\n",
+      "memory.high": "max\n",
+      "pids.max": "max\n",
+      "pids.current": "1799\n",
+      "pids.events": "max 0\n"
+    },
+    "/sys/fs/cgroup/user.slice/user-1000.slice": {
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.events.local": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.max": "max\n",
+      "memory.current": "42374148096\n",
+      "memory.high": "max\n",
+      "pids.max": "167713\n",
+      "pids.current": "1809\n",
+      "pids.events": "max 0\n"
+    },
+    "/sys/fs/cgroup/user.slice": {
+      "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.events.local": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "memory.max": "max\n",
+      "memory.current": "42857828352\n",
+      "memory.high": "max\n",
+      "pids.max": "max\n",
+      "pids.current": "1809\n",
+      "pids.events": "max 0\n"
+    },
+    "/sys/fs/cgroup": {}
+  },
+  "affinity": 22,
+  "kvm_exists": false,
+  "load": "31.24 45.09 23.68 1/2317 48\n",
+  "cpu_pressure": "some avg10=0.06 avg60=17.44 avg300=21.63 total=693996227\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=0\n",
+  "meminfo": "MemTotal:       65326736 kB\nMemFree:        15028156 kB\nMemAvailable:   54076976 kB\nBuffers:              80 kB\nCached:         40058936 kB\nSwapCached:            0 kB\nActive:         17972272 kB\nInactive:       27803148 kB\nActive(anon):    6040128 kB\nInactive(anon):  1930136 kB\nActive(file):   11932144 kB\nInactive(file): 25873012 kB\nUnevictable:     1084184 kB\nMlocked:             212 kB\nSwapTotal:      65326076 kB\nSwapFree:       65322828 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              4756 kB\nWriteback:             0 kB\nAnonPages:       6321884 kB\nMapped:          1746164 kB\nShmem:           2254204 kB\nKReclaimable:    1971360 kB\nSlab:            2455788 kB\nSReclaimable:    1971360 kB\nSUnreclaim:       484428 kB\nKernelStack:       37304 kB\nPageTables:       116148 kB\nSecPageTables:      2316 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    97989444 kB\nCommitted_AS:   39091588 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:      466952 kB\nVmallocChunk:          0 kB\nPercpu:            31104 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:   1204224 kB\nShmemHugePages:  1337344 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nCmaTotal:              0 kB\nCmaFree:               0 kB\nUnaccepted:            0 kB\nBalloon:               0 kB\nGPUActive:             0 kB\nGPUReclaim:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:     2058972 kB\nDirectMap2M:    62443520 kB\nDirectMap1G:     2097152 kB\n",
+  "limits": "Limit                     Soft Limit           Hard Limit           Units     \nMax cpu time              unlimited            unlimited            seconds   \nMax file size             unlimited            unlimited            bytes     \nMax data size             unlimited            unlimited            bytes     \nMax stack size            8388608              unlimited            bytes     \nMax core file size        unlimited            unlimited            bytes     \nMax resident set          unlimited            unlimited            bytes     \nMax processes             254111               254111               processes \nMax open files            1048576              1048576              files     \nMax locked memory         8388608              8388608              bytes     \nMax address space         unlimited            unlimited            bytes     \nMax file locks            unlimited            unlimited            locks     \nMax pending signals       254111               254111               signals   \nMax msgqueue size         819200               819200               bytes     \nMax nice priority         31                   31                   \nMax realtime priority     99                   99                   \nMax realtime timeout      unlimited            unlimited            us        \n",
+  "kernel_journal_oom_qemu": [
+    "Nov 01 16:03:05 bookentity27thcachy kernel: OOM killer disabled.",
+    "Nov 01 16:03:05 bookentity27thcachy kernel: OOM killer enabled."
+  ],
+  "official_tcg_docs": "https://www.qemu.org/docs/master/system/invocation.html#standard-options",
+  "qemu_version": "QEMU emulator version 11.1.2\nCopyright (c) 2003-2026 Fabrice Bellard and the QEMU Project developers\n"
+}

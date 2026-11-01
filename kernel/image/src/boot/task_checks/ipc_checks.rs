@@ -7,7 +7,7 @@ use kryo_core::ipc::{Endpoint, Notification};
 use kryo_core::object::ObjectKind;
 use kryo_hal::{IdleCause, UserReason};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum Case {
     Rpc,
     CancelQueued,
@@ -81,7 +81,7 @@ fn run_case(
         ),
         Case::OwnerQueued => (
             code::peer_closed_client(0),
-            code::exiting_server(0, false),
+            code::exiting_queued_server(),
             [16, 17],
         ),
         Case::OwnerAccepted => (
@@ -127,15 +127,28 @@ fn run_case(
                 KernelObject::Notification(RefCell::new(Notification::new(owner))),
             )
             .unwrap();
-        let consumer = tasks.resources_mut(owner).unwrap();
+        let mut consumer = tasks.resources_mut(owner).unwrap();
         consumer.context.rbp = consumer
+            .process
             .handles
             .insert(object.try_clone().unwrap(), Rights::WAIT)
             .unwrap()
             .as_raw();
         if matches!(case, Case::NotifyPending) {
-            let producer = tasks.resources_mut(first).unwrap();
+            let control = objects
+                .create(ObjectKind::TaskControl, KernelObject::TaskControl(first))
+                .unwrap();
+            // R12 lets the consumer observe both real Signals and producer Exit
+            // before its first Wait, regardless of intervening preemption.
+            consumer.context.r12 = consumer
+                .process
+                .handles
+                .insert(control, Rights::INSPECT)
+                .unwrap()
+                .as_raw();
+            let mut producer = tasks.resources_mut(first).unwrap();
             producer.context.rbp = producer
+                .process
                 .handles
                 .insert(object.try_clone().unwrap(), Rights::SIGNAL)
                 .unwrap()
@@ -159,8 +172,9 @@ fn run_case(
                 KernelObject::Endpoint(RefCell::new(Endpoint::new(owner))),
             )
             .unwrap();
-        let receiver = tasks.resources_mut(owner).unwrap();
+        let mut receiver = tasks.resources_mut(owner).unwrap();
         receiver.context.rbp = receiver
+            .process
             .handles
             .insert(
                 object.try_clone().unwrap(),
@@ -168,27 +182,41 @@ fn run_case(
             )
             .unwrap()
             .as_raw();
-        let client = tasks.resources_mut(sender).unwrap();
+        let mut client = tasks.resources_mut(sender).unwrap();
         client.context.rbp = client
+            .process
             .handles
             .insert(object.try_clone().unwrap(), Rights::SEND)
             .unwrap()
             .as_raw();
         ipc.register(object);
-        if matches!(case, Case::CancelQueued | Case::CancelAccepted) {
+        if matches!(
+            case,
+            Case::CancelQueued | Case::CancelAccepted | Case::CloseQueued | Case::OwnerQueued
+        ) {
             let control = objects
                 .create(ObjectKind::TaskControl, KernelObject::TaskControl(sender))
                 .unwrap();
-            let receiver = tasks.resources_mut(owner).unwrap();
+            let mut receiver = tasks.resources_mut(owner).unwrap();
+            let rights = match case {
+                Case::CancelQueued => Rights::CONTROL | Rights::INSPECT,
+                Case::CancelAccepted => Rights::CONTROL,
+                _ => Rights::INSPECT,
+            };
             let handle = receiver
+                .process
                 .handles
-                .insert(control, Rights::CONTROL)
+                .insert(control, rights)
                 .unwrap()
                 .as_raw();
-            if matches!(case, Case::CancelQueued) {
-                receiver.context.rbp = handle;
-            } else {
-                receiver.context.rbx = handle;
+            match case {
+                Case::CancelQueued => {
+                    receiver.context.rbp = handle;
+                    receiver.context.r15 = handle;
+                }
+                Case::CancelAccepted => receiver.context.rbx = handle,
+                Case::CloseQueued | Case::OwnerQueued => receiver.context.r15 = handle,
+                _ => unreachable!(),
             }
         }
         None
@@ -229,6 +257,12 @@ fn run_case(
                 continue;
             }
             let resources = tasks.resources_mut(id).unwrap();
+            if resources.exit_code != expected[index] {
+                let _ = kryo_hal::print(format_args!(
+                    "IPC failure case={:?} task={:?} expected={} actual={} last={:?}\n",
+                    case, id, expected[index], resources.exit_code, calls.last_failure
+                ));
+            }
             assert_eq!(resources.exit_code, expected[index]);
             assert!(resources.wait.is_none());
             drop(
@@ -247,6 +281,12 @@ fn run_case(
         usize::from(matches!(case, Case::CancelAccepted | Case::OwnerAccepted))
     );
     if matches!(case, Case::NotifyPending | Case::NotifyWaiting) {
+        if idle_count != 1 {
+            let _ = kryo_hal::print(format_args!(
+                "IPC: notification idle mismatch case={:?} count={}\n",
+                case, idle_count,
+            ));
+        }
         assert_eq!(idle_count, 1);
     }
     if matches!(case, Case::Rpc) {

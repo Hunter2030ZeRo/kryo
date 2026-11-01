@@ -1,7 +1,11 @@
+pub(crate) mod acpi;
 pub(crate) mod apic;
+pub(crate) mod clock;
 pub(crate) mod context;
-mod cpu;
+pub(crate) mod cpu;
 pub(crate) mod gdt;
+pub(crate) mod hpet_device;
 pub(crate) mod interrupts;
 pub(crate) mod paging;
+pub(crate) mod smp;
 mod tss;

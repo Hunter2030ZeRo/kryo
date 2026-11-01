@@ -1,11 +1,20 @@
+use crate::storage::Slots;
 use spin::Mutex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ObjectKind {
+    LaunchManifest,
+    StartupRecord,
+    ChannelFactory,
     TaskControl,
     Memory,
     Endpoint,
     Notification,
+    ProcessControl,
+    ThreadControl,
+    Image,
+    DebugConsole,
+    Device,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -53,7 +62,19 @@ struct Slot<T> {
 
 /// Arena locking requires callers to exclude same-CPU IRQ reentry; NMI use is unsupported.
 pub struct ObjectTable<T, const OBJECTS: usize> {
-    slots: Mutex<[Slot<T>; OBJECTS]>,
+    slots: Mutex<Slots<Slot<T>, OBJECTS>>,
+}
+
+impl<T, const OBJECTS: usize> Drop for ObjectTable<T, OBJECTS> {
+    fn drop(&mut self) {
+        // Forgotten references may still retain hardware mappings. Losing the
+        // arena must not destroy their backing memory.
+        for slot in self.slots.get_mut() {
+            if slot.references != 0 {
+                core::mem::forget(slot.value.take());
+            }
+        }
+    }
 }
 
 impl<T, const OBJECTS: usize> Default for ObjectTable<T, OBJECTS> {
@@ -65,7 +86,7 @@ impl<T, const OBJECTS: usize> Default for ObjectTable<T, OBJECTS> {
 impl<T, const OBJECTS: usize> ObjectTable<T, OBJECTS> {
     pub const fn new() -> Self {
         Self {
-            slots: Mutex::new(
+            slots: Mutex::new(Slots::new(
                 [const {
                     Slot {
                         generation: 1,
@@ -75,7 +96,17 @@ impl<T, const OBJECTS: usize> ObjectTable<T, OBJECTS> {
                         value: None,
                     }
                 }; OBJECTS],
-            ),
+            )),
+        }
+    }
+
+    pub const fn growing() -> Self {
+        Self::limited(u32::MAX as usize)
+    }
+
+    pub const fn limited(limit: usize) -> Self {
+        Self {
+            slots: Mutex::new(Slots::limited(limit)),
         }
     }
 
@@ -85,10 +116,16 @@ impl<T, const OBJECTS: usize> ObjectTable<T, OBJECTS> {
         value: T,
     ) -> Result<ObjectRef<'_, T, OBJECTS>, ObjectCreateError<T>> {
         let mut slots = self.slots.lock();
-        let Some(index) = slots
-            .iter()
-            .position(|slot| !slot.retired && slot.value.is_none())
-        else {
+        let Ok(index) = slots.vacant(
+            |slot| !slot.retired && slot.value.is_none(),
+            || Slot {
+                generation: 1,
+                retired: false,
+                references: 0,
+                kind: ObjectKind::TaskControl,
+                value: None,
+            },
+        ) else {
             return Err(ObjectCreateError {
                 error: ObjectError::Capacity,
                 value,

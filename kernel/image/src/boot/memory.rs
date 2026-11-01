@@ -1,6 +1,8 @@
 use super::{EXECUTABLE_ADDRESS, HHDM, MEMORY_MAP, check_protocol};
+use core::sync::atomic::{AtomicBool, Ordering};
 use kryo_core::mm::frame::{
-    FRAME_SIZE, FramePool, MemoryRegion, NormalizeError, PhysRange, RegionKind, normalize_memory,
+    FRAME_SIZE, FrameMetadata, FrameMetadataLayout, FramePool, MemoryRegion, NormalizeError,
+    PhysRange, RegionKind, metadata_layout, normalize_memory,
 };
 use limine::memmap as lm;
 
@@ -20,10 +22,9 @@ static BOOT_MEMORY: spin::Mutex<BootMemoryStorage> = spin::Mutex::new(BootMemory
     available: [PhysRange::EMPTY; OUTPUT_CAPACITY],
 });
 
-const BITMAP_WORDS: usize = 16_384;
-const SUMMARY_WORDS: usize = BITMAP_WORDS.div_ceil(64);
-pub(super) type BootFramePool = FramePool<OUTPUT_CAPACITY, BITMAP_WORDS, SUMMARY_WORDS>;
+pub(crate) type BootFramePool = FramePool<OUTPUT_CAPACITY, 0, 0>;
 static FRAMES: BootFramePool = FramePool::new();
+static MEMORY_STARTED: AtomicBool = AtomicBool::new(false);
 
 fn decode_memory_region(entry: &lm::Entry) -> Result<MemoryRegion, NormalizeError> {
     let range = PhysRange::from_base_len(entry.base, entry.length)
@@ -47,6 +48,11 @@ fn decode_memory_region(entry: &lm::Entry) -> Result<MemoryRegion, NormalizeErro
 
 pub(crate) fn init_physical_memory() {
     check_protocol();
+    // Claim bootstrap ownership before carving or zeroing metadata. Retrying
+    // would otherwise overwrite storage already borrowed by the active pool.
+    MEMORY_STARTED
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .expect("Physical memory bootstrap already started");
     log_boot_memory();
 
     let Some(map) = MEMORY_MAP.response() else {
@@ -72,20 +78,57 @@ pub(crate) fn init_physical_memory() {
         };
     }
 
-    let reservation_count = 0;
-
-    let plan = match normalize_memory(
-        &mut regions[..count],
-        &mut reservations[..reservation_count],
-        available,
-    ) {
-        Ok(plan) => plan,
-        Err(error) => {
-            let _ = kryo_hal::print(format_args!("MEM normalize error: {:?}\n", error));
-            panic!("Cannot normalize boot memory");
-        }
+    let (metadata_range, layout, usable_frames) = {
+        let plan = normalize_memory(&mut regions[..count], &mut [], available)
+            .expect("Cannot normalize boot memory");
+        check_physical_width(plan.available());
+        let layout = metadata_layout(plan.frame_count()).expect("Invalid frame metadata size");
+        let bytes = u64::try_from(layout.bytes)
+            .expect("Frame metadata exceeds address width")
+            .checked_add(FRAME_SIZE - 1)
+            .expect("Frame metadata size overflow")
+            & !(FRAME_SIZE - 1);
+        let range = plan
+            .available()
+            .iter()
+            .find(|range| range.len() >= bytes)
+            .and_then(|range| PhysRange::from_base_len(range.start(), bytes))
+            .expect("No contiguous Usable range for frame metadata");
+        (range, layout, plan.frame_count())
     };
-
+    reservations[0] = metadata_range;
+    let plan = normalize_memory(&mut regions[..count], &mut reservations[..1], available)
+        .expect("Cannot reserve frame metadata");
+    assert_eq!(
+        usable_frames - plan.frame_count(),
+        metadata_range.len() / FRAME_SIZE
+    );
+    assert!(
+        plan.available().iter().all(|range| {
+            range.end() <= metadata_range.start() || range.start() >= metadata_range.end()
+        }),
+        "Frame metadata remains allocatable"
+    );
+    let hhdm = HHDM.response().expect("Missing Limine HHDM response");
+    // Limine retains the original Usable RAM aliases, including this reserved span.
+    let direct = unsafe { kryo_hal::DirectMap::new(hhdm.offset) }.expect("Invalid boot direct map");
+    #[cfg(feature = "boot-tests")]
+    let high_ranges = [1 << 32, 1 << 37].map(|minimum| {
+        plan.available().iter().find_map(|range| {
+            let first = range.start().max(minimum);
+            (first < range.end()).then(|| PhysRange::from_base_len(first, FRAME_SIZE).unwrap())
+        })
+    });
+    let _ = kryo_hal::print(format_args!(
+        "FRAME metadata: start={:#x} end={:#x} bytes={} bitmap_words={} summary_words={} usable_frames={} managed_frames={}\n",
+        metadata_range.start(),
+        metadata_range.end(),
+        metadata_range.len(),
+        layout.bitmap_words,
+        layout.summary_words,
+        usable_frames,
+        plan.frame_count(),
+    ));
     let _ = kryo_hal::print(format_args!(
         "MEM normalized: ranges={} frames={}\n",
         plan.available().len(),
@@ -102,15 +145,26 @@ pub(crate) fn init_physical_memory() {
         ));
     }
 
-    // Only unreserved Usable RAM enters the sole pool; static metadata is in the kernel image.
-    match unsafe { FRAMES.initialize(plan) } {
-        Ok(()) => {}
-        Err(error) => {
-            let _ = kryo_hal::print(format_args!("FRAME init error: {:?}\n", error));
-            panic!("Cannot initialize physical frames");
-        }
+    // The boot reservation owns these bytes permanently; the pool never allocates them.
+    let metadata = unsafe { metadata_storage(direct, metadata_range, layout) };
+    if let Err(failure) = unsafe { FRAMES.initialize_external(plan, metadata) } {
+        let _ = kryo_hal::print(format_args!("FRAME init error: {:?}\n", failure.error));
+        panic!("Cannot initialize physical frames");
     }
     drop(storage);
+    #[cfg(feature = "boot-tests")]
+    {
+        let before = FRAMES.stats();
+        assert!(matches!(
+            FRAMES.allocate_in(metadata_range),
+            Err(kryo_core::mm::frame::FrameAllocError::OutOfMemory)
+        ));
+        assert_eq!(FRAMES.stats(), before);
+        kryo_hal::emergency_write_str("FRAME: metadata reservation excluded\n");
+    }
+    unsafe { crate::heap::init(&FRAMES, direct) };
+    #[cfg(feature = "boot-tests")]
+    crate::heap::check();
     let stats = FRAMES.stats();
     let _ = kryo_hal::print(format_args!(
         "FRAME: ready total={} free={}\n",
@@ -118,11 +172,8 @@ pub(crate) fn init_physical_memory() {
     ));
     #[cfg(feature = "boot-tests")]
     {
-        let hhdm = HHDM.response().expect("Missing Limine HHDM response");
-        // Limine maps Usable RAM and its page tables through the retained HHDM.
-        let direct_map =
-            unsafe { kryo_hal::DirectMap::new(hhdm.offset) }.expect("Invalid Limine direct map");
-        super::checks::run(&FRAMES, direct_map);
+        super::checks::check_high_memory(&FRAMES, direct, high_ranges);
+        super::checks::run(&FRAMES, direct);
         let physical_end = map
             .entries()
             .iter()
@@ -135,7 +186,54 @@ pub(crate) fn init_physical_memory() {
             })
             .max()
             .expect("No usable RAM");
-        super::user_checks::run(&FRAMES, direct_map, physical_end);
+        super::user_checks::run(&FRAMES, direct, physical_end);
+    }
+}
+
+fn check_physical_width(ranges: &[PhysRange]) {
+    let maximum = core::arch::x86_64::__cpuid(0x8000_0000).eax;
+    let bits = if maximum >= 0x8000_0008 {
+        core::arch::x86_64::__cpuid(0x8000_0008).eax & 0xff
+    } else {
+        36
+    };
+    assert!(
+        (1..=52).contains(&bits),
+        "Unsupported physical address width"
+    );
+    assert!(
+        ranges.iter().all(|range| (range.end() - 1) >> bits == 0),
+        "Usable RAM exceeds CPU physical address width"
+    );
+}
+
+/// # Safety
+/// The normalized boot plan granted exclusive ownership of this retained HHDM
+/// span and excluded it from the sole frame pool. No other aliases or allocator
+/// may access its bytes independently for the remaining kernel lifetime.
+unsafe fn metadata_storage(
+    direct: kryo_hal::DirectMap,
+    range: PhysRange,
+    layout: FrameMetadataLayout,
+) -> FrameMetadata {
+    let first = direct
+        .frame_address(range.start())
+        .expect("Invalid metadata mapping");
+    let last = direct
+        .frame_address(range.end() - FRAME_SIZE)
+        .expect("Invalid metadata end");
+    assert_eq!(last.checked_add(FRAME_SIZE).unwrap() - first, range.len());
+    let bytes = usize::try_from(range.len()).expect("Metadata span exceeds address width");
+    assert!(layout.bytes <= bytes);
+    let pointer = first as *mut u64;
+    // Initialize before creating typed references; both slices are disjoint and
+    // entirely within the reserved pages, including their alignment padding.
+    unsafe {
+        pointer.cast::<u8>().write_bytes(0, bytes);
+        let bitmap = core::slice::from_raw_parts_mut(pointer, layout.bitmap_words);
+        let summary =
+            core::slice::from_raw_parts_mut(pointer.add(layout.bitmap_words), layout.summary_words);
+        FrameMetadata::new(bitmap, summary)
     }
 }
 
@@ -169,4 +267,9 @@ fn log_boot_memory() {
             index, entry.type_, entry.base, end, entry.length,
         ));
     }
+}
+
+#[cfg(not(feature = "boot-tests"))]
+pub(crate) fn frames() -> &'static BootFramePool {
+    &FRAMES
 }

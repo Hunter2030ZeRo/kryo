@@ -27,4 +27,6 @@ pub enum PagingError {
     ActiveAddressSpace,
     InvalidPermissions,
     InsufficientTables,
+    ShootdownPending,
+    UsersActive,
 }

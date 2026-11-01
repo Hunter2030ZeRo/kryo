@@ -66,6 +66,40 @@ fn lookup_checks_kind_and_required_rights_before_retaining_reference() {
 }
 
 #[test]
+fn description_checks_handle_generation_without_cloning_or_adding_authority() {
+    let objects = ObjectTable::<u64, 1>::new();
+    let object = objects.create(ObjectKind::Image, 42).unwrap();
+    let monitor = object.try_clone().unwrap();
+    let mut handles = HandleTable::<u64, 1, 1>::new();
+    let handle = handles.insert(object, Rights::EXECUTE).unwrap();
+    let count = monitor.reference_count();
+    assert_eq!(
+        handles.describe(handle),
+        Ok((ObjectKind::Image, Rights::EXECUTE))
+    );
+    assert_eq!(monitor.reference_count(), count);
+    assert_eq!(
+        handles.describe(Handle::INVALID),
+        Err(CapabilityError::InvalidHandle)
+    );
+    handles.close(handle).unwrap();
+    assert_eq!(
+        handles.describe(handle),
+        Err(CapabilityError::InvalidHandle)
+    );
+    let replacement = handles.insert(monitor, Rights::READ).unwrap();
+    assert_ne!(replacement, handle);
+    assert_eq!(
+        handles.describe(handle),
+        Err(CapabilityError::InvalidHandle)
+    );
+    assert_eq!(
+        handles.describe(replacement),
+        Ok((ObjectKind::Image, Rights::READ))
+    );
+}
+
+#[test]
 fn duplicate_requires_authority_and_cannot_amplify_rights() {
     let objects = ObjectTable::<u64, 1>::new();
     let mut handles = HandleTable::<u64, 1, 4>::new();
@@ -192,7 +226,9 @@ fn payload_is_destroyed_only_after_the_last_strong_reference() {
 
 #[test]
 fn rights_reject_unknown_bits() {
-    assert_eq!(Rights::from_bits(128), None);
+    assert_eq!(Rights::from_bits(2048), Some(Rights::EXECUTE));
+    assert_eq!(Rights::from_bits(4096), Some(Rights::CREATE));
+    assert_eq!(Rights::from_bits(8192), None);
     assert_eq!(Rights::from_bits(u64::MAX), None);
     assert_eq!(Rights::from_bits(0).unwrap().bits(), 0);
     assert_eq!(

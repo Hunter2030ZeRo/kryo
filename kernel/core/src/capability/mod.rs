@@ -1,5 +1,11 @@
 use crate::object::{ObjectError, ObjectKind, ObjectRef};
+use crate::storage::Slots;
 use core::ops::BitOr;
+
+mod transfer;
+pub use transfer::{
+    HandleReservation, ReservationError, TransferBatch, TransferError, TransferSpec,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Handle(u64);
@@ -36,9 +42,15 @@ impl Rights {
     pub const RECEIVE: Self = Self(16);
     pub const WAIT: Self = Self(32);
     pub const SIGNAL: Self = Self(64);
+    pub const READ: Self = Self(128);
+    pub const WRITE: Self = Self(256);
+    pub const MAP: Self = Self(512);
+    pub const TRANSFER: Self = Self(1024);
+    pub const EXECUTE: Self = Self(2048);
+    pub const CREATE: Self = Self(4096);
 
     pub const fn from_bits(bits: u64) -> Option<Self> {
-        if bits & !127 == 0 {
+        if bits & !8191 == 0 {
             Some(Self(bits))
         } else {
             None
@@ -88,12 +100,14 @@ struct Entry<'objects, T, const OBJECTS: usize> {
 struct Slot<'objects, T, const OBJECTS: usize> {
     generation: u32,
     retired: bool,
+    reserved: bool,
     entry: Option<Entry<'objects, T, OBJECTS>>,
 }
 
 /// Process-local handles. Exclusive mutation serializes insert, close, and duplication.
 pub struct HandleTable<'objects, T, const OBJECTS: usize, const HANDLES: usize> {
-    slots: [Slot<'objects, T, OBJECTS>; HANDLES],
+    domain: u64,
+    slots: Slots<Slot<'objects, T, OBJECTS>, HANDLES>,
 }
 
 impl<T, const OBJECTS: usize, const HANDLES: usize> Default
@@ -109,14 +123,50 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
 {
     pub const fn new() -> Self {
         Self {
-            slots: [const {
-                Slot {
-                    generation: 1,
-                    retired: false,
-                    entry: None,
-                }
-            }; HANDLES],
+            domain: 0,
+            slots: Slots::new(
+                [const {
+                    Slot {
+                        generation: 1,
+                        retired: false,
+                        reserved: false,
+                        entry: None,
+                    }
+                }; HANDLES],
+            ),
         }
+    }
+
+    pub const fn growing() -> Self {
+        Self::limited(u32::MAX as usize)
+    }
+
+    pub const fn limited(limit: usize) -> Self {
+        Self {
+            domain: 0,
+            slots: Slots::limited(limit),
+        }
+    }
+
+    fn ensure_free(&mut self, count: usize) -> Result<(), CapabilityError> {
+        let free = self
+            .slots
+            .iter()
+            .filter(|slot| !slot.retired && !slot.reserved && slot.entry.is_none())
+            .count();
+        let length = self
+            .slots
+            .len()
+            .checked_add(count.saturating_sub(free))
+            .ok_or(CapabilityError::Capacity)?;
+        self.slots
+            .reserve_len(length, || Slot {
+                generation: 1,
+                retired: false,
+                reserved: false,
+                entry: None,
+            })
+            .map_err(|_| CapabilityError::Capacity)
     }
 
     pub fn insert(
@@ -124,6 +174,12 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
         object: ObjectRef<'objects, T, OBJECTS>,
         rights: Rights,
     ) -> Result<Handle, InsertError<ObjectRef<'objects, T, OBJECTS>>> {
+        if self.ensure_free(1).is_err() {
+            return Err(InsertError {
+                error: CapabilityError::Capacity,
+                object,
+            });
+        }
         let Some(index) = self.free_slot() else {
             return Err(InsertError {
                 error: CapabilityError::Capacity,
@@ -156,13 +212,24 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
         entry.object.try_clone().map_err(map_object_error)
     }
 
+    /// Describes only this table's live handle; this grants no object reference.
+    pub fn describe(&self, handle: Handle) -> Result<(ObjectKind, Rights), CapabilityError> {
+        let entry = self.entry(handle)?;
+        Ok((entry.object.kind(), entry.rights))
+    }
+
     pub fn duplicate(&mut self, handle: Handle, rights: Rights) -> Result<Handle, CapabilityError> {
         let entry = self.entry(handle)?;
         if !entry.rights.contains(Rights::DUP) || !entry.rights.contains(rights) {
             return Err(CapabilityError::PermissionDenied);
         }
+        self.ensure_free(1)?;
         let index = self.free_slot().ok_or(CapabilityError::Capacity)?;
-        let object = entry.object.try_clone().map_err(map_object_error)?;
+        let object = self
+            .entry(handle)?
+            .object
+            .try_clone()
+            .map_err(map_object_error)?;
         let result =
             Handle::new(index, self.slots[index].generation).ok_or(CapabilityError::Capacity)?;
         self.slots[index].entry = Some(Entry { object, rights });
@@ -193,7 +260,7 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
     fn free_slot(&self) -> Option<usize> {
         self.slots
             .iter()
-            .position(|slot| !slot.retired && slot.entry.is_none())
+            .position(|slot| !slot.retired && !slot.reserved && slot.entry.is_none())
     }
 
     fn entry(&self, handle: Handle) -> Result<&Entry<'objects, T, OBJECTS>, CapabilityError> {

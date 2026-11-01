@@ -32,6 +32,7 @@ pub enum VmError<E> {
     Backend(E),
     InvalidAddress,
     InvalidContents,
+    InvalidPermissions,
     MappingCapacity,
     TableCapacity,
     AlreadyMapped,
@@ -71,11 +72,15 @@ unsafe impl<const R: usize, const W: usize, const S: usize> FrameAllocator for F
 /// # Safety
 /// Root construction must not publish a root on failure. map is transactional:
 /// an error publishes no supplied frames; success returns exactly the number
-/// of supplied table frames retained by the tree. All user mappings are private,
-/// supervisor mappings stay inaccessible to users, and no leaf is global.
+/// of supplied table frames retained by the tree. User leaves may retain private
+/// or shared backing. Supervisor mappings stay inaccessible to users, and no
+/// user leaf is global.
 /// unmap and retire finish all required TLB work before returning.
 /// Alias operations must preserve W^X across the direct map and user mappings.
 /// Dropping this backend must not access or release its raw frames.
+/// check_inactive must also exclude concurrent user writes through other roots
+/// while read_frame copies shared data. The BSP backend requires the boot root
+/// and disabled IRQs; an SMP backend needs equivalent synchronization.
 pub unsafe trait VmBackend {
     type Error;
 

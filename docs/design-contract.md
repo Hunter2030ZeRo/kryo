@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.1, 2026-10-31.
+Version 0.4, 2026-11-01.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -26,11 +26,27 @@ Only Usable RAM enters the initial frame pool. Align usable ranges inward, align
 
 Initialize allocation ownership once. Recomputing a memory plan must not mark live allocations free.
 
+Size frame metadata from the normalized Usable-frame count before reserving its storage. Reserve the whole page-rounded backing span, including padding, and normalize the allocation plan again before activating the pool. The pool must never allocate its own metadata pages. Bootstrap storage must not depend on a heap whose allocation path already requires the frame pool.
+
+Initialize reserved bytes before creating typed mutable slices. Retain their exclusive HHDM-backed borrows for the pool lifetime. Validate the full plan and buffer capacity before changing pool state; initialization failure returns the supplied buffers unchanged. Claim bootstrap initialization before carving or zeroing so a second invocation cannot overwrite active metadata.
+
+Allocation order is not physical-address order. A caller that requires a physical interval must request allocation within that interval. The interval restricts selection from existing pool authority; it does not add unmanaged frames or admit excluded metadata pages.
+
 Mappings retain backing-frame references. Closing a handle does not release a frame still used by a mapping, request, or pin. Unmap includes removal of access and completion of required TLB invalidation on every relevant CPU. Reuse is forbidden while stale translations can still access the frame.
 
 DMA references are tracked separately. Device access must end before a pinned frame can be reclaimed.
 
 Initialize a frame before exposing it to another process or device. Keep frame-allocation metadata separate from shared memory-object lifetime; a heap allocation or `Arc` per frame is not required.
+
+### Metadata allocation
+
+Process, thread, handle, object, wait, and VM metadata may grow with available memory. A compile-time fixture capacity must not become a normal service limit. Explicit quotas and address-space budgets remain valid policy limits and must be reported as resource errors.
+
+Reserve fallible metadata before publishing a runnable owner, process membership, accepted capability grant, or wait registration. Keep the unpublished owner on failure. Prepare the initial process membership and result-handle capacity before making its first thread runnable. Completion delivery must have the side-record storage it needs before the wait can block.
+
+Growth must preserve IDs, generations, pending reservations, and strong references. Do not compact or discard vacant generational slots while stale IDs may exist. Retire a slot before generation wrap. Metadata may move only while the caller excludes all references into it; the SMP mailbox protocol passes owned CPU state and retains no registry references.
+
+An allocation token grants ownership of a frame or contiguous run. Heap headers retain these tokens; raw physical addresses cannot reconstruct them. Metadata deallocation must not release live mappings or forgotten hardware owners. VM metadata may be discarded after successful explicit close; registry slot history remains until registry retirement.
 
 ### Mapping lifetime
 
@@ -54,9 +70,11 @@ A thread owns its address-space reference, kernel stack, saved context, TLS, all
 
 GDT/TSS storage must remain at stable addresses while in use. CPUs may share an immutable IDT, but each CPU must load its own required registers. A global initialization guard must not skip an AP's register setup.
 
-The current `BOOT_CPU_LOADED` and `BOOT_TSS` are BSP-only. Provide a privilege-entry stack before user execution and CPU-local storage before SMP. Update the kernel entry stack as part of switching threads.
+Each registered CPU owns stable GDT/TSS storage, entry and emergency stacks, user-entry bookkeeping, and kernel FP storage. Each CPU loads its own registers and updates TSS.RSP0 when entering a thread. The shared IDT remains immutable after construction.
 
 SYSCALL does not switch to a kernel stack automatically. HAL entry code must obtain a trusted CPU-local stack before calling Rust code. TSS privilege-entry setup and SYSCALL entry setup are separate requirements.
+
+CPU membership and execution leases use CPU sets that span all configured logical slots. Atomic word snapshots are not a transaction across the whole set. Startup, dispatch, shutdown, and shootdown handshakes must keep membership changes separate from the execution and mapping operations that rely on a snapshot. Missing acknowledgements retain resources regardless of CPU index.
 
 ### Execution and waiting
 
@@ -106,13 +124,15 @@ Revocation blocks new work. Already accepted operations, mappings, and pins foll
 
 ### Control messages
 
-Start with synchronous endpoint send/receive/call/reply. Experimental version 0 implements 32 inline bytes without capability transfer. The proposal for at most two transferred capabilities remains pending. Confirm limits and discovery before publishing a stable ABI; current experimental registers are documented in [interfaces](interfaces.md).
+Start with synchronous endpoint send/receive/call/reply. Experimental version 0 implements 32 inline bytes and up to two capabilities through copy delegation with reduced rights. Source handles remain valid; linear move remains pending. Confirm limits and discovery before publishing a stable ABI; current experimental registers are documented in [interfaces](interfaces.md).
 
 Store small pending messages in waiting-thread state and transfer them at rendezvous. Avoid unbounded mailboxes and a heap allocation per RPC. Waits and receiver capacity are subject to task/process quotas.
 
-One process owns an endpoint's RECEIVE right initially; its threads may receive concurrently. SEND rights may be delegated. Moving RECEIVE ownership to another process is deferred.
+The current receiver owner is one thread. SEND rights may be delegated. Process-wide concurrent receiving and consumer migration are deferred.
 
 Endpoint owner termination or explicit closure marks the endpoint Closed and resolves send, receive, and reply waits. Remaining capabilities do not reopen it.
+
+Native channel creation requires an explicitly granted factory with CREATE. Duplicates and delegated factory capabilities share their account. Charge each channel until its final payload reference retires, including references retained after closure or creator death. Remove closed registry roots after accepted grants and completions settle; close a channel when no external authority retains it. Device roots remain until explicit hardware retirement. The current consumer owner is the exact creating thread; RECEIVE and WAIT migration remain unsupported.
 
 | Request state | Failure meaning |
 | --- | --- |
@@ -150,6 +170,18 @@ A timed-out caller may still have a server or device using its buffer. Ending a 
 ## Services and devices
 
 A user-space registry/supervisor manages stable service IDs. Distinguish service identity, process identity, endpoints, and instance generations.
+
+Service IDs and message fields never authenticate authority. Bind registration to
+a private instance admission capability and discovery policy to a private client
+gateway, or provide an equivalent authenticated mechanism. Give lookup clients no
+service-control operation through that gateway. Verify received capability kinds
+and rights before publishing a service or forwarding a grant.
+
+Validate startup roles against required roles, object kinds and maximum rights.
+Install all startup authority and its immutable receipt before publishing child
+execution. Revalidate descriptive source handles at spawn; stale handles invalidate
+the entire attempt. Allocate generations before start attempts and reject wrap.
+Keep service resource accounts across replacement until retained owners retire.
 
 Requests distinguish the client instance, request ID, and target generation. Define identifier reuse and reject stale completions. Generations alone do not provide exactly-once execution or state restoration.
 

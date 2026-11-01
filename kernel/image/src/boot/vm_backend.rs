@@ -1,20 +1,24 @@
 use super::memory::BootFramePool;
+use alloc::vec::Vec;
+use core::alloc::Layout;
 use core::cell::RefCell;
 use kryo_core::mm::frame::{FrameAllocError, OwnedFrame};
+use kryo_core::mm::shared::{NoSharedPage, SharedBackend, SharedPage};
 use kryo_core::mm::vm::{AddressSpace, Permissions, VmBackend, VmError};
 use kryo_hal::{DirectMap, KernelDirectMap, PagePermissions, PagingError, UserPageTable};
 
-const MAX_KERNEL_TABLES: usize = 32;
-pub(super) type UserSpace<'kernel> =
-    AddressSpace<'static, BootFramePool, UserBackend<'kernel>, 16, 64>;
+pub(crate) type UserSpace<'kernel, S = NoSharedPage> =
+    AddressSpace<'static, BootFramePool, UserBackend<'kernel>, 0, 0, S>;
 
-static KERNEL_TABLES: spin::Mutex<Option<[Option<OwnedFrame<'static>>; MAX_KERNEL_TABLES]>> =
-    spin::Mutex::new(None);
+#[cfg(feature = "boot-tests")]
+static KERNEL_TABLES: spin::Mutex<Option<Vec<OwnedFrame<'static>>>> = spin::Mutex::new(None);
 
-pub(super) enum BackendError {
+pub(crate) enum BackendError {
     Paging(PagingError),
     Allocation(FrameAllocError),
     TableCapacity,
+    #[cfg(feature = "boot-tests")]
+    InjectedRestore,
 }
 
 impl core::fmt::Debug for BackendError {
@@ -23,6 +27,8 @@ impl core::fmt::Debug for BackendError {
             Self::Paging(error) => formatter.debug_tuple("Paging").field(error).finish(),
             Self::Allocation(error) => formatter.debug_tuple("Allocation").field(error).finish(),
             Self::TableCapacity => formatter.write_str("TableCapacity"),
+            #[cfg(feature = "boot-tests")]
+            Self::InjectedRestore => formatter.write_str("InjectedRestore"),
         }
     }
 }
@@ -39,38 +45,52 @@ impl From<FrameAllocError> for BackendError {
     }
 }
 
-pub(super) struct KernelMemory {
+pub(crate) struct KernelMemory {
     pool: &'static BootFramePool,
     direct: DirectMap,
     aliases: KernelDirectMap,
-    tables: [Option<OwnedFrame<'static>>; MAX_KERNEL_TABLES],
-    count: usize,
+    tables: Vec<OwnedFrame<'static>>,
+    #[cfg(feature = "boot-tests")]
     table_limit: usize,
+    #[cfg(feature = "boot-tests")]
+    restore_failures: usize,
 }
 
 impl KernelMemory {
-    pub(super) unsafe fn new(
+    pub(crate) unsafe fn new(
         pool: &'static BootFramePool,
         direct: DirectMap,
         physical_end: u64,
+        region: &kryo_hal::KernelRegion,
     ) -> Result<Self, BackendError> {
         // Establish supervisor NX direct-map policy before any user roots are cloned.
-        let aliases = unsafe { KernelDirectMap::new(direct, physical_end) }?;
+        let aliases = unsafe { KernelDirectMap::with_mmio_region(direct, physical_end, region) }?;
         Ok(Self {
             pool,
             direct,
             aliases,
-            tables: [const { None }; MAX_KERNEL_TABLES],
-            count: 0,
-            table_limit: MAX_KERNEL_TABLES,
+            tables: Vec::new(),
+            #[cfg(feature = "boot-tests")]
+            table_limit: usize::MAX,
+            #[cfg(feature = "boot-tests")]
+            restore_failures: 0,
         })
+    }
+
+    #[cfg(feature = "boot-tests")]
+    pub(crate) fn fail_next_restore(&mut self) {
+        self.restore_failures = 1;
     }
 
     fn prepare(&mut self, physical: u64) -> Result<(), BackendError> {
         let needed = self.aliases.tables_needed(physical)?;
-        if self.count + needed > self.table_limit {
+        #[cfg(feature = "boot-tests")]
+        if self.tables.len().saturating_add(needed) > self.table_limit {
             return Err(BackendError::TableCapacity);
         }
+        self.tables
+            .try_reserve(needed)
+            .map_err(|_| BackendError::TableCapacity)?;
         let mut frames: [Option<OwnedFrame<'static>>; 2] = [None, None];
         for index in 0..needed {
             match self.pool.allocate() {
@@ -96,8 +116,7 @@ impl KernelMemory {
                 for (index, frame) in frames.into_iter().enumerate() {
                     if let Some(frame) = frame {
                         if index < used {
-                            self.tables[self.count] = Some(frame);
-                            self.count += 1;
+                            self.tables.push(frame);
                         } else {
                             unsafe { self.pool.release(frame) }
                                 .expect("Cannot return unused kernel table");
@@ -108,26 +127,48 @@ impl KernelMemory {
             }
             Err(error) => {
                 for frame in frames.into_iter().flatten() {
-                    unsafe { self.pool.release(frame) }
-                        .expect("Cannot return rejected kernel table");
+                    if error == PagingError::ShootdownPending {
+                        // Links may already be visible. A missing remote TLB
+                        // acknowledgement cannot return published table storage.
+                        self.tables.push(frame);
+                    } else {
+                        unsafe { self.pool.release(frame) }
+                            .expect("Cannot return rejected kernel table");
+                    }
                 }
                 Err(error.into())
             }
         }
     }
 
-    pub(super) fn retain_tables(self) -> usize {
+    pub(crate) fn retained_pages(&self) -> u64 {
+        let metadata = if self.tables.capacity() == 0 {
+            0
+        } else {
+            crate::heap::allocation_pages(
+                Layout::array::<OwnedFrame<'static>>(self.tables.capacity()).unwrap(),
+            )
+            .unwrap()
+        };
+        (self.tables.len() + metadata) as u64
+    }
+
+    #[cfg(feature = "boot-tests")]
+    pub(crate) fn retain_tables(self) -> (usize, u64) {
         let mut retained = KERNEL_TABLES.lock();
         assert!(
             retained.is_none(),
             "Kernel table ownership already retained"
         );
+        let pages = self.retained_pages();
+        let count = self.tables.len();
         *retained = Some(self.tables);
-        self.count
+        (count, pages)
     }
 }
 
-pub(super) fn check_preparation_failure(
+#[cfg(feature = "boot-tests")]
+pub(crate) fn check_preparation_failure(
     pool: &'static BootFramePool,
     kernel: &RefCell<KernelMemory>,
 ) {
@@ -141,26 +182,48 @@ pub(super) fn check_preparation_failure(
     ));
     assert_eq!(space.mapped_pages(), 0);
     space.close().expect("Cannot close rejected user mapping");
-    kernel.borrow_mut().table_limit = MAX_KERNEL_TABLES;
+    kernel.borrow_mut().table_limit = usize::MAX;
     assert_eq!(pool.stats(), before);
     kryo_hal::emergency_write_str("VM: alias preparation rollback OK\n");
 }
 
-pub(super) struct UserBackend<'kernel> {
+pub(crate) struct UserBackend<'kernel> {
     tables: UserPageTable,
     kernel: &'kernel RefCell<KernelMemory>,
 }
 
-pub(super) fn new_space<'kernel>(
+#[cfg(feature = "boot-tests")]
+pub(crate) fn new_space<'kernel>(
     pool: &'static BootFramePool,
     kernel: &'kernel RefCell<KernelMemory>,
 ) -> Result<UserSpace<'kernel>, VmError<BackendError>> {
-    AddressSpace::new(pool, |root| {
+    new_shared_space(pool, kernel)
+}
+
+pub(crate) fn new_shared_space<'kernel, S: SharedPage>(
+    pool: &'static BootFramePool,
+    kernel: &'kernel RefCell<KernelMemory>,
+) -> Result<UserSpace<'kernel, S>, VmError<BackendError>> {
+    AddressSpace::new_growing(pool, |root| {
         let direct = kernel.borrow().direct;
         // Core owns this new root frame, and the BSP boot root remains active.
         let tables = unsafe { UserPageTable::new(direct, root) }?;
         Ok(UserBackend { tables, kernel })
     })
+}
+
+// Fresh pool frames have never been exposed, and retain the established RW+NX
+// HHDM policy even if splitting or zeroing fails.
+unsafe impl SharedBackend for KernelMemory {
+    type Error = BackendError;
+
+    unsafe fn initialize_shared(&mut self, physical: u64) -> Result<(), Self::Error> {
+        self.prepare(physical)?;
+        let alias = self.aliases.frame_permissions(physical)?;
+        assert!(alias.writable && !alias.executable);
+        unsafe { self.direct.zero_frame(physical) }?;
+        Ok(())
+    }
 }
 
 // Core retains every root/table/data token. Kernel direct-map splits are separately
@@ -216,6 +279,11 @@ unsafe impl VmBackend for UserBackend<'_> {
 
     unsafe fn restore_frame(&mut self, physical: u64) -> Result<(), Self::Error> {
         let mut kernel = self.kernel.borrow_mut();
+        #[cfg(feature = "boot-tests")]
+        if kernel.restore_failures != 0 {
+            kernel.restore_failures -= 1;
+            return Err(BackendError::InjectedRestore);
+        }
         let alias = kernel.aliases.frame_permissions(physical)?;
         // Preparation can fail before splitting a huge, already safe RW+NX alias.
         if alias.writable && !alias.executable {

@@ -1,5 +1,7 @@
+mod extended;
 mod traps;
 
+use super::cpu::{MAX_CPUS, current_cpu};
 use core::arch::global_asm;
 use core::cell::UnsafeCell;
 use core::mem::offset_of;
@@ -9,9 +11,10 @@ use x86_64::registers::model_specific::{Efer, EferFlags, FsBase, GsBase, Msr};
 use x86_64::registers::segmentation::{DS, ES, FS, GS, SS, Segment};
 use x86_64::{PhysAddr, VirtAddr};
 
+pub use extended::ExtendedState;
 pub(super) use traps::install_handlers;
 
-const TIMER_SLICE_COUNT: u32 = 1_000_000;
+const TIMER_SLICE_NS: u64 = 2_000_000;
 const USER_FLAGS: u64 = (1 << 0)
     | (1 << 2)
     | (1 << 4)
@@ -91,6 +94,12 @@ impl UserContext {
             gs_base: 0,
         })
     }
+
+    pub fn set_fs_base(&mut self, base: u64) -> Result<(), UserEntryError> {
+        validate_bases(base, 0)?;
+        self.fs_base = base;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -129,71 +138,113 @@ struct RunState {
     kernel_cr0: u64,
     kernel_cr4: u64,
     kernel_flags: u64,
+    kernel_xcr0: u64,
+    fp_area: *mut u8,
+    fp_format: u64,
+    fp_mask: u64,
     fs_base: u64,
     gs_base: u64,
     sysenter_cs: u64,
     kernel_entry_stack: u64,
-    efer: EferFlags,
+    efer: u64,
     selectors: [u16; 5],
     context: *mut UserContext,
     has_sysenter: bool,
     active: bool,
     legacy_exit: bool,
     preemptible: bool,
+    kernel_fp: *mut u8,
     outcome: UserOutcome,
 }
 
-#[repr(transparent)]
-struct BootRun(UnsafeCell<RunState>);
+#[repr(C, align(64))]
+struct LocalRun(UnsafeCell<RunState>);
 
-// Only CPU 0 accesses this state, with IRQs disabled and no nested user run.
-unsafe impl Sync for BootRun {}
+// Each registered CPU owns its slot, with IRQs off and no nested user run.
+unsafe impl Sync for LocalRun {}
 
-static RUN_STATE: BootRun = BootRun(UnsafeCell::new(RunState {
-    kernel_rsp: 0,
-    kernel_cr3: 0,
-    kernel_cr0: 0,
-    kernel_cr4: 0,
-    kernel_flags: 0,
-    fs_base: 0,
-    gs_base: 0,
-    sysenter_cs: 0,
-    kernel_entry_stack: 0,
-    efer: EferFlags::empty(),
-    selectors: [0; 5],
-    context: core::ptr::null_mut(),
-    has_sysenter: false,
-    active: false,
-    legacy_exit: false,
-    preemptible: false,
-    outcome: UserOutcome::EMPTY,
-}));
+static RUN_STATES: [LocalRun; MAX_CPUS] = [const {
+    LocalRun(UnsafeCell::new(RunState {
+        kernel_rsp: 0,
+        kernel_cr3: 0,
+        kernel_cr0: 0,
+        kernel_cr4: 0,
+        kernel_flags: 0,
+        kernel_xcr0: 0,
+        fp_area: core::ptr::null_mut(),
+        fp_format: 0,
+        fp_mask: 0,
+        fs_base: 0,
+        gs_base: 0,
+        sysenter_cs: 0,
+        kernel_entry_stack: 0,
+        efer: 0,
+        selectors: [0; 5],
+        context: core::ptr::null_mut(),
+        has_sysenter: false,
+        active: false,
+        legacy_exit: false,
+        preemptible: false,
+        kernel_fp: core::ptr::null_mut(),
+        outcome: UserOutcome::EMPTY,
+    }))
+}; MAX_CPUS];
+
+fn local_state() -> Option<*mut RunState> {
+    Some(RUN_STATES[current_cpu()?.index()].0.get())
+}
+
+pub(crate) fn user_active() -> bool {
+    local_state().is_some_and(|state| unsafe { (*state).active })
+}
+
+// This helper runs before user FP state is saved. The entire HAL is compiled
+// soft-float; it only identifies stable CPU-local storage after GPR capture.
+extern "C" fn trap_state() -> *mut () {
+    local_state().unwrap_or(core::ptr::null_mut()).cast::<()>()
+}
 
 global_asm!(
     include_str!("entry.S"),
-    state = sym RUN_STATE,
+    trap_state = sym trap_state,
     kernel_rsp = const offset_of!(RunState, kernel_rsp),
     kernel_cr3 = const offset_of!(RunState, kernel_cr3),
     kernel_cr0 = const offset_of!(RunState, kernel_cr0),
     kernel_cr4 = const offset_of!(RunState, kernel_cr4),
     kernel_flags = const offset_of!(RunState, kernel_flags),
+    kernel_xcr0 = const offset_of!(RunState, kernel_xcr0),
+    kernel_efer = const offset_of!(RunState, efer),
+    fp_area = const offset_of!(RunState, fp_area),
+    fp_format = const offset_of!(RunState, fp_format),
+    fp_mask = const offset_of!(RunState, fp_mask),
+    kernel_fp = const offset_of!(RunState, kernel_fp),
+    trap_code = const traps::FRAME_CODE_OFFSET,
     context_rip = const offset_of!(UserContext, rip),
     context_rsp = const offset_of!(UserContext, rsp),
     context_flags = const offset_of!(UserContext, rflags),
     fault_dispatch = sym traps::fault_dispatch,
     exit_dispatch = sym traps::exit_dispatch,
+    device_dispatch = sym traps::device_dispatch,
     timer_dispatch = sym traps::timer_dispatch,
+    reschedule_dispatch = sym traps::reschedule_dispatch,
+    shootdown_dispatch = sym traps::shootdown_dispatch,
 );
 
 unsafe extern "C" {
-    fn kryo_enter_user(root: u64, context: *const UserContext, code: u64, data: u64);
-    fn kryo_leave_user() -> !;
+    fn kryo_enter_user(
+        root: u64,
+        context: *const UserContext,
+        code: u64,
+        data: u64,
+        state: *mut (),
+    );
+    fn kryo_leave_user(state: *mut ()) -> !;
 }
 
 /// Runs a bounded scalar bootstrap program using the legacy int80 exit gate.
 ///
 /// # Safety
-/// The BSP, mapping, and CPU-state requirements of run_context apply. The default
+/// The CPU, mapping, and CPU-state requirements of run_context apply. The default
 /// boot entry stack is retained and IRQs stay disabled; there is no preemption.
 pub unsafe fn run_user(
     root: u64,
@@ -202,25 +253,91 @@ pub unsafe fn run_user(
 ) -> Result<UserOutcome, UserEntryError> {
     let mut context = UserContext::new(instruction, stack)?;
     let kernel_stack = super::tss::kernel_stack().as_u64();
-    unsafe { run(root, &mut context, kernel_stack, false, true) }
+    unsafe { run(root, &mut context, kernel_stack, false, true, None, None) }
 }
 
 /// Resumes one scalar user context until a call, fault, or timer preemption.
 ///
 /// # Safety
-/// Call only on CPU 0 before AP startup, with initialized GDT/IDT and IRQs disabled.
+/// Call on a registered CPU with its own initialized GDT/TSS, a loaded IDT, and
+/// IRQs disabled. Its scheduler must exclusively own this context and its space's
+/// execution lease until return; another CPU must not run the same context.
 /// The inactive root must retain all kernel supervisor mappings. Retain its user
 /// frames and tables, and the supplied kernel entry stack, until this call returns.
 /// The entry stack must be mapped writable supervisor memory with sufficient space.
 /// Do not mutate mappings while the context runs. Preemptible runs require an
-/// initialized local timer. FP/SIMD state is unsupported and traps instead.
+/// initialized clock and calibrated local timer. FP/SIMD state is unsupported
+/// and traps instead. Preemptible runs use a two-millisecond one-shot slice.
 pub unsafe fn run_context(
     root: u64,
     context: &mut UserContext,
     kernel_stack_top: u64,
     preemptible: bool,
 ) -> Result<UserOutcome, UserEntryError> {
-    unsafe { run(root, context, kernel_stack_top, preemptible, false) }
+    unsafe {
+        run(
+            root,
+            context,
+            kernel_stack_top,
+            preemptible,
+            false,
+            None,
+            None,
+        )
+    }
+}
+
+/// Resumes a context with eagerly preserved x87, SSE, and optional AVX state.
+///
+/// # Safety
+/// All run_context requirements apply. Retain exclusive kernel-owned state storage
+/// until return. Compile all kernel code with the bare-metal soft-float target;
+/// hardware FP/SIMD instructions are restricted to the entry/save mechanisms.
+pub unsafe fn run_context_extended(
+    root: u64,
+    context: &mut UserContext,
+    extended: &mut ExtendedState,
+    kernel_stack_top: u64,
+    preemptible: bool,
+) -> Result<UserOutcome, UserEntryError> {
+    unsafe {
+        run(
+            root,
+            context,
+            kernel_stack_top,
+            preemptible,
+            false,
+            Some(extended),
+            None,
+        )
+    }
+}
+
+/// Resumes a user context with an absolute monotonic timer deadline.
+///
+/// # Safety
+/// The run_context requirements apply, including retained initialized clock and
+/// calibrated timer mappings. If supplied, retain exclusive extended-state
+/// storage until return. The scheduler must recheck deadlines after every return;
+/// an IRQ can arrive early from an older event or a bounded hardware chunk.
+pub unsafe fn run_context_until(
+    root: u64,
+    context: &mut UserContext,
+    extended: Option<&mut ExtendedState>,
+    kernel_stack_top: u64,
+    deadline_ns: u64,
+) -> Result<UserOutcome, UserEntryError> {
+    unsafe {
+        run(
+            root,
+            context,
+            kernel_stack_top,
+            true,
+            false,
+            extended,
+            Some(deadline_ns),
+        )
+    }
 }
 
 unsafe fn run(
@@ -229,6 +346,8 @@ unsafe fn run(
     kernel_stack_top: u64,
     preemptible: bool,
     legacy_exit: bool,
+    extended: Option<&mut ExtendedState>,
+    deadline_ns: Option<u64>,
 ) -> Result<UserOutcome, UserEntryError> {
     let current_root = Cr3::read().0.start_address().as_u64();
     validate_root(root, current_root)?;
@@ -237,16 +356,28 @@ unsafe fn run(
     validate_kernel_stack(kernel_stack_top)?;
     check_cpu()?;
     let (code, data) = super::gdt::user_selectors().ok_or(UserEntryError::NotInitialized)?;
-    let state = RUN_STATE.0.get();
+    let cpu = current_cpu().ok_or(UserEntryError::NotInitialized)?;
+    let state = RUN_STATES[cpu.index()].0.get();
     if unsafe { (*state).active } {
         return Err(UserEntryError::AlreadyRunning);
     }
+    let kernel_xcr0 = if let Some(extended) = extended.as_ref() {
+        unsafe { extended::validate_cpu(extended)? }
+    } else {
+        0
+    };
     if preemptible {
         if !crate::timer_initialized() {
             return Err(UserEntryError::TimerUnavailable);
         }
-        unsafe { crate::arm_timer(TIMER_SLICE_COUNT) }
-            .map_err(|_| UserEntryError::TimerUnavailable)?;
+        let deadline = match deadline_ns {
+            Some(deadline) => deadline,
+            None => crate::monotonic_time()
+                .map_err(|_| UserEntryError::TimerUnavailable)?
+                .checked_add(TIMER_SLICE_NS)
+                .ok_or(UserEntryError::TimerUnavailable)?,
+        };
+        unsafe { crate::arm_deadline(deadline) }.map_err(|_| UserEntryError::TimerUnavailable)?;
         if !crate::timer_ready() {
             return Err(UserEntryError::TimerUnavailable);
         }
@@ -261,6 +392,10 @@ unsafe fn run(
     unsafe {
         (*state).kernel_cr0 = Cr0::read_raw();
         (*state).kernel_cr4 = Cr4::read_raw();
+        (*state).kernel_xcr0 = kernel_xcr0;
+        (*state).fp_area = core::ptr::null_mut();
+        (*state).fp_format = 0;
+        (*state).fp_mask = 0;
         (*state).fs_base = FsBase::read().as_u64();
         (*state).gs_base = GsBase::read().as_u64();
         (*state).kernel_entry_stack = super::tss::kernel_stack().as_u64();
@@ -271,13 +406,15 @@ unsafe fn run(
             GS::get_reg().0,
             SS::get_reg().0,
         ];
-        (*state).efer = Efer::read();
+        // Raw restoration must retain architectural bits absent from the crate's flags.
+        (*state).efer = Efer::read_raw();
         (*state).has_sysenter = has_sysenter;
         (*state).sysenter_cs = sysenter_cs;
         (*state).context = context;
         (*state).outcome = UserOutcome::EMPTY;
         (*state).legacy_exit = legacy_exit;
         (*state).preemptible = preemptible;
+        (*state).kernel_fp = extended::kernel_area(cpu);
         (*state).active = true;
 
         super::tss::set_kernel_stack(VirtAddr::new(kernel_stack_top));
@@ -285,15 +422,40 @@ unsafe fn run(
         GS::set_reg(x86_64::structures::gdt::SegmentSelector(0));
         FsBase::write(VirtAddr::new(context.fs_base));
         GsBase::write(VirtAddr::new(context.gs_base));
-        Efer::update(|flags| flags.remove(EferFlags::SYSTEM_CALL_EXTENSIONS));
+        Efer::update(|flags| {
+            flags.remove(EferFlags::SYSTEM_CALL_EXTENSIONS);
+            if extended.is_some() {
+                flags.remove(EferFlags::FAST_FXSAVE_FXRSTOR);
+            }
+        });
         if has_sysenter {
             Msr::new(0x174).write(0);
         }
-        Cr0::update(|flags| flags.insert(Cr0Flags::TASK_SWITCHED | Cr0Flags::MONITOR_COPROCESSOR));
-        Cr4::update(|flags| flags.remove(Cr4Flags::PERFORMANCE_MONITOR_COUNTER));
-        kryo_enter_user(root, context, u64::from(code), u64::from(data));
+        // Native TLS bases are installed through validated saved context, not WRFSBASE.
+        Cr4::update(|flags| {
+            flags.remove(Cr4Flags::PERFORMANCE_MONITOR_COUNTER | Cr4Flags::FSGSBASE)
+        });
+        if let Some(extended) = extended {
+            let layout = extended.layout();
+            (*state).fp_area = extended.area_ptr();
+            (*state).fp_format = layout.format as u64;
+            (*state).fp_mask = layout.mask;
+            extended::prepare(layout, cpu);
+        } else {
+            Cr0::update(|flags| {
+                flags.insert(Cr0Flags::TASK_SWITCHED | Cr0Flags::MONITOR_COPROCESSOR)
+            });
+        }
+        kryo_enter_user(
+            root,
+            context,
+            u64::from(code),
+            u64::from(data),
+            state.cast::<()>(),
+        );
         (*state).active = false;
         (*state).context = core::ptr::null_mut();
+        (*state).fp_area = core::ptr::null_mut();
         Ok((*state).outcome)
     }
 }
@@ -367,7 +529,7 @@ fn check_cpu() -> Result<(), UserEntryError> {
 }
 
 unsafe fn finish(outcome: UserOutcome) -> ! {
-    let state = RUN_STATE.0.get();
+    let state = local_state().expect("Unregistered context owner");
     unsafe {
         (*state).outcome = outcome;
         if (*state).preemptible {
@@ -382,17 +544,27 @@ unsafe fn finish(outcome: UserOutcome) -> ! {
         SS::set_reg(x86_64::structures::gdt::SegmentSelector(selectors[4]));
         FsBase::write(VirtAddr::new((*state).fs_base));
         GsBase::write(VirtAddr::new((*state).gs_base));
-        Efer::write((*state).efer);
         if (*state).has_sysenter {
             Msr::new(0x174).write((*state).sysenter_cs);
         }
-        kryo_leave_user()
+        kryo_leave_user(state.cast::<()>())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cpu_run_slots_are_distinct_and_cache_line_aligned() {
+        for (index, state) in RUN_STATES.iter().enumerate() {
+            let pointer = state.0.get() as usize;
+            assert_eq!(pointer % 64, 0);
+            for earlier in &RUN_STATES[..index] {
+                assert_ne!(pointer, earlier.0.get() as usize);
+            }
+        }
+    }
 
     #[test]
     fn user_addresses_and_initial_alignment_are_validated() {
@@ -449,10 +621,31 @@ mod tests {
     }
 
     #[test]
+    fn tls_update_checks_the_base_before_changing_saved_state() {
+        let mut context = UserContext::new(0x400000, 0x800000).unwrap();
+        assert_eq!(context.set_fs_base(0x900000), Ok(()));
+        for base in [1 << 47, u64::MAX] {
+            assert_eq!(
+                context.set_fs_base(base),
+                Err(UserEntryError::InvalidAddress)
+            );
+            assert_eq!(context.fs_base, 0x900000);
+        }
+        assert_eq!(context.set_fs_base(0), Ok(()));
+        assert_eq!(context.fs_base, 0);
+        assert_eq!(context.gs_base, 0);
+    }
+
+    #[test]
     fn assembly_register_layout_matches_the_saved_prefix() {
         assert_eq!(offset_of!(UserContext, rax), 0);
         assert_eq!(offset_of!(UserContext, r15), 14 * 8);
         assert_eq!(offset_of!(UserContext, rip), 15 * 8);
         assert_eq!(size_of::<UserContext>(), 20 * 8);
+        assert_eq!(offset_of!(RunState, efer), 13 * 8);
+        assert_eq!(
+            offset_of!(RunState, selectors) - offset_of!(RunState, efer),
+            8
+        );
     }
 }

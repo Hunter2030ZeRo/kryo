@@ -1,0 +1,10 @@
+{
+  "scope": "Disassembly prologue sizes; not exhaustive call-graph bounds or hardware high-water measurements",
+  "bootstrap_stack_bytes": 262144,
+  "fixture_run_case_before_approx_bytes": 86016,
+  "fixture_run_case_after_bytes": 20544,
+  "fixture_phases": "Warm image, prepare tasks, execute syscall, and reap use separate non-inlined functions, ending large temporary lifetimes before syscall execution.",
+  "preliminary_normal_debug_known_spawn_chain_bytes": 144048,
+  "normal_scope": "Preliminary normal binary subtotal includes direct main-path frames and AddressSpace::new; unaccounted helper frames remain. No bootstrap stack increase was made.",
+  "failed_kernel_sha256": "2ac89194a5ec9563d2006e19aa146809dbcab333b2000202f573a4fdc3452aa6"
+}

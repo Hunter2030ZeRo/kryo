@@ -1,17 +1,30 @@
 #![no_std]
 #![no_main]
+extern crate alloc;
 mod boot;
+mod heap;
+mod runtime;
 
 use core::arch::asm;
 use core::panic::PanicInfo;
+use core::sync::atomic::{AtomicBool, Ordering};
 use kryo_hal::{init_gdt, init_idt};
 use x86_64::instructions::interrupts::int3;
+
+static PANICKING: AtomicBool = AtomicBool::new(false);
 
 #[panic_handler]
 fn panic(info: &PanicInfo<'_>) -> ! {
     use kryo_hal::{emergency_write_hex as hex, emergency_write_str as text};
 
     x86_64::instructions::interrupts::disable();
+
+    if PANICKING.swap(true, Ordering::AcqRel) {
+        text("\nSecondary kernel panic\n");
+        loop {
+            unsafe { asm!("cli", "hlt", options(nostack)) }
+        }
+    }
 
     text("\nPANIC\n");
 
@@ -28,7 +41,7 @@ fn panic(info: &PanicInfo<'_>) -> ! {
     if let Some(message) = info.message().as_str() {
         text(message);
     } else {
-        text("<message requires formatting>");
+        let _ = kryo_hal::print(format_args!("{}", info.message()));
     }
     text("\n");
 
@@ -44,6 +57,9 @@ pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::disable();
     init_gdt();
     init_idt();
+    boot::check_protocol();
+    boot::platform::prepare();
+    runtime::smp::prepare();
 
     boot::init_physical_memory();
 
@@ -68,7 +84,13 @@ pub extern "C" fn _start() -> ! {
     int3();
 
     kryo_hal::emergency_write_str("C");
+    #[cfg(not(feature = "boot-tests"))]
+    kryo_hal::emergency_write_str("\n");
 
+    #[cfg(not(feature = "boot-tests"))]
+    boot::start_services();
+
+    #[cfg(feature = "boot-tests")]
     loop {
         unsafe {
             asm!("cli; hlt", options(nomem, nostack));

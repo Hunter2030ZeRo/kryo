@@ -1,0 +1,156 @@
+{
+  "profile": "debug",
+  "cpu": "max",
+  "cpus": 2,
+  "memory": "129G",
+  "memory_bytes": 138512695296,
+  "rss_limit_bytes": 2147483648,
+  "peak_rss_bytes": 127049728,
+  "status": "failed",
+  "reason": "guest reported PANIC",
+  "checks": {
+    "heap": true,
+    "growth": false,
+    "growth_oom": false,
+    "growth_retirement": false,
+    "frames": true,
+    "zeroing": true,
+    "paging": true,
+    "user_spaces": false,
+    "user_isolation": false,
+    "vm_rollback": false,
+    "preemption": false,
+    "capabilities": false,
+    "timer_drain": false,
+    "task_teardown": false,
+    "invalid_context": false,
+    "ipc": false,
+    "idle": false,
+    "shared_memory": false,
+    "cap_transfer": false,
+    "shared_fault": false,
+    "elf_native": false,
+    "extended_state": false,
+    "clock": false,
+    "deadlines": false,
+    "early_irq": false,
+    "launch": false,
+    "spawn": false,
+    "threads": false,
+    "thread_state": false,
+    "supervision": false,
+    "device_queue": false,
+    "device_expiry": false,
+    "device_retry": false,
+    "device": false,
+    "smp_online": false,
+    "smp_retired": false,
+    "smp_tlb": false,
+    "smp_parallel": false,
+    "smp_missing_ack": false,
+    "smp_wakeup": false,
+    "smp_fault_policy": false,
+    "breakpoint": false,
+    "avx_context": false,
+    "frame_metadata": true,
+    "metadata_excluded": true,
+    "high_frame_4G": true,
+    "high_frame_128G": true
+  },
+  "mode": "boot-tests",
+  "logs": {
+    "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/build.stdout.log",
+    "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/build.stderr.log",
+    "debug": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/debug.log",
+    "stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/qemu.stdout.log",
+    "stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/qemu.stderr.log"
+  },
+  "guest_exit_verified": false,
+  "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+  "build_exit_code": 0,
+  "qemu_command": [
+    "qemu-system-x86_64",
+    "-M",
+    "q35,memory-backend=ram",
+    "-global",
+    "hpet.msi=on",
+    "-object",
+    "memory-backend-ram,id=ram,size=129G,prealloc=off,reserve=off",
+    "-overcommit",
+    "mem-lock=off",
+    "-accel",
+    "tcg,thread=multi",
+    "-smp",
+    "2",
+    "-m",
+    "129G",
+    "-display",
+    "none",
+    "-serial",
+    "none",
+    "-monitor",
+    "none",
+    "-no-reboot",
+    "-debugcon",
+    "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/debug.log",
+    "-cdrom",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/kryo.iso",
+    "-boot",
+    "d",
+    "-cpu",
+    "max"
+  ],
+  "qemu_pid": 1203,
+  "memory_observed": {
+    "metadata": {
+      "start": 1048576,
+      "end": 5341184,
+      "bytes": 4292608,
+      "bitmap_words": 528260,
+      "summary_words": 8255,
+      "usable_frames": 33808623,
+      "managed_frames": 33807575
+    },
+    "managed_frames": 33807575,
+    "available": [
+      [
+        520192,
+        651264
+      ],
+      [
+        5341184,
+        2115674112
+      ],
+      [
+        2117537792,
+        2117545984
+      ],
+      [
+        2117611520,
+        2117615616
+      ],
+      [
+        2146762752,
+        2146902016
+      ],
+      [
+        4294967296,
+        140660178944
+      ]
+    ],
+    "high_frames": [
+      {
+        "minimum": 4294967296,
+        "physical": 4294967296
+      },
+      {
+        "minimum": 137438953472,
+        "physical": 137438953472
+      }
+    ]
+  },
+  "boot_seconds": 6.32,
+  "qemu_stop": "host_sigterm",
+  "qemu_exit_code": 0,
+  "elapsed_seconds": 11.665
+}

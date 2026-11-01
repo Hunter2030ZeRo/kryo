@@ -1,4 +1,5 @@
-use super::{Completion, Delivery, IpcError, Message, ReplyToken};
+use super::{ChannelLease, Completion, Delivery, IpcError, MAX_CAPABILITIES, Message, ReplyToken};
+use crate::storage::Slots;
 use crate::sync::wait::{WaitId, WaitTable};
 use crate::task::TaskId;
 
@@ -11,6 +12,13 @@ struct Pending {
     wait: WaitId,
     message: Message,
     call: bool,
+    cap_count: usize,
+}
+
+#[derive(Clone, Copy)]
+struct Receiver {
+    wait: WaitId,
+    cap_capacity: usize,
 }
 
 #[derive(Clone, Copy)]
@@ -29,30 +37,52 @@ struct ReplySlot {
 /// Bounded rendezvous state, serialized with its single WaitTable.
 /// This version has one receiver-owner task. SMP needs synchronization around both.
 pub struct Endpoint<const QUEUE: usize, const REPLIES: usize> {
+    _lease: Option<ChannelLease>,
     owner: TaskId,
     closed: Option<IpcError>,
-    receiver: Option<WaitId>,
-    senders: [Option<Pending>; QUEUE],
+    receiver: Option<Receiver>,
+    senders: Slots<Option<Pending>, QUEUE>,
     queued: usize,
-    replies: [ReplySlot; REPLIES],
+    replies: Slots<ReplySlot, REPLIES>,
 }
 
 impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
     pub const fn new(owner: TaskId) -> Self {
         Self {
+            _lease: None,
             owner,
             closed: None,
             receiver: None,
-            senders: [None; QUEUE],
+            senders: Slots::new([None; QUEUE]),
             queued: 0,
-            replies: [const {
-                ReplySlot {
-                    generation: 1,
-                    retired: false,
-                    reply: None,
-                }
-            }; REPLIES],
+            replies: Slots::new(
+                [const {
+                    ReplySlot {
+                        generation: 1,
+                        retired: false,
+                        reply: None,
+                    }
+                }; REPLIES],
+            ),
         }
+    }
+
+    pub const fn growing(owner: TaskId) -> Self {
+        Self {
+            _lease: None,
+            owner,
+            closed: None,
+            receiver: None,
+            senders: Slots::growing(),
+            queued: 0,
+            replies: Slots::limited(u32::MAX as usize),
+        }
+    }
+
+    pub fn leased(owner: TaskId, lease: ChannelLease) -> Self {
+        let mut endpoint = Self::growing(owner);
+        endpoint._lease = Some(lease);
+        endpoint
     }
 
     pub const fn is_closed(&self) -> bool {
@@ -66,12 +96,24 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         message: Message,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        self.send_caps(sender, wait, message, 0, waits)
+    }
+
+    pub fn send_caps<const WAITS: usize>(
+        &mut self,
+        sender: TaskId,
+        wait: WaitId,
+        message: Message,
+        cap_count: usize,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
         self.submit(
             Pending {
                 sender,
                 wait,
                 message,
                 call: false,
+                cap_count,
             },
             waits,
         )
@@ -84,12 +126,24 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         message: Message,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        self.call_caps(sender, wait, message, 0, waits)
+    }
+
+    pub fn call_caps<const WAITS: usize>(
+        &mut self,
+        sender: TaskId,
+        wait: WaitId,
+        message: Message,
+        cap_count: usize,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
         self.submit(
             Pending {
                 sender,
                 wait,
                 message,
                 call: true,
+                cap_count,
             },
             waits,
         )
@@ -101,16 +155,30 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         wait: WaitId,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        self.receive_caps(receiver, wait, 0, waits)
+    }
+
+    /// The runtime must reserve these handle slots before registering the wait.
+    pub fn receive_caps<const WAITS: usize>(
+        &mut self,
+        receiver: TaskId,
+        wait: WaitId,
+        cap_capacity: usize,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
         if receiver != self.owner {
             return Err(IpcError::PermissionDenied);
         }
         self.check_open()?;
+        if cap_capacity > MAX_CAPABILITIES {
+            return Err(IpcError::Capacity);
+        }
         self.prune(waits);
         self.check_wait(receiver, wait, waits)?;
         if self.receiver.is_some() {
             return Err(IpcError::AlreadyWaiting);
         }
-        self.receiver = Some(wait);
+        self.receiver = Some(Receiver { wait, cap_capacity });
         self.pump(waits);
         Ok(())
     }
@@ -158,10 +226,37 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         wait: WaitId,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<Delivery, IpcError> {
+        self.cancel_with(wait, IpcError::Cancelled, true, waits)
+    }
+
+    /// Detaches the expired operation and preserves whether it was accepted.
+    /// Detach every wait due at one sampled timestamp before calling progress;
+    /// freeing a reply slot must not deliver another already-expired request.
+    pub fn timeout<const WAITS: usize>(
+        &mut self,
+        wait: WaitId,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<Delivery, IpcError> {
+        self.cancel_with(wait, IpcError::TimedOut, false, waits)
+    }
+
+    /// Resumes rendezvous after a serialized batch of timeouts is detached.
+    pub fn progress<const WAITS: usize>(&mut self, waits: &mut WaitTable<Completion, WAITS>) {
         self.prune(waits);
-        if self.receiver == Some(wait) {
+        self.pump(waits);
+    }
+
+    fn cancel_with<const WAITS: usize>(
+        &mut self,
+        wait: WaitId,
+        error: IpcError,
+        pump_after: bool,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<Delivery, IpcError> {
+        self.prune(waits);
+        if self.receiver.is_some_and(|receiver| receiver.wait == wait) {
             self.receiver = None;
-            fail(waits, wait, IpcError::Cancelled, Delivery::NotDelivered);
+            fail(waits, wait, error, Delivery::NotDelivered);
             return Ok(Delivery::NotDelivered);
         }
         if let Some(index) = self.senders[..self.queued]
@@ -169,8 +264,10 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
             .position(|entry| entry.is_some_and(|entry| entry.wait == wait))
         {
             self.remove_sender(index);
-            fail(waits, wait, IpcError::Cancelled, Delivery::NotDelivered);
-            self.pump(waits);
+            fail(waits, wait, error, Delivery::NotDelivered);
+            if pump_after {
+                self.pump(waits);
+            }
             return Ok(Delivery::NotDelivered);
         }
         if let Some(index) = self
@@ -179,8 +276,10 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
             .position(|slot| slot.reply.is_some_and(|reply| reply.wait == wait))
         {
             self.retire_reply(index);
-            fail(waits, wait, IpcError::Cancelled, Delivery::Accepted);
-            self.pump(waits);
+            fail(waits, wait, error, Delivery::Accepted);
+            if pump_after {
+                self.pump(waits);
+            }
             return Ok(Delivery::Accepted);
         }
         Err(IpcError::InvalidWait)
@@ -214,7 +313,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 index += 1;
             }
         }
-        for index in 0..REPLIES {
+        for index in 0..self.replies.len() {
             if let Some(reply) = self.replies[index].reply
                 && reply.caller == task
             {
@@ -232,12 +331,25 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
         self.check_open()?;
+        if request.cap_count > MAX_CAPABILITIES {
+            return Err(IpcError::Capacity);
+        }
         self.prune(waits);
         self.check_wait(request.sender, request.wait, waits)?;
-        if request.call && self.replies.iter().all(|slot| slot.retired) {
+        if request.call
+            && !self.replies.is_growing()
+            && self.replies.iter().all(|slot| slot.retired)
+        {
             return Err(IpcError::Capacity);
         }
         self.pump(waits);
+        if self.queued == 0
+            && self
+                .receiver
+                .is_some_and(|receiver| request.cap_count > receiver.cap_capacity)
+        {
+            return Err(IpcError::Capacity);
+        }
         if self.queued == 0
             && self.receiver.is_some()
             && (!request.call || self.reply_slot().is_some())
@@ -245,9 +357,9 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
             self.deliver(request, waits)?;
             return Ok(());
         }
-        if self.queued == QUEUE {
-            return Err(IpcError::Capacity);
-        }
+        self.senders
+            .reserve_len(self.queued + 1, || None)
+            .map_err(|_| IpcError::Capacity)?;
         self.senders[self.queued] = Some(request);
         self.queued += 1;
         self.pump(waits);
@@ -257,8 +369,18 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
     fn pump<const WAITS: usize>(&mut self, waits: &mut WaitTable<Completion, WAITS>) {
         while self.receiver.is_some() && self.queued > 0 {
             let request = self.senders[0].unwrap();
+            if request.cap_count > self.receiver.unwrap().cap_capacity {
+                self.remove_sender(0);
+                fail(
+                    waits,
+                    request.wait,
+                    IpcError::Capacity,
+                    Delivery::NotDelivered,
+                );
+                continue;
+            }
             if request.call && self.reply_slot().is_none() {
-                if self.replies.iter().all(|slot| slot.retired) {
+                if self.replies.is_growing() || self.replies.iter().all(|slot| slot.retired) {
                     self.remove_sender(0);
                     fail(
                         waits,
@@ -288,6 +410,10 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         request: Pending,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        let receiver = self.receiver.ok_or(IpcError::InvalidWait)?;
+        if request.cap_count > receiver.cap_capacity {
+            return Err(IpcError::Capacity);
+        }
         let reply = if request.call {
             let index = self.reply_slot().ok_or(IpcError::Capacity)?;
             let token =
@@ -301,12 +427,15 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         } else {
             None
         };
-        let receiver = self.receiver.take().ok_or(IpcError::InvalidWait)?;
+        self.receiver = None;
         let _ = waits.complete(
-            receiver,
+            receiver.wait,
             Completion::Received {
                 message: request.message,
                 reply,
+                sender: request.sender,
+                sender_wait: request.wait,
+                capabilities: request.cap_count,
             },
         );
         if !request.call {
@@ -318,7 +447,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
     fn prune<const WAITS: usize>(&mut self, waits: &WaitTable<Completion, WAITS>) {
         if self
             .receiver
-            .is_some_and(|wait| !valid_wait(waits, self.owner, wait))
+            .is_some_and(|receiver| !valid_wait(waits, self.owner, receiver.wait))
         {
             self.receiver = None;
         }
@@ -331,7 +460,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 self.remove_sender(index);
             }
         }
-        for index in 0..REPLIES {
+        for index in 0..self.replies.len() {
             if self.replies[index]
                 .reply
                 .is_some_and(|reply| !valid_wait(waits, reply.caller, reply.wait))
@@ -350,7 +479,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         if !valid_wait(waits, task, wait) {
             return Err(IpcError::InvalidWait);
         }
-        if self.receiver == Some(wait)
+        if self.receiver.is_some_and(|receiver| receiver.wait == wait)
             || self.senders[..self.queued]
                 .iter()
                 .any(|entry| entry.is_some_and(|entry| entry.wait == wait))
@@ -368,10 +497,17 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         self.closed.map_or(Ok(()), Err)
     }
 
-    fn reply_slot(&self) -> Option<usize> {
+    fn reply_slot(&mut self) -> Option<usize> {
         self.replies
-            .iter()
-            .position(|slot| !slot.retired && slot.reply.is_none())
+            .vacant(
+                |slot| !slot.retired && slot.reply.is_none(),
+                || ReplySlot {
+                    generation: 1,
+                    retired: false,
+                    reply: None,
+                },
+            )
+            .ok()
     }
 
     fn retire_reply(&mut self, index: usize) {
@@ -404,13 +540,13 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         }
         self.closed = Some(error);
         if let Some(receiver) = self.receiver.take() {
-            fail(waits, receiver, error, Delivery::NotDelivered);
+            fail(waits, receiver.wait, error, Delivery::NotDelivered);
         }
         while self.queued > 0 {
             let request = self.remove_sender(0);
             fail(waits, request.wait, error, Delivery::NotDelivered);
         }
-        for index in 0..REPLIES {
+        for index in 0..self.replies.len() {
             if let Some(reply) = self.replies[index].reply {
                 self.retire_reply(index);
                 fail(waits, reply.wait, error, Delivery::Accepted);

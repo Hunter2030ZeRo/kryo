@@ -1,0 +1,47 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001f8ee000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007e000) bytes=512000
+MEM[1]: kind=0 [0x000000000007e000, 0x000000000009f000) bytes=135168
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001f8c5000) bytes=528240640
+MEM[7]: kind=5 [0x000000001f8c5000, 0x000000001f8d8000) bytes=77824
+MEM[8]: kind=6 [0x000000001f8d8000, 0x000000001f8df000) bytes=28672
+MEM[9]: kind=5 [0x000000001f8df000, 0x000000001f8ee000) bytes=61440
+MEM[10]: kind=6 [0x000000001f8ee000, 0x000000001f9bb000) bytes=839680
+MEM[11]: kind=5 [0x000000001f9bb000, 0x000000001ffdf000) bytes=6438912
+MEM[12]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[13]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[14]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[15]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[16]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[17]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[18]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[19]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+MEM normalized: ranges=2 frames=128998
+AVAILABLE[0]: [0x000000000007e000, 0x000000000009f000) frames=33
+AVAILABLE[1]: [0x0000000000100000, 0x000000001f8c5000) frames=128965
+FRAME: ready total=128998 free=128998
+FRAME: alloc/release OK total=128998 free=128998
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=128998
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+
+PANIC
+file: kernel/image/src/boot/task_checks/clock.rs
+line: 0x000000000000001d
+message: <message requires formatting>

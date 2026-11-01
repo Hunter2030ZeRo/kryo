@@ -1,0 +1,608 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001e3af000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007f000) bytes=516096
+MEM[1]: kind=0 [0x000000000007f000, 0x000000000009f000) bytes=131072
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001a29d000) bytes=437899264
+MEM[7]: kind=5 [0x000000001a29d000, 0x000000001e29d000) bytes=67108864
+MEM[8]: kind=6 [0x000000001e29d000, 0x000000001e364000) bytes=815104
+MEM[9]: kind=0 [0x000000001e364000, 0x000000001e366000) bytes=8192
+MEM[10]: kind=6 [0x000000001e366000, 0x000000001e376000) bytes=65536
+MEM[11]: kind=0 [0x000000001e376000, 0x000000001e377000) bytes=4096
+MEM[12]: kind=5 [0x000000001e377000, 0x000000001e378000) bytes=4096
+MEM[13]: kind=6 [0x000000001e378000, 0x000000001e387000) bytes=61440
+MEM[14]: kind=5 [0x000000001e387000, 0x000000001e389000) bytes=8192
+MEM[15]: kind=6 [0x000000001e389000, 0x000000001e397000) bytes=57344
+MEM[16]: kind=5 [0x000000001e397000, 0x000000001e399000) bytes=8192
+MEM[17]: kind=6 [0x000000001e399000, 0x000000001e3a0000) bytes=28672
+MEM[18]: kind=5 [0x000000001e3a0000, 0x000000001e3af000) bytes=61440
+MEM[19]: kind=6 [0x000000001e3af000, 0x000000001edaf000) bytes=10485760
+MEM[20]: kind=5 [0x000000001edaf000, 0x000000001ff50000) bytes=18485248
+MEM[21]: kind=0 [0x000000001ff50000, 0x000000001ff73000) bytes=143360
+MEM[22]: kind=5 [0x000000001ff73000, 0x000000001ffdf000) bytes=442368
+MEM[23]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[24]: kind=8 [0x000000001ffe0000, 0x000000001ffe6000) bytes=24576
+MEM[25]: kind=1 [0x000000001ffe6000, 0x0000000020000000) bytes=106496
+MEM[26]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[27]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[28]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[29]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[30]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+MEM normalized: ranges=5 frames=106979
+AVAILABLE[0]: [0x000000000007f000, 0x000000000009f000) frames=32
+AVAILABLE[1]: [0x0000000000100000, 0x000000001a29d000) frames=106909
+AVAILABLE[2]: [0x000000001e364000, 0x000000001e366000) frames=2
+AVAILABLE[3]: [0x000000001e376000, 0x000000001e377000) frames=1
+AVAILABLE[4]: [0x000000001ff50000, 0x000000001ff73000) frames=35
+HEAP: alignment/reuse/failure OK
+FRAME: ready total=106979 free=106979
+FRAME: alloc/release OK total=106979 free=106979
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=106979
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+CLOCK: HPET monotonic ready lapic_counts=624887 sample_ns=10259110
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+ELF: module validated bytes=26192 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=254 xsave=true avx=true
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=20
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+SMP: online=128 discovered=128 limit=255
+DEVICE: queued IRQ retired before reuse
+DEVICE: expired wait precedes queued IRQ
+DEVICE: retirement retry retains owners
+THREAD: created id=0x100000002 process=0x100000001
+DEVICE: register authority and IRQ wakeup OK cases=4
+SMP: remote TLB retirement OK
+SMP: missing ACK retains backing OK
+SMP capture preempted: cpu=72 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP fault capture: id=0x100000001 state=Runnable reason=Exited rip=0x400000 ticks=1 code=[f, b, b8, 1, 0, 0, 0, 48]
+SMP fault capture: id=0x100000002 state=Runnable reason=Exited rip=0x40022f ticks=0 code=[f, b, b8, 1, 0, 0, 0, 48]
+SMP capture preempted: cpu=73 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=74 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=75 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=76 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=77 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=78 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=79 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=80 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=81 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=82 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=83 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=84 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=85 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=86 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=87 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=88 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=89 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=90 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=91 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=92 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=93 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=94 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=95 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=96 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=97 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=98 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=99 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=100 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=101 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=102 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=103 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=104 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=105 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=106 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=107 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=108 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=109 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=110 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=111 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=112 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=113 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=114 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=115 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=116 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=117 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=118 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=119 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=120 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=121 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=122 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=123 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=124 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=125 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=126 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=0 vector=0xe1
+SMP capture preempted: cpu=0 vector=0xe0
+SMP capture preempted: cpu=1 vector=0xe0
+SMP capture preempted: cpu=1 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=2 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=3 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=4 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=5 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=6 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=7 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=8 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=9 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=10 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=11 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=12 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=13 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=14 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=15 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=16 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=17 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=18 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=19 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=20 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=21 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=22 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=23 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=24 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=25 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=26 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=27 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=28 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=29 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=30 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=31 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=32 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=33 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=34 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=35 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=36 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=37 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=38 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=39 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=40 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=41 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=42 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=43 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=44 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=45 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=46 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=47 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=48 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=49 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=50 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=51 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=52 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=53 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=54 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=55 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=56 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=57 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=58 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=59 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=60 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=61 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=62 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=63 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=64 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=65 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=66 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=67 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=68 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=69 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=70 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=71 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=72 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=73 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=74 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=75 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=76 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=77 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=78 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=79 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=80 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=81 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=82 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=83 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=84 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=85 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=86 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=87 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=88 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=89 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=90 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=91 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=92 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=93 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=94 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=95 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=96 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=97 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=98 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=99 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=100 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=101 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=102 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=103 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=104 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=105 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=106 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=107 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=108 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=109 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=110 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=111 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=112 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=113 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=114 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=115 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=116 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=117 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=118 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=119 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=120 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=121 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=122 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=123 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=124 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=125 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=126 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=0 vector=0xe1
+SMP capture preempted: cpu=0 vector=0xe0
+SMP capture preempted: cpu=1 vector=0xe0
+SMP capture preempted: cpu=1 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=2 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=3 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=4 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=5 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=6 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=7 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=8 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=9 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=10 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=11 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=12 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=13 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=14 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=15 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=16 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=17 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=18 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=19 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=20 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=21 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=22 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=23 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=24 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=25 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=26 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=27 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=28 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=29 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=30 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=31 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=32 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=33 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=34 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=35 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=36 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=37 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=38 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=39 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=40 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=41 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=42 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=43 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=44 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=45 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=46 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=47 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=48 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=49 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=50 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=51 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=52 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=53 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=54 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=55 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=56 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=57 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=58 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=59 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=60 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=61 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=62 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=63 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=64 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=65 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=66 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=67 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=68 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=69 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=70 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+SMP capture preempted: cpu=71 vector=0xe0
+USERLOG: process=0x100000002 event=97 value=1
+
+PANIC
+file: kernel/image/src/boot/task_checks/smp_checks.rs
+line: 0x0000000000000142
+message: No batch captured a fatal exception beside a pending native call

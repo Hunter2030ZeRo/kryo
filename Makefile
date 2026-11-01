@@ -7,27 +7,61 @@ FEATURE_FLAGS := $(if $(strip $(FEATURES)),--features "$(FEATURES)")
 BUILD_DIR := build
 ISO_ROOT := $(BUILD_DIR)/iso_root
 ISO := $(BUILD_DIR)/kryo.iso
+USER_ELF := $(BUILD_DIR)/native-smoke.elf
+INIT_ELF := $(BUILD_DIR)/init.elf
+WORKER_ELF := $(BUILD_DIR)/bootstrap-worker.elf
+DEVICE_ELF := $(BUILD_DIR)/device-probe.elf
+SCALE_ELF := $(BUILD_DIR)/scale-probe.elf
+SERVICE_ELF := $(BUILD_DIR)/service-probe.elf
+PEER_ELF := $(BUILD_DIR)/service-peer.elf
+SUPERVISOR_ELF := $(BUILD_DIR)/supervisor.elf
+ECHO_ELF := $(BUILD_DIR)/echo-service.elf
+CLIENT_ELF := $(BUILD_DIR)/registry-client.elf
 
 CARGO_TARGET_DIR ?= target
 KERNEL := $(CARGO_TARGET_DIR)/$(TARGET)/$(PROFILE)/kryo
 LIMINE := /usr/share/limine
 
+CPUS ?= 4
+MEMORY ?= 512M
 QEMU := qemu-system-x86_64
-QEMU_FLAGS := -M q35 -m 512M -serial stdio -no-reboot -debugcon "file:$(BUILD_DIR)/debug.log"
+QEMU_FLAGS := -M q35,memory-backend=ram -object memory-backend-ram,id=ram,size=$(MEMORY),prealloc=off,reserve=off -overcommit mem-lock=off -global hpet.msi=on -m $(MEMORY) -smp $(CPUS) -serial stdio -no-reboot -debugcon "file:$(BUILD_DIR)/debug.log"
 
-.PHONY: all kernel iso run check test smoke clean
+.PHONY: all kernel user iso run check test smoke clean
 
 all: iso
 
 kernel:
 	cargo build --locked -p kryo --target $(TARGET) --profile $(CARGO_PROFILE) $(FEATURE_FLAGS)
 
-iso: kernel
+user:
+	python3 tools/build_user.py --profile "$(PROFILE)" --output "$(USER_ELF)"
+	python3 tools/build_user.py --program init --profile "$(PROFILE)" --output "$(INIT_ELF)"
+	python3 tools/build_user.py --program bootstrap-worker --profile "$(PROFILE)" --output "$(WORKER_ELF)"
+	python3 tools/build_user.py --program device-probe --profile "$(PROFILE)" --output "$(DEVICE_ELF)"
+	python3 tools/build_user.py --program scale-probe --profile "$(PROFILE)" --output "$(SCALE_ELF)"
+	python3 tools/build_user.py --program service-probe --profile "$(PROFILE)" --output "$(SERVICE_ELF)"
+	python3 tools/build_user.py --program service-peer --profile "$(PROFILE)" --output "$(PEER_ELF)"
+	python3 tools/build_user.py --program supervisor --profile "$(PROFILE)" --output "$(SUPERVISOR_ELF)"
+	python3 tools/build_user.py --program echo-service --profile "$(PROFILE)" --output "$(ECHO_ELF)"
+	python3 tools/build_user.py --program registry-client --profile "$(PROFILE)" --output "$(CLIENT_ELF)"
+
+iso: kernel user
 	rm -rf "$(ISO_ROOT)"
 	mkdir -p "$(ISO_ROOT)/boot/limine"
 	mkdir -p "$(ISO_ROOT)/EFI/BOOT"
 
 	cp "$(KERNEL)" "$(ISO_ROOT)/boot/kryo"
+	cp "$(USER_ELF)" "$(ISO_ROOT)/boot/native-smoke.elf"
+	cp "$(INIT_ELF)" "$(ISO_ROOT)/boot/init.elf"
+	cp "$(WORKER_ELF)" "$(ISO_ROOT)/boot/bootstrap-worker.elf"
+	cp "$(DEVICE_ELF)" "$(ISO_ROOT)/boot/device-probe.elf"
+	cp "$(SCALE_ELF)" "$(ISO_ROOT)/boot/scale-probe.elf"
+	cp "$(SERVICE_ELF)" "$(ISO_ROOT)/boot/service-probe.elf"
+	cp "$(PEER_ELF)" "$(ISO_ROOT)/boot/service-peer.elf"
+	cp "$(SUPERVISOR_ELF)" "$(ISO_ROOT)/boot/supervisor.elf"
+	cp "$(ECHO_ELF)" "$(ISO_ROOT)/boot/echo-service.elf"
+	cp "$(CLIENT_ELF)" "$(ISO_ROOT)/boot/registry-client.elf"
 	cp boot/limine.conf "$(ISO_ROOT)/boot/limine/"
 
 	cp "$(LIMINE)/limine-bios-cd.bin" "$(ISO_ROOT)/boot/limine/"

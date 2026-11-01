@@ -1,5 +1,5 @@
 use super::memory::BootFramePool;
-use kryo_core::mm::frame::{FRAME_SIZE, FrameAllocError, OwnedFrame};
+use kryo_core::mm::frame::{FRAME_SIZE, FrameAllocError, OwnedFrame, PhysRange};
 use kryo_hal::{BootPageSlot, DirectMap};
 
 const SCRATCH_ADDRESS: u64 = 0xffff_a000_0000_0000;
@@ -11,6 +11,57 @@ pub(super) fn run(pool: &BootFramePool, direct_map: DirectMap) {
     check_frames(pool);
     check_ram(pool, direct_map);
     check_paging(pool, direct_map);
+}
+
+pub(super) fn check_high_memory(
+    pool: &BootFramePool,
+    direct: DirectMap,
+    ranges: [Option<PhysRange>; 2],
+) {
+    for (minimum, range) in [1 << 32, 1 << 37].into_iter().zip(ranges) {
+        let Some(range) = range else { continue };
+        let before = pool.stats();
+        let frame = pool
+            .allocate_in(range)
+            .expect("Cannot allocate high RAM frame");
+        let physical = frame.address();
+        assert!(physical >= minimum);
+        let tables = allocate_frames::<3>(pool).expect("Cannot allocate high probe tables");
+        let addresses = tables.each_ref().map(|frame| frame.address());
+        // Table and data owners pin all aliases through the complete scratch retirement.
+        let mut slot = unsafe { BootPageSlot::new(direct, SCRATCH_ADDRESS, addresses) }
+            .expect("Cannot attach high RAM scratch slot");
+        unsafe {
+            direct.zero_frame(physical).expect("Cannot zero high RAM");
+            assert!(direct.frame_is_zero(physical).unwrap());
+            slot.map(physical).expect("Cannot map high RAM");
+            check_alias(&slot, direct, physical, minimum);
+        }
+        assert_eq!(slot.unmap().expect("Cannot unmap high RAM"), physical);
+        slot.detach().expect("Cannot detach high RAM scratch slot");
+        unsafe {
+            direct
+                .zero_frame(physical)
+                .expect("Cannot clear high RAM pattern");
+            pool.release(frame).expect("Cannot release high RAM frame");
+            release_frames(pool, tables);
+        }
+        let reused = pool
+            .allocate_in(range)
+            .expect("Cannot reuse high RAM frame");
+        assert_eq!(reused.address(), physical);
+        // The previous scratch branch and translation were retired before reuse.
+        unsafe {
+            assert!(direct.frame_is_zero(reused.address()).unwrap());
+            pool.release(reused)
+                .expect("Cannot return reused high RAM frame");
+        }
+        assert_eq!(pool.stats(), before);
+        let _ = kryo_hal::print(format_args!(
+            "RAM: high frame OK minimum={:#x} physical={:#x}\n",
+            minimum, physical,
+        ));
+    }
 }
 
 fn check_frames(pool: &BootFramePool) {

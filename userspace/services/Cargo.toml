@@ -1,0 +1,9 @@
+[package]
+name = "kryo-services"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+kryo-libsys.workspace = true
+kryo-interfaces.workspace = true

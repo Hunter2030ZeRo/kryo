@@ -1,0 +1,25 @@
+[workspace]
+resolver = "3"
+members = ["libsys", "services", "init", "bootstrap-worker", "device-probe", "scale-probe", "service-probe", "service-peer", "supervisor", "echo-service", "registry-client"]
+exclude = ["native-smoke"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+kryo-libsys = { path = "libsys" }
+kryo-interfaces = { path = "../interfaces" }
+kryo-services = { path = "services" }
+
+[profile.dev]
+panic = "abort"
+opt-level = 1
+debug = true
+
+[profile.release]
+panic = "abort"
+opt-level = 3
+codegen-units = 1
+debug = true

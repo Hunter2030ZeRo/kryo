@@ -1,0 +1,114 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001e2d7000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007f000) bytes=516096
+MEM[1]: kind=0 [0x000000000007f000, 0x000000000009f000) bytes=131072
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001d9a9000) bytes=495620096
+MEM[7]: kind=5 [0x000000001d9a9000, 0x000000001daa9000) bytes=1048576
+MEM[8]: kind=6 [0x000000001daa9000, 0x000000001dba5000) bytes=1032192
+MEM[9]: kind=0 [0x000000001dba5000, 0x000000001dba7000) bytes=8192
+MEM[10]: kind=6 [0x000000001dba7000, 0x000000001dc96000) bytes=978944
+MEM[11]: kind=0 [0x000000001dc96000, 0x000000001dc97000) bytes=4096
+MEM[12]: kind=5 [0x000000001dc97000, 0x000000001dc98000) bytes=4096
+MEM[13]: kind=6 [0x000000001dc98000, 0x000000001dd9e000) bytes=1073152
+MEM[14]: kind=5 [0x000000001dd9e000, 0x000000001dda0000) bytes=8192
+MEM[15]: kind=6 [0x000000001dda0000, 0x000000001de76000) bytes=876544
+MEM[16]: kind=5 [0x000000001de76000, 0x000000001de78000) bytes=8192
+MEM[17]: kind=6 [0x000000001de78000, 0x000000001df59000) bytes=921600
+MEM[18]: kind=5 [0x000000001df59000, 0x000000001df5b000) bytes=8192
+MEM[19]: kind=6 [0x000000001df5b000, 0x000000001e03a000) bytes=913408
+MEM[20]: kind=5 [0x000000001e03a000, 0x000000001e03c000) bytes=8192
+MEM[21]: kind=6 [0x000000001e03c000, 0x000000001e112000) bytes=876544
+MEM[22]: kind=5 [0x000000001e112000, 0x000000001e114000) bytes=8192
+MEM[23]: kind=6 [0x000000001e114000, 0x000000001e1e9000) bytes=872448
+MEM[24]: kind=5 [0x000000001e1e9000, 0x000000001e1eb000) bytes=8192
+MEM[25]: kind=6 [0x000000001e1eb000, 0x000000001e2bf000) bytes=868352
+MEM[26]: kind=5 [0x000000001e2bf000, 0x000000001e2c1000) bytes=8192
+MEM[27]: kind=6 [0x000000001e2c1000, 0x000000001e2c8000) bytes=28672
+MEM[28]: kind=5 [0x000000001e2c8000, 0x000000001e2d7000) bytes=61440
+MEM[29]: kind=6 [0x000000001e2d7000, 0x000000001ece3000) bytes=10534912
+MEM[30]: kind=5 [0x000000001ece3000, 0x000000001ff50000) bytes=19320832
+MEM[31]: kind=0 [0x000000001ff50000, 0x000000001ff72000) bytes=139264
+MEM[32]: kind=5 [0x000000001ff72000, 0x000000001ffdf000) bytes=446464
+MEM[33]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[34]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[35]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[36]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[37]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[38]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[39]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[40]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+FRAME metadata: start=0x7f000 end=0x83000 bytes=16384 bitmap_words=1892 summary_words=30 usable_frames=121070 managed_frames=121066
+MEM normalized: ranges=5 frames=121066
+AVAILABLE[0]: [0x0000000000083000, 0x000000000009f000) frames=28
+AVAILABLE[1]: [0x0000000000100000, 0x000000001d9a9000) frames=121001
+AVAILABLE[2]: [0x000000001dba5000, 0x000000001dba7000) frames=2
+AVAILABLE[3]: [0x000000001dc96000, 0x000000001dc97000) frames=1
+AVAILABLE[4]: [0x000000001ff50000, 0x000000001ff72000) frames=34
+FRAME: metadata reservation excluded
+HEAP: alignment/reuse/failure OK
+FRAME: ready total=121066 free=121066
+FRAME: alloc/release OK total=121066 free=121066
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=121066
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+CLOCK: HPET monotonic ready lapic_counts=622603 sample_ns=10171380
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+ELF: module validated bytes=26200 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=299 xsave=true avx=true
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=19
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+SMP: online=2 discovered=2 limit=255
+DEVICE: queued IRQ retired before reuse
+DEVICE: expired wait precedes queued IRQ
+DEVICE: retirement retry retains owners
+THREAD: created id=0x100000002 process=0x100000001
+DEVICE: register authority and IRQ wakeup OK cases=4
+CHANNEL: creation rollback and lifetime OK
+IPC: channel registry retirement and retained charges OK
+PROCESS: spawned id=0x100000002 parent=0x100000001
+PROCESS: spawned id=0x200000002 parent=0x100000001
+USERLOG: process=0x100000001 event=4 value=2
+SERVICE: native IPC and restart OK instances=2 quota=8
+
+PANIC
+file: kernel/image/src/runtime/startup/checks.rs
+line: 0x000000000000011d
+message: assertion `left == right` failed
+  left: Err(PermissionDenied)
+ right: Err(OutOfResources)

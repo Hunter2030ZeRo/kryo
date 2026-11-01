@@ -1,0 +1,10 @@
+[package]
+name = "registry-client"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+build = "../build.rs"
+
+[dependencies]
+kryo-libsys.workspace = true
+kryo-services.workspace = true

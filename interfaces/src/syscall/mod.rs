@@ -2,6 +2,15 @@
 //! Input: RAX=call, RDI=first argument, RSI=second argument.
 //! Return: RAX=0 or a negative error, RDX=result. Handles use all 64 bits.
 //! IPC carries four u64 words in R8..R11; receive returns its reply token in RDX.
+//! EndpointCreate/NotificationCreate take a ChannelFactory handle in RDI and
+//! return the new, calling-thread-owned channel handle in RDX.
+//! ManifestCreate: RDI=version, RSI=service, RDX=instance, R8=argument.
+//! ManifestGrant: RDI=manifest, RSI=role, RDX=source, R8=kind, R9=rights.
+//! SpawnManifest: RDI=image, RSI=manifest; child RDI=startup record, RSI=0.
+//! StartupRead: RDI=record, RSI=word index. HandleInfo returns kind in RDX,
+//! rights in R8. Neither record words nor descriptive kind IDs grant authority.
+//! ReceiveFor: RDI=endpoint, RSI=capability capacity, RDX=relative nanoseconds.
+//! Its interval begins at kernel admission; absolute deadline calls stay absolute.
 
 pub const ABI_VERSION: u32 = 0;
 
@@ -22,6 +31,38 @@ pub enum Call {
     Wait = 11,
     Signal = 12,
     CancelWait = 13,
+    MemoryCreate = 14,
+    MemoryMap = 15,
+    MemoryUnmap = 16,
+    SendCaps = 17,
+    CallCaps = 18,
+    SetTls = 19,
+    ClockRead = 20,
+    SleepUntil = 21,
+    SendUntil = 22,
+    ReceiveUntil = 23,
+    CallUntil = 24,
+    WaitUntil = 25,
+    SendCapsUntil = 26,
+    CallCapsUntil = 27,
+    Spawn = 28,
+    ProcessWait = 29,
+    DebugLog = 30,
+    ProcessWaitUntil = 31,
+    ThreadCreate = 32,
+    ThreadExit = 33,
+    ThreadJoin = 34,
+    ThreadJoinUntil = 35,
+    DeviceRead = 36,
+    DeviceWrite = 37,
+    EndpointCreate = 38,
+    NotificationCreate = 39,
+    ManifestCreate = 40,
+    ManifestGrant = 41,
+    SpawnManifest = 42,
+    StartupRead = 43,
+    HandleInfo = 44,
+    ReceiveFor = 45,
 }
 
 impl TryFrom<u64> for Call {
@@ -43,6 +84,38 @@ impl TryFrom<u64> for Call {
             11 => Ok(Self::Wait),
             12 => Ok(Self::Signal),
             13 => Ok(Self::CancelWait),
+            14 => Ok(Self::MemoryCreate),
+            15 => Ok(Self::MemoryMap),
+            16 => Ok(Self::MemoryUnmap),
+            17 => Ok(Self::SendCaps),
+            18 => Ok(Self::CallCaps),
+            19 => Ok(Self::SetTls),
+            20 => Ok(Self::ClockRead),
+            21 => Ok(Self::SleepUntil),
+            22 => Ok(Self::SendUntil),
+            23 => Ok(Self::ReceiveUntil),
+            24 => Ok(Self::CallUntil),
+            25 => Ok(Self::WaitUntil),
+            26 => Ok(Self::SendCapsUntil),
+            27 => Ok(Self::CallCapsUntil),
+            28 => Ok(Self::Spawn),
+            29 => Ok(Self::ProcessWait),
+            30 => Ok(Self::DebugLog),
+            31 => Ok(Self::ProcessWaitUntil),
+            32 => Ok(Self::ThreadCreate),
+            33 => Ok(Self::ThreadExit),
+            34 => Ok(Self::ThreadJoin),
+            35 => Ok(Self::ThreadJoinUntil),
+            36 => Ok(Self::DeviceRead),
+            37 => Ok(Self::DeviceWrite),
+            38 => Ok(Self::EndpointCreate),
+            39 => Ok(Self::NotificationCreate),
+            40 => Ok(Self::ManifestCreate),
+            41 => Ok(Self::ManifestGrant),
+            42 => Ok(Self::SpawnManifest),
+            43 => Ok(Self::StartupRead),
+            44 => Ok(Self::HandleInfo),
+            45 => Ok(Self::ReceiveFor),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -60,6 +133,7 @@ pub enum Error {
     PeerClosed = 7,
     Cancelled = 8,
     InvalidReply = 9,
+    TimedOut = 10,
 }
 
 impl Error {
@@ -85,7 +159,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=13 {
+        for number in 0..=45 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

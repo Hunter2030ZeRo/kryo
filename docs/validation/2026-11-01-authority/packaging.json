@@ -1,0 +1,182 @@
+[
+  {
+    "program": "native-smoke",
+    "profile": "debug",
+    "symbolful_bytes": 26200,
+    "boot_bytes": 13240,
+    "load_data_preserved": true,
+    "artifact_sha256": "bb9198de7fe9461e8b12a406018e19689f272b89629b07cf285ccf97c370eea6",
+    "boot_sha256": "b4cd7621fc45f5559607fca248722d1d325b68adbc6bb81a28f8ac5a2fd9647a"
+  },
+  {
+    "program": "init",
+    "profile": "debug",
+    "symbolful_bytes": 866272,
+    "boot_bytes": 7848,
+    "load_data_preserved": true,
+    "artifact_sha256": "fdb84de44c9e746a5643cf570c3a8d5b1437e05eac30d09075c44dc2bd36592a",
+    "boot_sha256": "071b5fc45bcd2b0fbb72ac3853f2675e31c6624af367e3b23d9ddde9d77b2b28"
+  },
+  {
+    "program": "bootstrap-worker",
+    "profile": "debug",
+    "symbolful_bytes": 869424,
+    "boot_bytes": 10448,
+    "load_data_preserved": true,
+    "artifact_sha256": "3df6af844ca77bfe8550b7343cc2551343a87e109371e2b961766f2a1c5193c9",
+    "boot_sha256": "a964bdf309622c1ae5d2091ec28ce8fe6d4af6a677442dee3503d2138a11b2e2"
+  },
+  {
+    "program": "device-probe",
+    "profile": "debug",
+    "symbolful_bytes": 873152,
+    "boot_bytes": 8120,
+    "load_data_preserved": true,
+    "artifact_sha256": "d4091824d301a3c37b71e1df18fa48654238bf686f9bceaef79166db2f358b3d",
+    "boot_sha256": "fd181b4b2995e3035512515f22aca894b44937a2e9f403d6fab8dcc5622f8d0b"
+  },
+  {
+    "program": "scale-probe",
+    "profile": "debug",
+    "symbolful_bytes": 912296,
+    "boot_bytes": 20232,
+    "load_data_preserved": true,
+    "artifact_sha256": "fd02f868b47accb91e0b595b674bfacbd2ee469152a769c049c95ec32310e154",
+    "boot_sha256": "ce1304152c8a6a8472f3affbfa308f82c542041d640fe58bc7be368f8e0048e7"
+  },
+  {
+    "program": "service-probe",
+    "profile": "debug",
+    "symbolful_bytes": 920872,
+    "boot_bytes": 24000,
+    "load_data_preserved": true,
+    "artifact_sha256": "e0087cb6e019f37b730fb466cc3f0c7d39ba1ed1b86c4f5918dfc0292d1c83ed",
+    "boot_sha256": "1f731eac7f4d32299b61ed4f31b7936fad6c065c6e73ebab04fdabe42b225469"
+  },
+  {
+    "program": "service-peer",
+    "profile": "debug",
+    "symbolful_bytes": 876456,
+    "boot_bytes": 18808,
+    "load_data_preserved": true,
+    "artifact_sha256": "06b8d396c3a6af8e244f7d818f7ccb70c6d303ce64c37a3e01e1b995851cfad9",
+    "boot_sha256": "1a538f6a848bee20ee0608360c1030e5fdffbfacf7d8fbf76ecd1adf44db74e2"
+  },
+  {
+    "program": "supervisor",
+    "profile": "debug",
+    "symbolful_bytes": 1090472,
+    "boot_bytes": 40632,
+    "load_data_preserved": true,
+    "artifact_sha256": "506fa74d5b837537050f24aa5d50a69c147d972b9f6cc79d00dc44026dc50f6a",
+    "boot_sha256": "c143c7b19fe1fcbb1d342c1e87b82d6ae910657e630d38a10c4283fcd8109b88"
+  },
+  {
+    "program": "echo-service",
+    "profile": "debug",
+    "symbolful_bytes": 983328,
+    "boot_bytes": 25280,
+    "load_data_preserved": true,
+    "artifact_sha256": "fc822744711f151c646630c0a5eb9e178eca3365b411c72394f9f8f747d77226",
+    "boot_sha256": "2c894a0631099ad6866b8e583b8fbc8cdad1d830b31bc66b480a5b4408c8ffb3"
+  },
+  {
+    "program": "registry-client",
+    "profile": "debug",
+    "symbolful_bytes": 1027936,
+    "boot_bytes": 29576,
+    "load_data_preserved": true,
+    "artifact_sha256": "2a01a64bdf3d794b128c78ed615a2a8e89c97c503ea6b6be40aaefa5ad8cb8f2",
+    "boot_sha256": "df018a8359ebb8ed1dc7b9bebd126aedfce62624c2bfd99f2921544a805e27fc"
+  },
+  {
+    "program": "native-smoke",
+    "profile": "release",
+    "symbolful_bytes": 30384,
+    "boot_bytes": 13240,
+    "load_data_preserved": true,
+    "artifact_sha256": "18f93b350038f7f5514bc3bf7500efa79fd7a57b024742b4f333dc746e0499fe",
+    "boot_sha256": "5127a3504aadf93f2f425ea56449b798576a3226d9e45b6383cbe6aa2a68da97"
+  },
+  {
+    "program": "init",
+    "profile": "release",
+    "symbolful_bytes": 835600,
+    "boot_bytes": 6160,
+    "load_data_preserved": true,
+    "artifact_sha256": "5ac8a71b40294e82306fa735279f0b2db3988e2fd17e19b84570b1d33aa15029",
+    "boot_sha256": "10f9a5af35887fdef675c933b3db9fbefa165f7caa4829fdf03e2f1364457a5f"
+  },
+  {
+    "program": "bootstrap-worker",
+    "profile": "release",
+    "symbolful_bytes": 844736,
+    "boot_bytes": 9336,
+    "load_data_preserved": true,
+    "artifact_sha256": "e3479dc76acf960cdc781d9b61e5f6907a50d161a3dfbd304b3c41a70da9f187",
+    "boot_sha256": "110a32c06bff7452de84fb61171811dd1499b5a36900a5c21ff01cdc6dd9b7bd"
+  },
+  {
+    "program": "device-probe",
+    "profile": "release",
+    "symbolful_bytes": 38944,
+    "boot_bytes": 8888,
+    "load_data_preserved": true,
+    "artifact_sha256": "bd9df579ffd415d40b42ee597b9ae52ab1cd5729b2d87d6f60d21e4738bf67b3",
+    "boot_sha256": "fe7b8d606bea5b45654654c692bc972b537075537811ca0552e4b3f60f59ca25"
+  },
+  {
+    "program": "scale-probe",
+    "profile": "release",
+    "symbolful_bytes": 78024,
+    "boot_bytes": 13384,
+    "load_data_preserved": true,
+    "artifact_sha256": "02176e9d7e210ce797efc9df215faa75cadd0d410b3977c990164de952e66ab5",
+    "boot_sha256": "1b63c6c46bdb7458c454436feb563d9180678041007473fb3ff4adb11718d88b"
+  },
+  {
+    "program": "service-probe",
+    "profile": "release",
+    "symbolful_bytes": 874480,
+    "boot_bytes": 17600,
+    "load_data_preserved": true,
+    "artifact_sha256": "a17733323b5d5cb14b64e49b5c8bb40374dfd8f6fd5c6b7184f4b5890119d972",
+    "boot_sha256": "17a18d6103e487cfcad3a9a25c470cfe3f49a352bef1c6139bf508d30589c284"
+  },
+  {
+    "program": "service-peer",
+    "profile": "release",
+    "symbolful_bytes": 835144,
+    "boot_bytes": 9112,
+    "load_data_preserved": true,
+    "artifact_sha256": "e706f79d2470b1dc11a1c9670157c7d05ffaf2475b0647999903a688b7d0aaed",
+    "boot_sha256": "2a9c10a29efecfd5cda9164018f1fabfc2a31f27d5da921232b8b43adbfd2295"
+  },
+  {
+    "program": "supervisor",
+    "profile": "release",
+    "symbolful_bytes": 1044416,
+    "boot_bytes": 32808,
+    "load_data_preserved": true,
+    "artifact_sha256": "67d7e2577f35a35b10d82eccd3efacb0bc9175b3115d7e70098afa0a130e4e62",
+    "boot_sha256": "d584ff59532f344c016d7c465869155d8476374a8abea970ff20c3560507925b"
+  },
+  {
+    "program": "echo-service",
+    "profile": "release",
+    "symbolful_bytes": 941560,
+    "boot_bytes": 23056,
+    "load_data_preserved": true,
+    "artifact_sha256": "8634dced17c592d091ce3a69102ed74a90b9ae383a7b0c0e984d6b53c25a4c92",
+    "boot_sha256": "fcff405b530ae78b5f2e2e8012afa3cfca089ae82d9d8de4dc088f6c6d5018df"
+  },
+  {
+    "program": "registry-client",
+    "profile": "release",
+    "symbolful_bytes": 979128,
+    "boot_bytes": 27472,
+    "load_data_preserved": true,
+    "artifact_sha256": "bf59b7edeb7cf5e72b328d18b96116bfdcd5bc0ead23a6b330cd6278f10d807b",
+    "boot_sha256": "736336424cd95f047e9b03f71441688c941bfba78ea7dc2b156d20ef22fed419"
+  }
+]

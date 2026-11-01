@@ -2,13 +2,48 @@ use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 
+use kryo_core::capability::{HandleTable, Rights};
 use kryo_core::mm::frame::{
     FRAME_SIZE, FramePool, MemoryRegion, PhysRange, RegionKind, normalize_memory,
 };
+use kryo_core::mm::shared::{SharedBackend, SharedError, SharedMemory, SharedPage};
 use kryo_core::mm::vm::{AddressSpace, Permissions, VmBackend, VmError};
+use kryo_core::object::{ObjectKind, ObjectRef, ObjectTable};
 
 type Pool = FramePool<1, 4, 1>;
 type Space<'pool> = AddressSpace<'pool, Pool, ModelBackend, 8, 16>;
+
+#[test]
+fn growing_vm_metadata_crosses_mapping_and_page_table_fixture_limits() {
+    let pool = pool(256);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let mut space = AddressSpace::<_, _, 0, 0>::new_growing(&pool, |root| {
+        Ok(ModelBackend::new(root, model.clone()))
+    })
+    .unwrap();
+    for index in 0..96 {
+        let address = 0x40_0000 + index * 0x20_0000;
+        space
+            .map_page(address, Permissions::ReadWrite, &[index as u8])
+            .unwrap();
+    }
+    assert_eq!(space.mapped_pages(), 96);
+    assert!(space.retained_tables() > 64);
+    for index in 0..96 {
+        let mut byte = [0];
+        space
+            .read_page(0x40_0000 + index * 0x20_0000, 0, &mut byte)
+            .unwrap();
+        assert_eq!(byte[0], index as u8);
+    }
+    model.failure.set(Some(Failure::Unmap));
+    assert!(space.close().is_err());
+    assert_eq!(space.mapped_pages(), 96);
+    assert_ne!(pool.stats(), before);
+    space.close().unwrap();
+    assert_eq!(pool.stats(), before);
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ModelError {
@@ -22,6 +57,7 @@ enum Failure {
     Initialize,
     Seal,
     Map,
+    Unmap,
     Retire,
 }
 
@@ -85,7 +121,7 @@ unsafe impl VmBackend for ModelBackend {
     }
 
     fn check_inactive(&self) -> Result<(), Self::Error> {
-        if self.model.active_root.get() == self.root {
+        if self.model.active_root.get() != 0 {
             Err(ModelError::Active)
         } else {
             Ok(())
@@ -150,6 +186,7 @@ unsafe impl VmBackend for ModelBackend {
     }
 
     unsafe fn unmap(&mut self, address: u64) -> Result<u64, Self::Error> {
+        self.fail(Failure::Unmap)?;
         let physical = self.mappings.remove(&address).ok_or(ModelError::Missing)?;
         self.model
             .events
@@ -494,4 +531,447 @@ fn dropping_a_space_does_not_reclaim_unretired_frames() {
     let before = pool.stats();
     drop(space);
     assert_eq!(pool.stats(), before);
+}
+
+type Memory<'pool> = SharedMemory<'pool, Pool, 4>;
+type Memories<'pool> = ObjectTable<Memory<'pool>, 2>;
+type MemoryRef<'objects, 'pool> = ObjectRef<'objects, Memory<'pool>, 2>;
+type SharedSpace<'pool, 'objects> =
+    AddressSpace<'pool, Pool, ModelBackend, 8, 16, Page<'objects, 'pool>>;
+
+struct Initializer {
+    model: Rc<Model>,
+    fail_after: Option<usize>,
+    calls: usize,
+}
+
+unsafe impl SharedBackend for Initializer {
+    type Error = ModelError;
+
+    unsafe fn initialize_shared(&mut self, physical: u64) -> Result<(), Self::Error> {
+        if self.fail_after == Some(self.calls) {
+            return Err(ModelError::Injected);
+        }
+        self.calls += 1;
+        self.model
+            .memory
+            .borrow_mut()
+            .insert(physical, vec![0; FRAME_SIZE as usize]);
+        self.model
+            .events
+            .borrow_mut()
+            .push(Event::Initialize(physical));
+        Ok(())
+    }
+}
+
+struct Page<'objects, 'pool> {
+    _object: MemoryRef<'objects, 'pool>,
+    physical: u64,
+}
+
+impl<'objects, 'pool> Page<'objects, 'pool> {
+    fn new(object: MemoryRef<'objects, 'pool>, index: usize) -> Self {
+        let physical = object.with(|memory| memory.page_address(index)).unwrap();
+        Self {
+            _object: object,
+            physical,
+        }
+    }
+}
+
+// The immutable object payload owns each page, and this reference retains it.
+unsafe impl SharedPage for Page<'_, '_> {
+    fn physical(&self) -> u64 {
+        self.physical
+    }
+}
+
+fn memory<'pool>(pool: &'pool Pool, model: &Rc<Model>, pages: usize) -> Memory<'pool> {
+    let mut backend = Initializer {
+        model: model.clone(),
+        fail_after: None,
+        calls: 0,
+    };
+    Memory::new(pool, pages, &mut backend).unwrap()
+}
+
+fn shared_space<'pool, 'objects>(
+    pool: &'pool Pool,
+    model: &Rc<Model>,
+) -> SharedSpace<'pool, 'objects> {
+    AddressSpace::new(pool, |root| Ok(ModelBackend::new(root, model.clone()))).unwrap()
+}
+
+#[test]
+fn shared_memory_is_bounded_zeroed_once_and_released_by_its_owner() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut initializer = Initializer {
+        model: model.clone(),
+        fail_after: None,
+        calls: 0,
+    };
+    for pages in [0, 5, usize::MAX] {
+        assert!(matches!(
+            Memory::new(&pool, pages, &mut initializer),
+            Err(SharedError::InvalidSize)
+        ));
+    }
+    assert_eq!(initializer.calls, 0);
+    assert_eq!(pool.stats().free, 32);
+    let memory = Memory::new(&pool, 3, &mut initializer).unwrap();
+    assert_eq!(memory.page_count(), 3);
+    assert_eq!(memory.byte_len(), 3 * FRAME_SIZE);
+    assert_eq!(initializer.calls, 3);
+    assert_eq!(pool.stats().free, 29);
+    for index in 0..3 {
+        let physical = memory.page_address(index).unwrap();
+        assert!(
+            model.memory.borrow()[&physical]
+                .iter()
+                .all(|byte| *byte == 0)
+        );
+    }
+    assert_eq!(memory.page_address(3), None);
+    assert_eq!(memory.page_address(usize::MAX), None);
+    drop(memory);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn shared_memory_partial_allocation_failure_returns_unpublished_frames() {
+    let pool = pool(2);
+    let model = Rc::new(Model::default());
+    let mut initializer = Initializer {
+        model,
+        fail_after: None,
+        calls: 0,
+    };
+    assert!(matches!(
+        Memory::new(&pool, 3, &mut initializer),
+        Err(SharedError::Allocation(_))
+    ));
+    assert_eq!(initializer.calls, 2);
+    assert_eq!(pool.stats().free, 2);
+}
+
+#[test]
+fn shared_memory_partial_initialization_failure_returns_all_frame_owners() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut initializer = Initializer {
+        model,
+        fail_after: Some(1),
+        calls: 0,
+    };
+    assert!(matches!(
+        Memory::new(&pool, 3, &mut initializer),
+        Err(SharedError::Backend(ModelError::Injected))
+    ));
+    assert_eq!(initializer.calls, 1);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn mappings_keep_shared_storage_after_the_last_handle_is_closed() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 2))
+        .unwrap();
+    let physical = object.with(|memory| memory.page_address(0)).unwrap();
+    let mut handles = HandleTable::<_, 2, 2>::new();
+    let handle = handles.insert(object, Rights::INSPECT).unwrap();
+    let mut first = shared_space(&pool, &model);
+    let mut second = shared_space(&pool, &model);
+    for (space, permissions) in [
+        (&mut first, Permissions::ReadWrite),
+        (&mut second, Permissions::ReadOnly),
+    ] {
+        let object = handles
+            .lookup(handle, ObjectKind::Memory, Rights::INSPECT)
+            .unwrap();
+        space
+            .map_shared_page(0x400000, permissions, Page::new(object, 0))
+            .unwrap();
+    }
+    assert_eq!(first.permissions(0x400000), Some(Permissions::ReadWrite));
+    assert_eq!(second.permissions(0x400000), Some(Permissions::ReadOnly));
+    handles.close(handle).unwrap();
+    assert_eq!(objects.live_count(), 1);
+    model.memory.borrow_mut().get_mut(&physical).unwrap()[0] = 42;
+    let mut byte = [0];
+    first.read_page(0x400000, 0, &mut byte).unwrap();
+    assert_eq!(byte, [42]);
+    second.read_page(0x400000, 0, &mut byte).unwrap();
+    assert_eq!(byte, [42]);
+    first.close().unwrap();
+    assert_eq!(objects.live_count(), 1);
+    second.read_page(0x400000, 0, &mut byte).unwrap();
+    assert_eq!(byte, [42]);
+    second.close().unwrap();
+    assert_eq!(objects.live_count(), 0);
+    assert_eq!(pool.stats().free, 64);
+    assert_eq!(
+        model
+            .events
+            .borrow()
+            .iter()
+            .filter(|event| matches!(event, Event::Initialize(_)))
+            .count(),
+        2
+    );
+    assert!(
+        !model
+            .events
+            .borrow()
+            .iter()
+            .any(|event| matches!(event, Event::Seal(_) | Event::Restore(_)))
+    );
+}
+
+#[test]
+fn shared_mapping_failure_releases_tables_and_its_temporary_lease() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space = shared_space(&pool, &model);
+    let before = pool.stats();
+    model.failure.set(Some(Failure::Map));
+    assert_eq!(
+        space.map_shared_page(
+            0x400000,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 0),
+        ),
+        Err(VmError::Backend(ModelError::Injected))
+    );
+    assert_eq!(object.reference_count(), 1);
+    assert_eq!(pool.stats(), before);
+    assert_eq!(space.mapped_pages(), 0);
+    space.close().unwrap();
+    drop(object);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn shared_map_partial_table_allocation_failure_preserves_the_object() {
+    let pool = pool(4);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space = shared_space(&pool, &model);
+    let before = pool.stats();
+    assert!(matches!(
+        space.map_shared_page(
+            0x400000,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 0),
+        ),
+        Err(VmError::Allocation(_))
+    ));
+    assert_eq!(object.reference_count(), 1);
+    assert_eq!(pool.stats(), before);
+    assert_eq!(space.retained_tables(), 0);
+    space.close().unwrap();
+    drop(object);
+    assert_eq!(pool.stats().free, 4);
+}
+
+#[test]
+fn shared_duplicate_and_metadata_limits_do_not_retain_temporary_leases() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space: AddressSpace<'_, Pool, ModelBackend, 1, 3, Page<'_, '_>> =
+        AddressSpace::new(&pool, |root| Ok(ModelBackend::new(root, model.clone()))).unwrap();
+    space
+        .map_shared_page(
+            0x400000,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 0),
+        )
+        .unwrap();
+    let before = pool.stats();
+    for (address, error) in [
+        (0x400000, VmError::AlreadyMapped),
+        (0x401000, VmError::MappingCapacity),
+    ] {
+        assert_eq!(
+            space.map_shared_page(
+                address,
+                Permissions::ReadOnly,
+                Page::new(object.try_clone().unwrap(), 0),
+            ),
+            Err(error)
+        );
+        assert_eq!(object.reference_count(), 2);
+        assert_eq!(pool.stats(), before);
+    }
+    space.close().unwrap();
+    let mut no_tables: AddressSpace<'_, Pool, ModelBackend, 1, 2, Page<'_, '_>> =
+        AddressSpace::new(&pool, |root| Ok(ModelBackend::new(root, model.clone()))).unwrap();
+    let before = pool.stats();
+    assert_eq!(
+        no_tables.map_shared_page(
+            0x400000,
+            Permissions::ReadOnly,
+            Page::new(object.try_clone().unwrap(), 0),
+        ),
+        Err(VmError::TableCapacity)
+    );
+    assert_eq!(object.reference_count(), 1);
+    assert_eq!(pool.stats(), before);
+    no_tables.close().unwrap();
+    drop(object);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn mixed_backing_close_retry_does_not_restore_or_release_shared_pages_early() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space = shared_space(&pool, &model);
+    space
+        .map_page(0x400000, Permissions::ReadExecute, &[0xcc])
+        .unwrap();
+    space
+        .map_shared_page(0x401000, Permissions::ReadWrite, Page::new(object, 0))
+        .unwrap();
+    let before = pool.stats();
+    model.fail_restore.set(true);
+    assert_eq!(space.close(), Err(VmError::Backend(ModelError::Injected)));
+    assert_eq!(space.mapped_pages(), 1);
+    assert_eq!(objects.live_count(), 1);
+    assert_eq!(pool.stats(), before);
+    model.fail_restore.set(false);
+    space.close().unwrap();
+    assert_eq!(objects.live_count(), 0);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn shared_unmap_failure_keeps_the_mapping_lease_until_close_retry() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space = shared_space(&pool, &model);
+    space
+        .map_shared_page(0x400000, Permissions::ReadOnly, Page::new(object, 0))
+        .unwrap();
+    let before = pool.stats();
+    model.failure.set(Some(Failure::Unmap));
+    assert_eq!(space.close(), Err(VmError::Backend(ModelError::Injected)));
+    assert_eq!(space.mapped_pages(), 1);
+    assert_eq!(objects.live_count(), 1);
+    assert_eq!(pool.stats(), before);
+    space.close().unwrap();
+    assert_eq!(objects.live_count(), 0);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn shared_maps_reject_executable_aliases_and_bad_virtual_addresses() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space = shared_space(&pool, &model);
+    let before = pool.stats();
+    for address in [0, 0x1001, 0x8000_0000_0000, u64::MAX] {
+        assert_eq!(
+            space.map_shared_page(
+                address,
+                Permissions::ReadWrite,
+                Page::new(object.try_clone().unwrap(), 0),
+            ),
+            Err(VmError::InvalidAddress)
+        );
+    }
+    assert_eq!(
+        space.map_shared_page(
+            0x400000,
+            Permissions::ReadExecute,
+            Page::new(object.try_clone().unwrap(), 0),
+        ),
+        Err(VmError::InvalidPermissions)
+    );
+    assert_eq!(pool.stats(), before);
+    assert_eq!(object.reference_count(), 1);
+    space.close().unwrap();
+    drop(object);
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn shared_reads_reject_a_writer_running_in_another_root() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut first = shared_space(&pool, &model);
+    let mut second = shared_space(&pool, &model);
+    first
+        .map_shared_page(
+            0x400000,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 0),
+        )
+        .unwrap();
+    second
+        .map_shared_page(0x400000, Permissions::ReadOnly, Page::new(object, 0))
+        .unwrap();
+    model.active_root.set(first.root_frame().unwrap());
+    assert_eq!(
+        second.read_page(0x400000, 0, &mut [0]),
+        Err(VmError::Backend(ModelError::Active))
+    );
+    model.active_root.set(0);
+    first.close().unwrap();
+    second.close().unwrap();
+    assert_eq!(pool.stats().free, 32);
+}
+
+#[test]
+fn dropping_an_unclosed_space_forgets_its_shared_backing_lease() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let before_drop;
+    {
+        let objects = Memories::new();
+        let object = objects
+            .create(ObjectKind::Memory, memory(&pool, &model, 1))
+            .unwrap();
+        let mut space = shared_space(&pool, &model);
+        space
+            .map_shared_page(0x400000, Permissions::ReadWrite, Page::new(object, 0))
+            .unwrap();
+        before_drop = pool.stats();
+        drop(space);
+        assert_eq!(objects.live_count(), 1);
+        assert_eq!(pool.stats(), before_drop);
+    }
+    // The arena also preserves forgotten references instead of dropping live RAM.
+    assert_eq!(pool.stats(), before_drop);
 }

@@ -1,4 +1,5 @@
-use super::tss::boot_tss;
+use super::cpu::{MAX_CPUS, current_cpu, init_boot_cpu};
+use super::tss::local_tss;
 use spin::Once;
 use x86_64::instructions::tables::load_tss;
 use x86_64::registers::segmentation::{CS, DS, ES, FS, GS, SS, Segment};
@@ -12,19 +13,26 @@ struct Selectors {
     user_data: SegmentSelector,
 }
 
-static GDT: Once<(GlobalDescriptorTable, Selectors)> = Once::new();
-static BOOT_CPU_LOADED: Once<()> = Once::new();
+static GDTS: [Once<(GlobalDescriptorTable, Selectors)>; MAX_CPUS] =
+    [const { Once::new() }; MAX_CPUS];
+static LOADED: [Once<()>; MAX_CPUS] = [const { Once::new() }; MAX_CPUS];
 
 pub fn init_gdt() {
-    let (gdt, selectors) = GDT.call_once(|| {
+    assert!(
+        !x86_64::instructions::interrupts::are_enabled(),
+        "GDT initialization requires IRQs off"
+    );
+    let cpu =
+        current_cpu().unwrap_or_else(|| unsafe { init_boot_cpu() }.expect("Unregistered CPU"));
+    let (gdt, selectors) = GDTS[cpu.index()].call_once(|| {
         let mut gdt = GlobalDescriptorTable::new();
 
         let code = gdt.append(Descriptor::kernel_code_segment());
         let data = gdt.append(Descriptor::kernel_data_segment());
         let user_data = gdt.append(Descriptor::user_data_segment());
         let user_code = gdt.append(Descriptor::user_code_segment());
-        // The BSP TSS stays at a stable address and uses interior mutability for RSP0.
-        let tss = gdt.append(unsafe { Descriptor::tss_segment_unchecked(boot_tss()) });
+        // This CPU's TSS stays fixed; RSP0 uses CPU-local interior mutability.
+        let tss = gdt.append(unsafe { Descriptor::tss_segment_unchecked(local_tss(cpu)) });
 
         (
             gdt,
@@ -38,7 +46,7 @@ pub fn init_gdt() {
         )
     });
 
-    BOOT_CPU_LOADED.call_once(|| {
+    LOADED[cpu.index()].call_once(|| {
         gdt.load();
 
         unsafe {
@@ -54,6 +62,6 @@ pub fn init_gdt() {
 }
 
 pub(super) fn user_selectors() -> Option<(u16, u16)> {
-    let (_, selectors) = GDT.get()?;
+    let (_, selectors) = GDTS[current_cpu()?.index()].get()?;
     Some((selectors.user_code.0, selectors.user_data.0))
 }

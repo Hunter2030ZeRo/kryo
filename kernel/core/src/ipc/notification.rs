@@ -1,9 +1,10 @@
-use super::{Completion, Delivery, IpcError};
+use super::{ChannelLease, Completion, Delivery, IpcError};
 use crate::sync::wait::{WaitId, WaitTable};
 use crate::task::TaskId;
 
 /// One consumer and a coalescing pending bit, serialized with its WaitTable.
 pub struct Notification {
+    _lease: Option<ChannelLease>,
     owner: TaskId,
     pending: bool,
     waiting: Option<WaitId>,
@@ -13,11 +14,18 @@ pub struct Notification {
 impl Notification {
     pub const fn new(owner: TaskId) -> Self {
         Self {
+            _lease: None,
             owner,
             pending: false,
             waiting: None,
             closed: None,
         }
+    }
+
+    pub fn leased(owner: TaskId, lease: ChannelLease) -> Self {
+        let mut notification = Self::new(owner);
+        notification._lease = Some(lease);
+        notification
     }
 
     pub fn wait<const WAITS: usize>(
@@ -69,6 +77,23 @@ impl Notification {
         wait: WaitId,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        self.cancel_with(wait, IpcError::Cancelled, waits)
+    }
+
+    pub fn timeout<const WAITS: usize>(
+        &mut self,
+        wait: WaitId,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
+        self.cancel_with(wait, IpcError::TimedOut, waits)
+    }
+
+    fn cancel_with<const WAITS: usize>(
+        &mut self,
+        wait: WaitId,
+        error: IpcError,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
         self.prune(waits);
         if self.waiting != Some(wait) {
             return Err(IpcError::InvalidWait);
@@ -77,7 +102,7 @@ impl Notification {
         let _ = waits.complete(
             wait,
             Completion::Failed {
-                error: IpcError::Cancelled,
+                error,
                 delivery: Delivery::NotDelivered,
             },
         );

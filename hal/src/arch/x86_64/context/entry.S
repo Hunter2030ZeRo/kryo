@@ -9,7 +9,7 @@ kryo_enter_user:
     push r13
     push r14
     push r15
-    lea rax, [rip + {state}]
+    mov rax, r8
     mov [rax + {kernel_rsp}], rsp
     mov r9, cr3
     mov [rax + {kernel_cr3}], r9
@@ -25,6 +25,22 @@ kryo_enter_user:
     push qword ptr [rsi + {context_flags}]
     push rdx
     push qword ptr [rsi + {context_rip}]
+    mov r9, r8
+    mov r8, [r9 + {fp_area}]
+    test r8, r8
+    jz 1f
+    mov rax, cr0
+    and rax, -9
+    mov cr0, rax
+    cmp qword ptr [r9 + {fp_format}], 2
+    jne 2f
+    mov eax, [r9 + {fp_mask}]
+    xor edx, edx
+    xrstor64 [r8]
+    jmp 1f
+2:
+    fxrstor64 [r8]
+1:
     mov rax, [rsi]
     mov rbx, [rsi + 8]
     mov rcx, [rsi + 16]
@@ -48,16 +64,42 @@ kryo_enter_user:
 kryo_leave_user:
     cli
     cld
-    lea rax, [rip + {state}]
-    mov rcx, [rax + {kernel_cr3}]
+    mov r10, rdi
+    mov rcx, [r10 + {kernel_cr3}]
     mov cr3, rcx
-    mov rcx, [rax + {kernel_cr4}]
+    cmp qword ptr [r10 + {fp_area}], 0
+    je 3f
+    mov rax, cr0
+    and rax, -9
+    mov cr0, rax
+    mov r8, [r10 + {kernel_fp}]
+    cmp qword ptr [r10 + {fp_format}], 2
+    jne 4f
+    mov eax, [r10 + {fp_mask}]
+    xor edx, edx
+    xrstor64 [r8]
+    mov rax, [r10 + {kernel_xcr0}]
+    mov rdx, rax
+    shr rdx, 32
+    xor ecx, ecx
+    xsetbv
+    jmp 3f
+4:
+    fxrstor64 [r8]
+3:
+    # Restore EFER after FP state: AMD FFXSR can otherwise skip kernel XMM restore.
+    mov rax, [r10 + {kernel_efer}]
+    mov rdx, rax
+    shr rdx, 32
+    mov ecx, 0xc0000080
+    wrmsr
+    mov rcx, [r10 + {kernel_cr4}]
     mov cr4, rcx
-    mov rcx, [rax + {kernel_cr0}]
+    mov rcx, [r10 + {kernel_cr0}]
     mov cr0, rcx
-    push qword ptr [rax + {kernel_flags}]
+    push qword ptr [r10 + {kernel_flags}]
     popfq
-    mov rsp, [rax + {kernel_rsp}]
+    mov rsp, [r10 + {kernel_rsp}]
     pop r15
     pop r14
     pop r13
@@ -111,6 +153,38 @@ kryo_leave_user:
     popfq
 .endm
 
+.macro save_extended
+    test byte ptr [rsp + {trap_code}], 3
+    jz 9f
+    mov rbx, rsp
+    and rsp, -16
+    call {trap_state}
+    mov rsp, rbx
+    mov r9, rax
+    test r9, r9
+    jz 9f
+    mov r8, [r9 + {fp_area}]
+    test r8, r8
+    jz 9f
+    mov rax, cr0
+    and rax, -9
+    mov cr0, rax
+    cmp qword ptr [r9 + {fp_format}], 2
+    jne 8f
+    mov eax, [r9 + {fp_mask}]
+    xor edx, edx
+    xsave64 [r8]
+    jmp 7f
+8:
+    fxsave64 [r8]
+7:
+    # State save precedes dispatch; the lookup helper is strictly soft-float.
+    mov rax, cr0
+    or rax, 8
+    mov cr0, rax
+9:
+.endm
+
 .global kryo_user_exit
 .type kryo_user_exit, @function
 kryo_user_exit:
@@ -118,28 +192,37 @@ kryo_user_exit:
     push 0x80
     save_registers
     prepare_rust
+    save_extended
     mov rdi, rsp
     and rsp, -16
     call {exit_dispatch}
     ud2
 .size kryo_user_exit, .-kryo_user_exit
 
-.global kryo_timer_interrupt
-.type kryo_timer_interrupt, @function
-kryo_timer_interrupt:
+.macro irq_stub name, vector, dispatcher
+.global \name
+.type \name, @function
+\name:
     push 0
-    push 0xe0
+    push \vector
     save_registers
     prepare_rust
+    save_extended
     mov rdi, rsp
     mov rbx, rsp
     and rsp, -16
-    call {timer_dispatch}
+    call \dispatcher
     mov rsp, rbx
     restore_registers
     add rsp, 16
     iretq
-.size kryo_timer_interrupt, .-kryo_timer_interrupt
+.size \name, .-\name
+.endm
+
+irq_stub kryo_device_interrupt, 0xd0, {device_dispatch}
+irq_stub kryo_timer_interrupt, 0xe0, {timer_dispatch}
+irq_stub kryo_reschedule_interrupt, 0xe1, {reschedule_dispatch}
+irq_stub kryo_shootdown_interrupt, 0xe2, {shootdown_dispatch}
 
 .global kryo_spurious_interrupt
 .type kryo_spurious_interrupt, @function
@@ -187,6 +270,7 @@ fault_with_error 30
 kryo_fault_common:
     save_registers
     prepare_rust
+    save_extended
     mov rdi, rsp
     mov rsi, cr2
     and rsp, -16

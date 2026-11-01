@@ -1,5 +1,5 @@
 use super::programs::Program;
-use kryo_interfaces::syscall::{Call, Error};
+use kryo_interfaces::syscall::{Call, Error, TaskStatus};
 
 const REQUEST: [u64; 4] = [41, 0x1234_5678_9abc_def0, 7, 9];
 const RESPONSE: [u64; 4] = [42, 0x1234_5678_9abc_def0, 7, 9];
@@ -53,10 +53,19 @@ pub(super) fn waiter(notification: u64, status: u64) -> Program {
 
 pub(super) fn double_waiter(notification: u64, status: u64) -> Program {
     let mut code = Program::new();
-    for _ in 0..2 {
-        code.call(Call::Yield, 0, 0);
-        code.expect_status(0);
-    }
+    let producer_status = code.as_bytes().len();
+    code.emit(&[0xb8]);
+    code.emit(&(Call::TaskStatus as u32).to_le_bytes());
+    code.emit(&[0x4c, 0x89, 0xe7]); // mov rdi,r12: fixture producer INSPECT handle
+    code.immediate(&[0x48, 0xbe], 0);
+    code.emit(&[0xcd, 0x80]);
+    code.expect_status(0);
+    code.emit(&[0x48, 0x81, 0xfa]); // cmp rdx,Exited
+    code.emit(&(TaskStatus::Exited as u32).to_le_bytes());
+    code.emit(&[0x0f, 0x85]); // jne producer_status
+    let displacement =
+        i32::try_from(producer_status as isize - (code.as_bytes().len() + 4) as isize).unwrap();
+    code.emit(&displacement.to_le_bytes());
     for _ in 0..2 {
         call_on(&mut code, Call::Wait, notification, 0);
         code.expect_status(0);
@@ -87,6 +96,7 @@ pub(super) fn cancelled_client(endpoint: u64, delivery: u64) -> Program {
 
 pub(super) fn closer_or_canceller(handle: u64, cancel: bool) -> Program {
     let mut code = Program::new();
+    wait_for_queued_client(&mut code);
     let call = if cancel {
         Call::CancelWait
     } else {
@@ -117,6 +127,13 @@ pub(super) fn exiting_server(endpoint: u64, accept: bool) -> Program {
     code.finish()
 }
 
+pub(super) fn exiting_queued_server() -> Program {
+    let mut code = Program::new();
+    wait_for_queued_client(&mut code);
+    code.call(Call::Exit, 17, 0);
+    code.finish()
+}
+
 pub(super) fn cancelling_server(endpoint: u64) -> Program {
     let mut code = Program::new();
     call_on(&mut code, Call::Receive, endpoint, 0);
@@ -135,6 +152,21 @@ pub(super) fn cancelling_server(endpoint: u64) -> Program {
     code.expect_status(Error::InvalidReply.status());
     code.call(Call::Exit, 19, 0);
     code.finish()
+}
+
+fn wait_for_queued_client(code: &mut Program) {
+    let inspect = code.as_bytes().len();
+    code.emit(&[0xb8]);
+    code.emit(&(Call::TaskStatus as u32).to_le_bytes());
+    code.emit(&[0x4c, 0x89, 0xff, 0xcd, 0x80]); // mov rdi,r15: fixture client INSPECT handle
+    code.expect_status(0);
+    // The client's first blocking operation is its endpoint Call.
+    code.emit(&[0x48, 0x81, 0xfa]);
+    code.emit(&(TaskStatus::Blocked as u32).to_le_bytes());
+    code.emit(&[0x0f, 0x85]);
+    let displacement =
+        i32::try_from(inspect as isize - (code.as_bytes().len() + 4) as isize).unwrap();
+    code.emit(&displacement.to_le_bytes());
 }
 
 fn message(code: &mut Program, words: [u64; 4]) {

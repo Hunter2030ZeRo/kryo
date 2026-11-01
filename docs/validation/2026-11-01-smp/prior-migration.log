@@ -1,0 +1,88 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001f6c1000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007f000) bytes=516096
+MEM[1]: kind=0 [0x000000000007f000, 0x000000000009f000) bytes=131072
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001f58c000) bytes=524861440
+MEM[7]: kind=5 [0x000000001f58c000, 0x000000001f68c000) bytes=1048576
+MEM[8]: kind=6 [0x000000001f68c000, 0x000000001f69a000) bytes=57344
+MEM[9]: kind=0 [0x000000001f69a000, 0x000000001f69c000) bytes=8192
+MEM[10]: kind=6 [0x000000001f69c000, 0x000000001f6a9000) bytes=53248
+MEM[11]: kind=0 [0x000000001f6a9000, 0x000000001f6aa000) bytes=4096
+MEM[12]: kind=5 [0x000000001f6aa000, 0x000000001f6ab000) bytes=4096
+MEM[13]: kind=6 [0x000000001f6ab000, 0x000000001f6b2000) bytes=28672
+MEM[14]: kind=5 [0x000000001f6b2000, 0x000000001f6c1000) bytes=61440
+MEM[15]: kind=6 [0x000000001f6c1000, 0x000000001f7fa000) bytes=1282048
+MEM[16]: kind=5 [0x000000001f7fa000, 0x000000001ff50000) bytes=7692288
+MEM[17]: kind=0 [0x000000001ff50000, 0x000000001ff74000) bytes=147456
+MEM[18]: kind=5 [0x000000001ff74000, 0x000000001ffdf000) bytes=438272
+MEM[19]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[20]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[21]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[22]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[23]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[24]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[25]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[26]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+MEM normalized: ranges=5 frames=128211
+AVAILABLE[0]: [0x000000000007f000, 0x000000000009f000) frames=32
+AVAILABLE[1]: [0x0000000000100000, 0x000000001f58c000) frames=128140
+AVAILABLE[2]: [0x000000001f69a000, 0x000000001f69c000) frames=2
+AVAILABLE[3]: [0x000000001f6a9000, 0x000000001f6aa000) frames=1
+AVAILABLE[4]: [0x000000001ff50000, 0x000000001ff74000) frames=36
+FRAME: ready total=128211 free=128211
+FRAME: alloc/release OK total=128211 free=128211
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=128211
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+CLOCK: HPET monotonic ready lapic_counts=622155 sample_ns=10169850
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+ELF: module validated bytes=26192 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=296 xsave=false avx=false
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=24
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+SMP: online=2 discovered=2 limit=4
+SMP: remote TLB retirement OK
+SMP: missing ACK retains backing OK
+USERLOG: process=0x100000002 event=97 value=1
+SMP: fatal process policy precedes peer call OK
+
+PANIC
+file: kernel/image/src/boot/task_checks/smp_checks.rs
+line: 0x00000000000000dd
+message: User CPU identity did not change across batches

@@ -1,0 +1,2536 @@
+{
+  "scope": "QEMU MTTCG demand-backed guest; real high-page access, no full-RAM sweep or physical hardware claim",
+  "results": [
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "129G",
+      "memory_bytes": 138512695296,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 150007808,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true,
+        "high_tlb_4G": true,
+        "high_frame_4G": true,
+        "high_tlb_128G": true,
+        "high_frame_128G": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/build.stderr.log",
+        "debug": "debug-max-smp2-ram129G.debug.log",
+        "stdout": "debug-max-smp2-ram129G.stdout.log",
+        "stderr": "debug-max-smp2-ram129G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=129G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "129G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram129G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 421,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5341184,
+          "bytes": 4292608,
+          "bitmap_words": 528260,
+          "summary_words": 8255,
+          "usable_frames": 33808621,
+          "managed_frames": 33807573
+        },
+        "managed_frames": 33807573,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5341184,
+            2115665920
+          ],
+          [
+            2117529600,
+            2117537792
+          ],
+          [
+            2117603328,
+            2117607424
+          ],
+          [
+            2146762752,
+            2146902016
+          ],
+          [
+            4294967296,
+            140660178944
+          ]
+        ],
+        "high_frames": [
+          {
+            "minimum": 4294967296,
+            "physical": 4294967296
+          },
+          {
+            "minimum": 137438953472,
+            "physical": 137438953472
+          }
+        ],
+        "tlb_backing": [
+          137438953472,
+          137438957568
+        ]
+      },
+      "boot_seconds": 13.018,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 15.037,
+      "label": "debug-max-smp2-ram129G"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "129G",
+      "memory_bytes": 138512695296,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 130588672,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true,
+        "high_tlb_4G": true,
+        "high_frame_4G": true,
+        "high_tlb_128G": true,
+        "high_frame_128G": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram129G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram129G/build.stderr.log",
+        "debug": "release-max-smp2-ram129G.debug.log",
+        "stdout": "release-max-smp2-ram129G.stdout.log",
+        "stderr": "release-max-smp2-ram129G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=129G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "129G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram129G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram129G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 1373,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5341184,
+          "bytes": 4292608,
+          "bitmap_words": 528291,
+          "summary_words": 8255,
+          "usable_frames": 33810568,
+          "managed_frames": 33809520
+        },
+        "managed_frames": 33809520,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5341184,
+            2123792384
+          ],
+          [
+            4294967296,
+            140660178944
+          ]
+        ],
+        "high_frames": [
+          {
+            "minimum": 4294967296,
+            "physical": 4294967296
+          },
+          {
+            "minimum": 137438953472,
+            "physical": 137438953472
+          }
+        ],
+        "tlb_backing": [
+          137438953472,
+          137438957568
+        ]
+      },
+      "boot_seconds": 9.684,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 23.85,
+      "label": "release-max-smp2-ram129G"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "129G",
+      "memory_bytes": 138512695296,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 123834368,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram129G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram129G/build.stderr.log",
+        "debug": "debug-normal-max-smp2-ram129G.debug.log",
+        "stdout": "debug-normal-max-smp2-ram129G.stdout.log",
+        "stderr": "debug-normal-max-smp2-ram129G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=129G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "129G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram129G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram129G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 1810,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5341184,
+          "bytes": 4292608,
+          "bitmap_words": 528269,
+          "summary_words": 8255,
+          "usable_frames": 33809158,
+          "managed_frames": 33808110
+        },
+        "managed_frames": 33808110,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5341184,
+            2117865472
+          ],
+          [
+            2119729152,
+            2119737344
+          ],
+          [
+            2119802880,
+            2119806976
+          ],
+          [
+            2146762752,
+            2146902016
+          ],
+          [
+            4294967296,
+            140660178944
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.816,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 9.149,
+      "label": "debug-normal-max-smp2-ram129G"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "129G",
+      "memory_bytes": 138512695296,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 105869312,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram129G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram129G/build.stderr.log",
+        "debug": "release-normal-max-smp2-ram129G.debug.log",
+        "stdout": "release-normal-max-smp2-ram129G.stdout.log",
+        "stderr": "release-normal-max-smp2-ram129G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=129G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "129G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram129G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram129G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 2222,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5341184,
+          "bytes": 4292608,
+          "bitmap_words": 528297,
+          "summary_words": 8255,
+          "usable_frames": 33810963,
+          "managed_frames": 33809915
+        },
+        "managed_frames": 33809915,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5341184,
+            2125410304
+          ],
+          [
+            4294967296,
+            140660178944
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.259,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 12.649,
+      "label": "release-normal-max-smp2-ram129G"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "128G",
+      "memory_bytes": 137438953472,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 149798912,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true,
+        "high_tlb_4G": true,
+        "high_frame_4G": true,
+        "high_tlb_128G": true,
+        "high_frame_128G": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram128G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram128G/build.stderr.log",
+        "debug": "debug-max-smp2-ram128G.debug.log",
+        "stdout": "debug-max-smp2-ram128G.stdout.log",
+        "stderr": "debug-max-smp2-ram128G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=128G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "128G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram128G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram128G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 2543,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5308416,
+          "bytes": 4259840,
+          "bitmap_words": 524164,
+          "summary_words": 8191,
+          "usable_frames": 33546477,
+          "managed_frames": 33545437
+        },
+        "managed_frames": 33545437,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5308416,
+            2115665920
+          ],
+          [
+            2117529600,
+            2117537792
+          ],
+          [
+            2117603328,
+            2117607424
+          ],
+          [
+            2146762752,
+            2146902016
+          ],
+          [
+            4294967296,
+            139586437120
+          ]
+        ],
+        "high_frames": [
+          {
+            "minimum": 4294967296,
+            "physical": 4294967296
+          },
+          {
+            "minimum": 137438953472,
+            "physical": 137438953472
+          }
+        ],
+        "tlb_backing": [
+          137438953472,
+          137438957568
+        ]
+      },
+      "boot_seconds": 13.01,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 14.051,
+      "label": "debug-max-smp2-ram128G"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "128G",
+      "memory_bytes": 137438953472,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 130465792,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true,
+        "high_tlb_4G": true,
+        "high_frame_4G": true,
+        "high_tlb_128G": true,
+        "high_frame_128G": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram128G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram128G/build.stderr.log",
+        "debug": "release-max-smp2-ram128G.debug.log",
+        "stdout": "release-max-smp2-ram128G.stdout.log",
+        "stderr": "release-max-smp2-ram128G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=128G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "128G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram128G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram128G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 2864,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5308416,
+          "bytes": 4259840,
+          "bitmap_words": 524195,
+          "summary_words": 8191,
+          "usable_frames": 33548424,
+          "managed_frames": 33547384
+        },
+        "managed_frames": 33547384,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5308416,
+            2123792384
+          ],
+          [
+            4294967296,
+            139586437120
+          ]
+        ],
+        "high_frames": [
+          {
+            "minimum": 4294967296,
+            "physical": 4294967296
+          },
+          {
+            "minimum": 137438953472,
+            "physical": 137438953472
+          }
+        ],
+        "tlb_backing": [
+          137438953472,
+          137438957568
+        ]
+      },
+      "boot_seconds": 9.672,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 10.715,
+      "label": "release-max-smp2-ram128G"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "128G",
+      "memory_bytes": 137438953472,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 124268544,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram128G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram128G/build.stderr.log",
+        "debug": "debug-normal-max-smp2-ram128G.debug.log",
+        "stdout": "debug-normal-max-smp2-ram128G.stdout.log",
+        "stderr": "debug-normal-max-smp2-ram128G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=128G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "128G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram128G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram128G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 3185,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5308416,
+          "bytes": 4259840,
+          "bitmap_words": 524173,
+          "summary_words": 8191,
+          "usable_frames": 33547014,
+          "managed_frames": 33545974
+        },
+        "managed_frames": 33545974,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5308416,
+            2117865472
+          ],
+          [
+            2119729152,
+            2119737344
+          ],
+          [
+            2119802880,
+            2119806976
+          ],
+          [
+            2146762752,
+            2146902016
+          ],
+          [
+            4294967296,
+            139586437120
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.817,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.865,
+      "label": "debug-normal-max-smp2-ram128G"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "128G",
+      "memory_bytes": 137438953472,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 106000384,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram128G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram128G/build.stderr.log",
+        "debug": "release-normal-max-smp2-ram128G.debug.log",
+        "stdout": "release-normal-max-smp2-ram128G.stdout.log",
+        "stderr": "release-normal-max-smp2-ram128G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=128G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "128G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram128G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram128G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 3506,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 5308416,
+          "bytes": 4259840,
+          "bitmap_words": 524201,
+          "summary_words": 8191,
+          "usable_frames": 33548819,
+          "managed_frames": 33547779
+        },
+        "managed_frames": 33547779,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            5308416,
+            2125410304
+          ],
+          [
+            4294967296,
+            139586437120
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.205,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.243,
+      "label": "release-normal-max-smp2-ram128G"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "8G",
+      "memory_bytes": 8589934592,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 127631360,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true,
+        "high_tlb_4G": true,
+        "high_frame_4G": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram8G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram8G/build.stderr.log",
+        "debug": "debug-max-smp2-ram8G.debug.log",
+        "stdout": "debug-max-smp2-ram8G.stdout.log",
+        "stderr": "debug-max-smp2-ram8G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=8G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "8G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram8G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2-ram8G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 3827,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 1314816,
+          "bytes": 266240,
+          "bitmap_words": 32644,
+          "summary_words": 511,
+          "usable_frames": 2089197,
+          "managed_frames": 2089132
+        },
+        "managed_frames": 2089132,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            1314816,
+            2115665920
+          ],
+          [
+            2117529600,
+            2117537792
+          ],
+          [
+            2117603328,
+            2117607424
+          ],
+          [
+            2146762752,
+            2146902016
+          ],
+          [
+            4294967296,
+            10737418240
+          ]
+        ],
+        "high_frames": [
+          {
+            "minimum": 4294967296,
+            "physical": 4294967296
+          }
+        ],
+        "tlb_backing": [
+          4294967296,
+          4294971392
+        ]
+      },
+      "boot_seconds": 12.974,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 14.008,
+      "label": "debug-max-smp2-ram8G"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "8G",
+      "memory_bytes": 8589934592,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 110014464,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true,
+        "high_tlb_4G": true,
+        "high_frame_4G": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram8G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram8G/build.stderr.log",
+        "debug": "release-max-smp2-ram8G.debug.log",
+        "stdout": "release-max-smp2-ram8G.stdout.log",
+        "stderr": "release-max-smp2-ram8G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=8G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "8G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram8G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2-ram8G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 4148,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 1314816,
+          "bytes": 266240,
+          "bitmap_words": 32675,
+          "summary_words": 511,
+          "usable_frames": 2091144,
+          "managed_frames": 2091079
+        },
+        "managed_frames": 2091079,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            1314816,
+            2123792384
+          ],
+          [
+            4294967296,
+            10737418240
+          ]
+        ],
+        "high_frames": [
+          {
+            "minimum": 4294967296,
+            "physical": 4294967296
+          }
+        ],
+        "tlb_backing": [
+          4294967296,
+          4294971392
+        ]
+      },
+      "boot_seconds": 9.683,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 10.726,
+      "label": "release-max-smp2-ram8G"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "8G",
+      "memory_bytes": 8589934592,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 107511808,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram8G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram8G/build.stderr.log",
+        "debug": "debug-normal-max-smp2-ram8G.debug.log",
+        "stdout": "debug-normal-max-smp2-ram8G.stdout.log",
+        "stderr": "debug-normal-max-smp2-ram8G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=8G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "8G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram8G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2-ram8G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 4469,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 1314816,
+          "bytes": 266240,
+          "bitmap_words": 32653,
+          "summary_words": 511,
+          "usable_frames": 2089734,
+          "managed_frames": 2089669
+        },
+        "managed_frames": 2089669,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            1314816,
+            2117865472
+          ],
+          [
+            2119729152,
+            2119737344
+          ],
+          [
+            2119802880,
+            2119806976
+          ],
+          [
+            2146762752,
+            2146902016
+          ],
+          [
+            4294967296,
+            10737418240
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.812,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.848,
+      "label": "debug-normal-max-smp2-ram8G"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "8G",
+      "memory_bytes": 8589934592,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 89939968,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram8G/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram8G/build.stderr.log",
+        "debug": "release-normal-max-smp2-ram8G.debug.log",
+        "stdout": "release-normal-max-smp2-ram8G.stdout.log",
+        "stderr": "release-normal-max-smp2-ram8G.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=8G,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "8G",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram8G/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2-ram8G/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 4790,
+      "memory_observed": {
+        "metadata": {
+          "start": 1048576,
+          "end": 1314816,
+          "bytes": 266240,
+          "bitmap_words": 32681,
+          "summary_words": 511,
+          "usable_frames": 2091539,
+          "managed_frames": 2091474
+        },
+        "managed_frames": 2091474,
+        "available": [
+          [
+            520192,
+            651264
+          ],
+          [
+            1314816,
+            2125410304
+          ],
+          [
+            4294967296,
+            10737418240
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.205,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.236,
+      "label": "release-normal-max-smp2-ram8G"
+    },
+    {
+      "profile": "debug",
+      "cpu": "default",
+      "cpus": 1,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 119795712,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "breakpoint": true,
+        "frame_metadata": true,
+        "metadata_excluded": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug/build.stderr.log",
+        "debug": "debug.debug.log",
+        "stdout": "debug.stdout.log",
+        "stderr": "debug.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "1",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug/kryo.iso",
+        "-boot",
+        "d"
+      ],
+      "qemu_pid": 5111,
+      "memory_observed": {
+        "metadata": {
+          "start": 516096,
+          "end": 532480,
+          "bytes": 16384,
+          "bitmap_words": 1926,
+          "summary_words": 31,
+          "usable_frames": 123246,
+          "managed_frames": 123242
+        },
+        "managed_frames": 123242,
+        "available": [
+          [
+            532480,
+            651264
+          ],
+          [
+            1048576,
+            505577472
+          ],
+          [
+            506916864,
+            506925056
+          ],
+          [
+            506990592,
+            506994688
+          ],
+          [
+            536150016,
+            536289280
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": [
+          2097152,
+          2101248
+        ]
+      },
+      "boot_seconds": 12.4,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 13.433,
+      "label": "debug"
+    },
+    {
+      "profile": "release",
+      "cpu": "default",
+      "cpus": 1,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 101498880,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "breakpoint": true,
+        "frame_metadata": true,
+        "metadata_excluded": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release/build.stderr.log",
+        "debug": "release.debug.log",
+        "stdout": "release.stdout.log",
+        "stderr": "release.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "1",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release/kryo.iso",
+        "-boot",
+        "d"
+      ],
+      "qemu_pid": 5431,
+      "memory_observed": {
+        "metadata": {
+          "start": 516096,
+          "end": 532480,
+          "bytes": 16384,
+          "bitmap_words": 1956,
+          "summary_words": 31,
+          "usable_frames": 125129,
+          "managed_frames": 125125
+        },
+        "managed_frames": 125125,
+        "available": [
+          [
+            532480,
+            651264
+          ],
+          [
+            1048576,
+            513441792
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": [
+          2097152,
+          2101248
+        ]
+      },
+      "boot_seconds": 8.904,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 9.947,
+      "label": "release"
+    },
+    {
+      "profile": "debug",
+      "cpu": "default",
+      "cpus": 1,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 101363712,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal/build.stderr.log",
+        "debug": "debug-normal.debug.log",
+        "stdout": "debug-normal.stdout.log",
+        "stderr": "debug-normal.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "1",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal/kryo.iso",
+        "-boot",
+        "d"
+      ],
+      "qemu_pid": 5751,
+      "memory_observed": {
+        "metadata": {
+          "start": 516096,
+          "end": 532480,
+          "bytes": 16384,
+          "bitmap_words": 1935,
+          "summary_words": 31,
+          "usable_frames": 123783,
+          "managed_frames": 123779
+        },
+        "managed_frames": 123779,
+        "available": [
+          [
+            532480,
+            651264
+          ],
+          [
+            1048576,
+            507777024
+          ],
+          [
+            509116416,
+            509124608
+          ],
+          [
+            509190144,
+            509194240
+          ],
+          [
+            536150016,
+            536289280
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.919,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.959,
+      "label": "debug-normal"
+    },
+    {
+      "profile": "release",
+      "cpu": "default",
+      "cpus": 1,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 86110208,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal/build.stderr.log",
+        "debug": "release-normal.debug.log",
+        "stdout": "release-normal.stdout.log",
+        "stderr": "release-normal.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "1",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal/kryo.iso",
+        "-boot",
+        "d"
+      ],
+      "qemu_pid": 6071,
+      "memory_observed": {
+        "metadata": {
+          "start": 516096,
+          "end": 532480,
+          "bytes": 16384,
+          "bitmap_words": 1962,
+          "summary_words": 31,
+          "usable_frames": 125524,
+          "managed_frames": 125520
+        },
+        "managed_frames": 125520,
+        "available": [
+          [
+            532480,
+            651264
+          ],
+          [
+            1048576,
+            515059712
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.411,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.433,
+      "label": "release-normal"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 125083648,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2/build.stderr.log",
+        "debug": "debug-max-smp2.debug.log",
+        "stdout": "debug-max-smp2.stdout.log",
+        "stderr": "debug-max-smp2.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-max-smp2/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 6391,
+      "memory_observed": {
+        "metadata": {
+          "start": 520192,
+          "end": 536576,
+          "bytes": 16384,
+          "bitmap_words": 1924,
+          "summary_words": 31,
+          "usable_frames": 123118,
+          "managed_frames": 123114
+        },
+        "managed_frames": 123114,
+        "available": [
+          [
+            536576,
+            651264
+          ],
+          [
+            1048576,
+            505053184
+          ],
+          [
+            506916864,
+            506925056
+          ],
+          [
+            506990592,
+            506994688
+          ],
+          [
+            536150016,
+            536293376
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": [
+          2097152,
+          2101248
+        ]
+      },
+      "boot_seconds": 12.869,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 13.899,
+      "label": "debug-max-smp2"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 105504768,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "heap": true,
+        "growth": true,
+        "growth_oom": true,
+        "growth_retirement": true,
+        "frames": true,
+        "zeroing": true,
+        "paging": true,
+        "user_spaces": true,
+        "user_isolation": true,
+        "vm_rollback": true,
+        "preemption": true,
+        "capabilities": true,
+        "timer_drain": true,
+        "task_teardown": true,
+        "invalid_context": true,
+        "ipc": true,
+        "idle": true,
+        "shared_memory": true,
+        "cap_transfer": true,
+        "shared_fault": true,
+        "elf_native": true,
+        "extended_state": true,
+        "clock": true,
+        "deadlines": true,
+        "early_irq": true,
+        "launch": true,
+        "spawn": true,
+        "threads": true,
+        "thread_state": true,
+        "supervision": true,
+        "device_queue": true,
+        "device_expiry": true,
+        "device_retry": true,
+        "device": true,
+        "smp_online": true,
+        "smp_retired": true,
+        "smp_tlb": true,
+        "smp_parallel": true,
+        "smp_missing_ack": true,
+        "smp_wakeup": true,
+        "smp_fault_policy": true,
+        "breakpoint": true,
+        "avx_context": true,
+        "frame_metadata": true,
+        "metadata_excluded": true
+      },
+      "mode": "boot-tests",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2/build.stderr.log",
+        "debug": "release-max-smp2.debug.log",
+        "stdout": "release-max-smp2.stdout.log",
+        "stderr": "release-max-smp2.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-max-smp2/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 6712,
+      "memory_observed": {
+        "metadata": {
+          "start": 520192,
+          "end": 536576,
+          "bytes": 16384,
+          "bitmap_words": 1955,
+          "summary_words": 31,
+          "usable_frames": 125065,
+          "managed_frames": 125061
+        },
+        "managed_frames": 125061,
+        "available": [
+          [
+            536576,
+            651264
+          ],
+          [
+            1048576,
+            513183744
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": [
+          2097152,
+          2101248
+        ]
+      },
+      "boot_seconds": 9.579,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 10.61,
+      "label": "release-max-smp2"
+    },
+    {
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 106926080,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2/build.stderr.log",
+        "debug": "debug-normal-max-smp2.debug.log",
+        "stdout": "debug-normal-max-smp2.stdout.log",
+        "stderr": "debug-normal-max-smp2.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/debug-normal-max-smp2/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 7033,
+      "memory_observed": {
+        "metadata": {
+          "start": 520192,
+          "end": 536576,
+          "bytes": 16384,
+          "bitmap_words": 1933,
+          "summary_words": 31,
+          "usable_frames": 123655,
+          "managed_frames": 123651
+        },
+        "managed_frames": 123651,
+        "available": [
+          [
+            536576,
+            651264
+          ],
+          [
+            1048576,
+            507252736
+          ],
+          [
+            509116416,
+            509124608
+          ],
+          [
+            509190144,
+            509194240
+          ],
+          [
+            536150016,
+            536293376
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.77,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.796,
+      "label": "debug-normal-max-smp2"
+    },
+    {
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 2,
+      "memory": "512M",
+      "memory_bytes": 536870912,
+      "rss_limit_bytes": 2147483648,
+      "peak_rss_bytes": 89145344,
+      "status": "passed",
+      "reason": "all boot markers observed",
+      "checks": {
+        "device": true,
+        "smp_online": true,
+        "normal_init": true,
+        "clock": true,
+        "restart_generations": true,
+        "worker_execution": true,
+        "process_threads": true,
+        "exit_observation": true,
+        "frame_metadata": true
+      },
+      "mode": "normal",
+      "logs": {
+        "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2/build.stdout.log",
+        "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2/build.stderr.log",
+        "debug": "release-normal-max-smp2.debug.log",
+        "stdout": "release-normal-max-smp2.stdout.log",
+        "stderr": "release-normal-max-smp2.stderr.log"
+      },
+      "guest_exit_verified": false,
+      "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+      "build_exit_code": 0,
+      "qemu_command": [
+        "qemu-system-x86_64",
+        "-M",
+        "q35,memory-backend=ram",
+        "-global",
+        "hpet.msi=on",
+        "-object",
+        "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+        "-overcommit",
+        "mem-lock=off",
+        "-accel",
+        "tcg,thread=multi",
+        "-smp",
+        "2",
+        "-m",
+        "512M",
+        "-display",
+        "none",
+        "-serial",
+        "none",
+        "-monitor",
+        "none",
+        "-no-reboot",
+        "-debugcon",
+        "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2/debug.log",
+        "-cdrom",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/ram-work/kryo/build/smoke/release-normal-max-smp2/kryo.iso",
+        "-boot",
+        "d",
+        "-cpu",
+        "max"
+      ],
+      "qemu_pid": 7354,
+      "memory_observed": {
+        "metadata": {
+          "start": 520192,
+          "end": 536576,
+          "bytes": 16384,
+          "bitmap_words": 1961,
+          "summary_words": 31,
+          "usable_frames": 125460,
+          "managed_frames": 125456
+        },
+        "managed_frames": 125456,
+        "available": [
+          [
+            536576,
+            651264
+          ],
+          [
+            1048576,
+            514801664
+          ]
+        ],
+        "high_frames": [],
+        "tlb_backing": null
+      },
+      "boot_seconds": 6.206,
+      "qemu_stop": "host_sigterm",
+      "qemu_exit_code": 0,
+      "elapsed_seconds": 7.233,
+      "label": "release-normal-max-smp2"
+    }
+  ],
+  "host_tests": {
+    "passed": 298,
+    "core": 239,
+    "hal": 58,
+    "interfaces": 1
+  },
+  "guest_sizes": [
+    "512M",
+    "8G",
+    "128G",
+    "129G"
+  ],
+  "maximum_peak_rss_bytes": 150007808,
+  "source_manifest_sha256": "adc7f0b384d7f0c9a2cc784131545704d2667fd7fc83b43b63e9b5609f2b1c97",
+  "source_scope": "Source and runner inputs; Markdown/documentation and generated build outputs excluded",
+  "claims": [
+    "4 GiB fixed bitmap limit removed",
+    "129 GiB guests manage more than 128 GiB after reservations",
+    "High-page HHDM/scratch access and high-backing TLB retirement verified"
+  ],
+  "non_claims": [
+    "No complete RAM write sweep",
+    "No physical 128 GiB DRAM or performance validation",
+    "No memory hotplug or NUMA policy"
+  ]
+}

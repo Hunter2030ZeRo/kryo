@@ -193,7 +193,7 @@ impl UserPageTable {
     pub unsafe fn retire(&mut self) -> Result<(), PagingError> {
         self.check_inactive()?;
         unsafe { self.root.as_ptr().write(PageTable::new()) };
-        super::kernel_map::flush_global();
+        super::kernel_map::flush_global()?;
         self.retired = true;
         Ok(())
     }

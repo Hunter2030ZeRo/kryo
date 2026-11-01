@@ -1,82 +1,63 @@
+mod exec_checks;
 mod ipc_checks;
 mod ipc_programs;
-mod ipc_runtime;
-mod native;
+mod launch_checks;
 mod programs;
-mod stacks;
+mod shared_checks;
+mod shared_programs;
+mod smp_checks;
+mod spawn_checks;
+mod thread_checks;
+mod time_checks;
+mod time_programs;
 
 use super::memory::BootFramePool;
-use super::vm_backend::{KernelMemory, UserSpace, new_space};
+use super::vm_backend::{KernelMemory, new_shared_space};
+use crate::runtime::KernelRegion;
+use crate::runtime::{
+    CallStats, Handles, IpcRuntime, KernelObject, KernelStack, Objects, ProcessResources,
+    Resources, SharedLease, Tasks, clock, idle_until_deadline, step,
+};
 use core::cell::RefCell;
-use ipc_runtime::IpcRuntime;
-use kryo_core::capability::{HandleTable, Rights};
-use kryo_core::ipc::{Endpoint, Notification};
+use kryo_core::capability::Rights;
 use kryo_core::mm::vm::Permissions;
-use kryo_core::object::{ObjectKind, ObjectRef, ObjectTable};
-use kryo_core::sched::{ReturnReason, TaskState};
-use kryo_core::sync::wait::WaitId;
-use kryo_core::task::{TaskId, TaskTable};
-use kryo_hal::{DirectMap, KernelRegion, UserContext, UserEntryError, UserOutcome, UserReason};
+use kryo_core::object::ObjectKind;
+use kryo_core::sched::TaskState;
+use kryo_hal::{DirectMap, ExtendedState, UserContext, UserEntryError, UserReason};
 use programs::{CODE, DATA, Program, SEED_A, SEED_B, STACK};
-use stacks::KernelStack;
 
-const REGION_BASE: u64 = 0xffff_ff00_0000_0000;
-const OBJECTS: usize = 8;
-const HANDLES: usize = 8;
-type Objects = ObjectTable<KernelObject, OBJECTS>;
-type Object<'objects> = ObjectRef<'objects, KernelObject, OBJECTS>;
-type Handles<'objects> = HandleTable<'objects, KernelObject, OBJECTS, HANDLES>;
-type Tasks<'kernel, 'objects> = TaskTable<Resources<'kernel, 'objects>, 2>;
-
-enum KernelObject {
-    TaskControl(TaskId),
-    Endpoint(RefCell<Endpoint<2, 2>>),
-    Notification(RefCell<Notification>),
-}
-
-struct Resources<'kernel, 'objects> {
-    space: UserSpace<'kernel>,
-    context: UserContext,
-    stack: KernelStack,
-    handles: Handles<'objects>,
-    ticks: usize,
-    exit_code: u64,
-    space_closed: bool,
-    wait: Option<WaitId>,
-}
-
-#[derive(Default)]
-struct CallStats {
-    yields: usize,
-    denied: usize,
-    invalid: usize,
-}
-
-pub(super) fn run(pool: &'static BootFramePool, direct: DirectMap, kernel: &RefCell<KernelMemory>) {
+pub(super) fn run(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    kernel: &RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+) {
     let before = pool.stats();
-    let tables = [
-        pool.allocate().expect("No first kernel-region table"),
-        pool.allocate().expect("No second kernel-region table"),
-        pool.allocate().expect("No leaf kernel-region table"),
-    ];
-    let physical = [
-        tables[0].address(),
-        tables[1].address(),
-        tables[2].address(),
-    ];
-    // The region is installed before any task roots inherit the kernel half.
-    let mut region = unsafe { KernelRegion::new(direct, REGION_BASE, physical) }
-        .expect("Cannot attach kernel task region");
+    let retained_before = kernel.borrow().retained_pages();
     let controller = kryo_hal::timer_physical_address().expect("No supported local APIC");
-    let mmio = unsafe { region.map_mmio(0, controller) }.expect("Cannot map local APIC");
+    let mmio = crate::boot::platform::apic_mapping();
     let flags = region.permissions(0).expect("Missing APIC mapping");
     assert!(flags.writable && flags.uncached && !flags.executable && !flags.user);
-    unsafe { kryo_hal::init_timer(mmio) }.expect("Cannot initialize local timer");
+    let clock_physical = clock::initialize(region);
 
-    check_preemption(pool, direct, kernel, &mut region);
-    check_capabilities(pool, direct, kernel, &mut region);
-    check_invalid_resume(pool, direct, kernel, &mut region);
-    ipc_checks::run(pool, direct, kernel, &mut region);
+    check_preemption(pool, direct, kernel, region);
+    check_capabilities(pool, direct, kernel, region);
+    check_invalid_resume(pool, direct, kernel, region);
+    ipc_checks::run(pool, direct, kernel, region);
+    shared_checks::run(pool, direct, kernel, region);
+    exec_checks::run(pool, direct, kernel, region);
+    time_checks::run(pool, direct, kernel, region);
+    launch_checks::run(pool, direct, kernel, region);
+    spawn_checks::run(pool, direct, kernel, region);
+    thread_checks::run(pool, direct, kernel, region);
+    let cpus = crate::runtime::smp::start(mmio);
+    crate::runtime::devices::probe(pool, direct, kernel, region, true);
+    crate::runtime::channel_probe::run(pool, direct, kernel, region);
+    crate::runtime::supervision::check(pool, direct, kernel, region);
+    smp_checks::run(pool, direct, kernel, region, cpus);
+    crate::runtime::service::check(pool, direct, kernel, region);
+    crate::runtime::scale::check(pool, direct, kernel, region);
+    crate::runtime::smp::shutdown();
 
     // Force a queued timer while IRQs are off. Shutdown must acknowledge it on
     // the kernel stack before the controller mapping can be removed.
@@ -91,15 +72,18 @@ pub(super) fn run(pool: &'static BootFramePool, direct: DirectMap, kernel: &RefC
     unsafe { kryo_hal::shutdown_timer() }.expect("Cannot drain and restore local timer");
     assert!(!kryo_hal::timer_initialized());
     kryo_hal::emergency_write_str("TIMER: pending interrupt drained\n");
+    clock::shutdown(region, clock_physical);
     // All task roots and entry-stack accesses are retired; IRQs remain off.
     unsafe {
         assert_eq!(region.unmap(0).expect("Cannot unmap APIC"), controller);
         region.detach().expect("Cannot detach kernel task region");
-        for frame in tables {
-            pool.release(frame).expect("Cannot free kernel task tables");
-        }
     }
-    assert_eq!(pool.stats(), before);
+    let retained_after = kernel.borrow().retained_pages();
+    assert_eq!(pool.stats().total, before.total);
+    assert_eq!(
+        pool.stats().free,
+        before.free - (retained_after - retained_before)
+    );
     kryo_hal::emergency_write_str("TASK: teardown OK\n");
 }
 
@@ -112,7 +96,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         first_slot: usize,
         program: &Program,
     ) -> Self {
-        let mut space = new_space(pool, kernel).expect("Cannot create task address space");
+        let mut space = new_shared_space(pool, kernel).expect("Cannot create task address space");
         space
             .map_page(CODE, Permissions::ReadExecute, program.as_bytes())
             .expect("Cannot map task code");
@@ -128,104 +112,40 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         context.r12 = SEED_A;
         context.r13 = SEED_B;
         Self {
-            space,
+            process: ProcessResources {
+                space,
+                handles: Handles::new(),
+                control: None,
+                pending: None,
+                pending_thread: None,
+                space_closed: false,
+            },
             context,
             stack: KernelStack::new(pool, direct, region, first_slot),
-            handles: Handles::new(),
             ticks: 0,
             exit_code: u64::MAX,
-            space_closed: false,
+            exit_reason: kryo_core::process::ExitReason::Exited,
             wait: None,
+            receive_slots: None,
+            received_wait: None,
+            received_handles: [None; 2],
+            pool,
+            memory: kernel,
+            extended: None,
+            direct,
+            user_slot: 0,
+            user_stack_owned: false,
+            thread_control: None,
         }
-    }
-
-    fn close(
-        &mut self,
-        pool: &BootFramePool,
-        region: &mut KernelRegion,
-    ) -> Result<(), &'static str> {
-        if !self.space_closed {
-            self.space
-                .close()
-                .map_err(|_| "Cannot close task address space")?;
-            self.space_closed = true;
-        }
-        // run_context restored TSS.RSP0 and the boot stack before returned().
-        unsafe { self.stack.close(pool, region) }.map_err(|_| "Cannot close task entry stack")
     }
 }
 
-fn step<'objects>(
-    tasks: &mut Tasks<'_, 'objects>,
-    calls: &mut CallStats,
-    ipc: &mut IpcRuntime<'objects>,
-) -> (TaskId, Result<UserOutcome, UserEntryError>) {
-    let id = tasks
-        .dispatch()
-        .expect("Scheduler already owns a running task")
-        .expect("No runnable test task");
-    let resources = tasks.resources_mut(id).expect("Missing running task");
-    let top = resources.stack.top();
-    let context = &mut resources.context;
-    // The task borrow pins its private user root and guarded entry stack. The
-    // HAL restores the boot root and saves all registers before this returns.
-    let outcome = resources
-        .space
-        .with_root(|root| unsafe { kryo_hal::run_context(root, context, top, true) })
-        .expect("Task address space still active");
-    let reason = match outcome {
-        Ok(UserOutcome {
-            reason: UserReason::Preempted,
-            ..
-        }) => {
-            resources.ticks += 1;
-            ReturnReason::Preempted
-        }
-        Ok(UserOutcome {
-            reason: UserReason::Call,
-            ..
-        }) => ReturnReason::Call,
-        Ok(UserOutcome {
-            reason: UserReason::Fault,
-            vector,
-            ..
-        }) => {
-            resources.exit_code = 0x100 + vector;
-            ReturnReason::Fault
-        }
-        Ok(UserOutcome {
-            reason: UserReason::Exited,
-            status,
-            ..
-        }) => {
-            resources.exit_code = status;
-            ReturnReason::Exit
-        }
-        Err(error) => {
-            let _ = kryo_hal::print(format_args!("TASK rejected: {:?}\n", error));
-            resources.exit_code = 255;
-            ReturnReason::Fault
-        }
-    };
-    tasks.returned(id, reason).expect("Invalid task return");
-    if matches!(
-        outcome,
-        Ok(UserOutcome {
-            reason: UserReason::Call,
-            ..
-        })
-    ) {
-        native::dispatch(id, tasks, calls, ipc);
-    }
-    ipc.settle(tasks);
-    (id, outcome)
-}
-
-fn check_progress(resources: &Resources<'_, '_>) {
+fn check_progress(resources: &crate::runtime::ResourcesView<'_, '_, '_>) {
     assert_eq!(resources.context.r12, SEED_A);
     assert_eq!(resources.context.r13, SEED_B);
     let mut bytes = [0; 8];
     resources
+        .process
         .space
         .read_page(DATA, 0, &mut bytes)
         .expect("Cannot inspect task progress");
@@ -274,7 +194,7 @@ fn check_preemption(
     for id in [first, second] {
         let resources = tasks.resources_mut(id).unwrap();
         assert_eq!(resources.ticks, 4);
-        check_progress(resources);
+        check_progress(&resources);
         tasks.stop(id).unwrap();
         drop(
             tasks
@@ -323,7 +243,7 @@ fn check_capabilities(
         Rights::CONTROL.bits(),
     );
     let mut controller = Resources::new(pool, direct, kernel, region, 7, &code);
-    controller.handles = handles;
+    controller.process.handles = handles;
     let caller = tasks.spawn(controller).unwrap();
     let mut calls = CallStats::default();
     let mut ipc = IpcRuntime::new();
@@ -343,7 +263,7 @@ fn check_capabilities(
             let resources = tasks.resources_mut(id).unwrap();
             if id == target {
                 assert_eq!(resources.exit_code, 33);
-                check_progress(resources);
+                check_progress(&resources);
                 target_reaped = true;
             } else {
                 assert_eq!(resources.exit_code, 7);
@@ -418,7 +338,7 @@ fn check_invalid_resume(
         }
     }
     assert!(rejected);
-    check_progress(tasks.resources_mut(peer).unwrap());
+    check_progress(&tasks.resources_mut(peer).unwrap());
     tasks.stop(peer).unwrap();
     drop(
         tasks

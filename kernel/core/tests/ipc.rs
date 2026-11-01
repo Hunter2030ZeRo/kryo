@@ -22,7 +22,10 @@ fn multiple_queued_senders_are_received_in_fifo_order() {
             waits.take(receive),
             Ok(Completion::Received {
                 message: Message([index as u64; 4]),
-                reply: None
+                reply: None,
+                sender: senders[index],
+                sender_wait: id.unwrap(),
+                capabilities: 0,
             })
         );
         assert_eq!(waits.take(id.unwrap()), Ok(Completion::Sent));
@@ -101,7 +104,10 @@ fn zero_reply_capacity_rejects_calls_but_accepts_plain_rendezvous() {
         waits.take(receive),
         Ok(Completion::Received {
             message: Message([1; 4]),
-            reply: None
+            reply: None,
+            sender,
+            sender_wait: send,
+            capabilities: 0,
         })
     );
     assert_eq!(waits.take(send), Ok(Completion::Sent));
@@ -177,7 +183,10 @@ fn rendezvous_transfers_inline_data_and_completes_each_wait_once() {
         waits.take(receive),
         Ok(Completion::Received {
             message: Message([1, 2, 3, 4]),
-            reply: None
+            reply: None,
+            sender,
+            sender_wait: send,
+            capabilities: 0,
         })
     );
     assert_eq!(waits.take(send), Ok(Completion::Sent));
@@ -230,7 +239,10 @@ fn queued_senders_keep_fifo_order_and_capacity_failure_does_not_register_a_wait(
         waits.take(receive),
         Ok(Completion::Received {
             message: Message([11; 4]),
-            reply: None
+            reply: None,
+            sender: first,
+            sender_wait: first_wait,
+            capabilities: 0,
         })
     );
     assert_eq!(waits.take(first_wait), Ok(Completion::Sent));
@@ -277,6 +289,7 @@ fn call_waits_for_a_single_reply_from_the_bound_receiver() {
         Completion::Received {
             message: Message([9, 9, 9, 9]),
             reply: Some(token),
+            ..
         } => token,
         other => panic!("{other:?}"),
     };
@@ -332,7 +345,10 @@ fn cancelling_before_acceptance_prevents_delivery() {
         waits.take(receive),
         Ok(Completion::Received {
             message: Message([2; 4]),
-            reply: None
+            reply: None,
+            sender: caller,
+            sender_wait: send,
+            capabilities: 0,
         })
     );
     assert_eq!(waits.take(send), Ok(Completion::Sent));
@@ -500,7 +516,10 @@ fn completed_and_reused_wait_slots_cannot_receive_stale_queued_messages() {
         waits.take(receive),
         Ok(Completion::Received {
             message: Message([2; 4]),
-            reply: None
+            reply: None,
+            sender: caller,
+            sender_wait: fresh,
+            capabilities: 0,
         })
     );
     assert_eq!(waits.take(fresh), Ok(Completion::Sent));

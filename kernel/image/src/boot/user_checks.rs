@@ -1,7 +1,7 @@
 use super::memory::BootFramePool;
 use super::vm_backend::{KernelMemory, UserSpace, check_preparation_failure, new_space};
 use core::cell::RefCell;
-use kryo_core::mm::frame::OwnedFrame;
+use kryo_core::mm::frame::{FrameAllocError, OwnedFrame, PhysRange};
 use kryo_core::mm::vm::Permissions;
 use kryo_hal::{DirectMap, UserOutcome, UserReason, run_user};
 
@@ -13,9 +13,10 @@ const STACK_TOP: u64 = STACK + 4096;
 pub(super) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end: u64) {
     let before = pool.stats();
     let reserved = reserve_low_frames(pool);
+    let mut region = super::platform::take_region();
     // This is the sole kernel alias manager, initialized before any child root.
     let kernel = RefCell::new(
-        unsafe { KernelMemory::new(pool, direct, physical_end) }
+        unsafe { KernelMemory::new(pool, direct, physical_end, &region) }
             .expect("Cannot initialize kernel alias policy"),
     );
 
@@ -115,13 +116,14 @@ pub(super) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
     let mut survivor = make_space(pool, &kernel, &exit(73), Permissions::ReadWrite, 0);
     assert_exit(execute(&mut survivor), 73);
     survivor.close().expect("Cannot close surviving user space");
-    super::task_checks::run(pool, direct, &kernel);
-    let retained = kernel.into_inner().retain_tables();
+    super::task_checks::run(pool, direct, &kernel, &mut region);
+    drop((flagged, survivor));
+    let (retained, retained_pages) = kernel.into_inner().retain_tables();
     for frame in reserved.into_iter().flatten() {
         // Reserved frames were never exposed to user mappings or devices.
         unsafe { pool.release(frame) }.expect("Cannot release test reservation");
     }
-    assert_eq!(pool.stats().free, before.free - retained as u64);
+    assert_eq!(pool.stats().free, before.free - retained_pages);
     let _ = kryo_hal::print(format_args!(
         "USER: isolation OK cases=16 kernel_tables={} free={}\n",
         retained,
@@ -262,18 +264,19 @@ fn assert_exit(outcome: UserOutcome, status: u64) {
     assert_eq!(outcome.status, status);
 }
 
-fn reserve_low_frames(pool: &'static BootFramePool) -> [Option<OwnedFrame<'static>>; 320] {
-    let mut reserved = [const { None }; 320];
+fn reserve_low_frames(pool: &'static BootFramePool) -> [Option<OwnedFrame<'static>>; 512] {
+    let mut reserved = [const { None }; 512];
+    let low = PhysRange::from_base_len(0, 0x20_0000).unwrap();
+    // Allocation is cursor-based; high-frame checks may have moved that cursor.
+    // Select this range explicitly so the VM failure fixture keeps its premise.
     for slot in &mut reserved {
-        let frame = pool.allocate().expect("Cannot reserve low frames");
-        if frame.address() >= 0x20_0000 {
-            // Leave the first huge-page-backed frame available for VM allocations.
-            unsafe { pool.release(frame) }.expect("Cannot return boundary frame");
-            return reserved;
+        match pool.allocate_in(low) {
+            Ok(frame) => *slot = Some(frame),
+            Err(FrameAllocError::OutOfMemory) => return reserved,
+            Err(error) => panic!("Cannot reserve low frames: {:?}", error),
         }
-        *slot = Some(frame);
     }
-    panic!("Low-frame reservation capacity exceeded");
+    reserved
 }
 
 struct Program {
