@@ -40,7 +40,10 @@ struct Pending<'objects> {
 }
 
 impl<'objects> Transport<'objects> {
-    fn create(
+    pub(crate) fn has_pending(&self) -> bool {
+        self.pending.is_some()
+    }
+    pub(crate) fn create(
         owner: ProcessId,
         object: Object<'objects>,
         hardware: VirtioPci,

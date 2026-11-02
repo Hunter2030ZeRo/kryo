@@ -17,7 +17,7 @@ CPU-local state, Limine AP startup, parallel user execution, remote wakeups, and
 
 Frame metadata now scales with the normalized Usable RAM inventory. The image reserves its backing before initializing the frame pool or heap. [ADR 0013](decisions/0013-runtime-frame-metadata.md) records bootstrap exclusion, physical-address selection, and the large-memory proof scope. Further memory work includes fragmented metadata backing, memory hotplug, NUMA policy, and physical-hardware validation.
 
-Normal boot starts a native supervisor with explicit root authority. Versioned manifests install role-labeled grants before child execution. Private instance registration and client discovery gateways bind service policy to capabilities; claimed IDs do not authenticate it. Shared resource accounts now bound handles, waits, live threads and shared payload pages, with additional per-process VM limits. Ordinary children inherit accounts and restart retains usage. [ADR 0015](decisions/0015-service-startup-and-authority.md) defines startup/discovery and [ADR 0016](decisions/0016-service-resource-budgets.md) defines resource lifetime. Validated private DMA queues now carry Ring 3 block commands. The next path is a persistent block IPC service, storage IRQ completion, native runtime and BetAFS/VFS integration. CPU elapsed-time accounting, scalable service events and dynamic configuration remain separate work. The current HPET grant validates restricted registers and IRQ notification; it is not a general device manager.
+Normal boot starts a native supervisor with explicit root authority. Versioned manifests install role-labeled grants before child execution. Private instance registration and client discovery gateways bind service policy to capabilities; claimed IDs do not authenticate it. Shared resource accounts now bound handles, waits, live threads and shared payload pages, with additional per-process VM limits. Ordinary children inherit accounts and restart retains usage. [ADR 0015](decisions/0015-service-startup-and-authority.md) defines startup/discovery and [ADR 0016](decisions/0016-service-resource-budgets.md) defines resource lifetime. Validated private DMA queues now carry Ring 3 block commands. A configured persistent block IPC service now connects clients through private read/write gates. The next path is the dedicated user ABI, native runtime, VFS/BetAFS and storage IRQ completion. CPU elapsed-time accounting, scalable service events and dynamic configuration remain separate work. The current HPET grant validates restricted registers and IRQ notification; it is not a general device manager.
 
 A general user target/runtime, ELF TLS templates, libc/std, dynamic linking, and libsys startup conventions remain necessary for ordinary applications. Shared pages and copied capabilities are implemented; buffer loans, bulk queues, object revocation, DMA pins, and IOMMU isolation remain pending.
 
@@ -34,8 +34,8 @@ Extend SMP scheduling after the corresponding ownership and failure-path checks 
 
 Conventional PCI discovery and owned DMA buffers now connect to actual Ring 3
 VirtIO block read/write/flush through private validated queues. The opt-in
-validation path uses polling and a disposable signed disk. Persistent block IPC,
-storage IRQ completion and general assignment remain pending. See
+validation path uses polling and a disposable signed disk. Configured initial block IPC now works; storage IRQ completion, external
+publication and general assignment remain pending. See
 [ADR 0018](decisions/0018-mediated-virtio-block-transport.md).
 
 BetAFS keeps its normal Ring 3 std dependency. Its adapter must preserve 4096-byte

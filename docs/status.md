@@ -255,6 +255,33 @@ libc, C++ runtime/libraries and their shared platform services are pending;
 [ADR 0019](decisions/0019-native-runtime-and-standard-libraries.md) records the
 order. A no_std BetAFS rewrite is not the integration direction.
 
+## Initial block IPC service
+
+The configured block service now runs in the normal supervisor's shared runtime
+graph and remains waiting after its validation clients exit. A separate read,
+write and test-control endpoint conveys each authority. Version-one messages
+carry fixed 4096-byte memory loans; clients supply no VirtIO commands. All grants
+retire before reply, including malformed and fire-and-forget messages.
+
+Suspended process preparation installs Device ownership and immutable startup
+records before Runnable publication. Driver/client accounts and channel payloads
+remain bounded. An accepted cancelled read retains its loan until cleanup; a
+subsequent Info reply establishes the single-threaded service's sequencing barrier.
+Late reply rejection is nonfatal. Boot tests use a control client for graceful
+stop and verify complete resource retirement. Normal idle has an explicit device
+cleanup retry deadline independent of supervisor activity.
+
+The graph remains opt-in on the signed disposable disk. General publication,
+device reassignment/restart, storage IRQs and wait-any remain pending; the server
+rotates three gates using one-millisecond waits. See
+[ADR 0020](decisions/0020-initial-block-service.md) and
+[service validation](validation/2026-11-02-block-service/README.md).
+
+Native images already use ELF64 AMD64 static ET_EXEC. Current bootstrap Rust
+programs still use the soft-float bare-metal target and register-based startup;
+a general SysV hard-float user target, crt0/initial stack and std ports are not
+validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and ABI.
+
 ## Limits
 
 - One to 255 xAPIC logical processors with directed APIC IDs 0..254 and multiword CPU sets, four-level paging, PCID off, and serialized BSP page-table policy. Larger CPU inventories are rejected before HHDM protection changes. No hotplug, x2APIC, affinity, topology/NUMA policy, per-CPU run queues, or parallel kernel syscall processing. IRQs remain disabled during policy work; idle, drain, and user execution use controlled IRQ windows.
@@ -272,8 +299,8 @@ order. A no_std BetAFS rewrite is not the integration direction.
 
 ## Next work
 
-Turn the validated block path into a persistent service with an explicit block
-IPC contract, then connect VFS, the native runtime and BetAFS. Add storage IRQ
+Connect the initial block service to VFS, the native runtime and BetAFS. Establish
+the dedicated user ABI and process startup before claiming standard-library support. Add storage IRQ
 completion and general device assignment while retaining the private queue
 boundary. The current HPET grant remains a bootstrap device path. CPU-time
 accounting must measure individual CPU jobs; preemption counts and BSP batch wall

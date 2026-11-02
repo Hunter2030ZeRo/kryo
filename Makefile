@@ -19,6 +19,8 @@ SUPERVISOR_ELF := $(BUILD_DIR)/supervisor.elf
 ECHO_ELF := $(BUILD_DIR)/echo-service.elf
 CLIENT_ELF := $(BUILD_DIR)/registry-client.elf
 BLOCK_ELF := $(BUILD_DIR)/virtio-block.elf
+BLOCK_SERVICE_ELF := $(BUILD_DIR)/block-service.elf
+BLOCK_CLIENT_ELF := $(BUILD_DIR)/block-client.elf
 
 CARGO_TARGET_DIR ?= target
 KERNEL := $(CARGO_TARGET_DIR)/$(TARGET)/$(PROFILE)/kryo
@@ -48,6 +50,8 @@ user:
 	python3 tools/build_user.py --program echo-service --profile "$(PROFILE)" --output "$(ECHO_ELF)"
 	python3 tools/build_user.py --program registry-client --profile "$(PROFILE)" --output "$(CLIENT_ELF)"
 	python3 tools/build_user.py --program virtio-block --profile "$(PROFILE)" --output "$(BLOCK_ELF)"
+	python3 tools/build_user.py --program block-service --profile "$(PROFILE)" --output "$(BLOCK_SERVICE_ELF)"
+	python3 tools/build_user.py --program block-client --profile "$(PROFILE)" --output "$(BLOCK_CLIENT_ELF)"
 
 iso: kernel user
 	rm -rf "$(ISO_ROOT)"
@@ -66,6 +70,8 @@ iso: kernel user
 	cp "$(ECHO_ELF)" "$(ISO_ROOT)/boot/echo-service.elf"
 	cp "$(CLIENT_ELF)" "$(ISO_ROOT)/boot/registry-client.elf"
 	cp "$(BLOCK_ELF)" "$(ISO_ROOT)/boot/virtio-block.elf"
+	cp "$(BLOCK_SERVICE_ELF)" "$(ISO_ROOT)/boot/block-service.elf"
+	cp "$(BLOCK_CLIENT_ELF)" "$(ISO_ROOT)/boot/block-client.elf"
 	cp boot/limine.conf "$(ISO_ROOT)/boot/limine/"
 ifeq ($(BLOCK_PROBE),1)
 	python3 -c 'from pathlib import Path; p=Path("$(ISO_ROOT)/boot"); (p/"block-probe.enabled").write_bytes(b"KRYO-BLOCK-PROBE-V1\n"); c=p/"limine/limine.conf"; c.write_text(c.read_text()+"\tmodule_path: boot():/boot/block-probe.enabled\n\tmodule_cmdline: kryo-block-probe-enabled\n")'

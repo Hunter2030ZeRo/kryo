@@ -40,8 +40,29 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
         initial.budgets.len(),
         initial.resources.len()
     ));
+    let mut block = super::block_service::start(
+        pool,
+        direct,
+        &memory,
+        &mut region,
+        &objects,
+        &mut tasks,
+        &mut ipc,
+        false,
+    );
     loop {
-        reap(&mut tasks, &mut ipc, pool, &mut region);
+        if let Some(block) = &mut block {
+            block.observe(
+                pool,
+                direct,
+                &memory,
+                &mut region,
+                &objects,
+                &mut tasks,
+                &mut ipc,
+            );
+        }
+        let retirement = reap(&mut tasks, &mut ipc, pool, &mut region);
         if tasks.process_thread_count(supervisor_process).is_err()
             || tasks.terminal(supervisor_process).is_some()
         {
@@ -56,6 +77,8 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
         }
         if tasks.has_runnable() {
             let _batch = smp::step(&mut tasks, &mut stats, &mut ipc, &mut region);
+        } else if retirement.retirement_pending {
+            retry_retirement(&mut tasks, &mut ipc);
         } else if ipc.waits.next_deadline().is_some() || super::devices::has_wake_source(&ipc) {
             super::idle_for_events(&mut tasks, &mut ipc);
         } else {
@@ -108,6 +131,7 @@ fn start<'kernel, 'objects>(
 
 #[derive(Default)]
 struct ReapStats {
+    retirement_pending: bool,
     created: usize,
     preempted_created: usize,
     preempted_main: usize,
@@ -121,8 +145,10 @@ fn reap<'objects>(
 ) -> ReapStats {
     let mut stats = ReapStats::default();
     ipc.settle(tasks);
-    super::devices::retire_bindings(tasks, ipc)
-        .expect("Device retirement failed; execution resources retained");
+    if super::devices::retire_bindings(tasks, ipc).is_err() {
+        stats.retirement_pending = true;
+        return stats;
+    }
     let mut cursor = None;
     while let Some(id) = tasks.next_dying(cursor) {
         cursor = Some(id);
@@ -158,6 +184,7 @@ pub(crate) fn check(
     let mut reaped = ReapStats::default();
     for _ in 0..1024 {
         let summary = reap(&mut tasks, &mut ipc, pool, region);
+        assert!(!summary.retirement_pending);
         reaped.created += summary.created;
         reaped.preempted_created += summary.preempted_created;
         reaped.preempted_main += summary.preempted_main;
@@ -200,6 +227,25 @@ pub(crate) fn check(
     assert_eq!(objects.live_count(), 0);
     assert_eq!(pool.stats(), before);
     kryo_hal::emergency_write_str("INIT: user supervision and restart OK generations=2\n");
+}
+
+#[cfg(not(feature = "boot-tests"))]
+fn retry_retirement<'objects>(tasks: &mut Tasks<'_, 'objects>, ipc: &mut IpcRuntime<'objects>) {
+    super::expire_waits(tasks, ipc);
+    if tasks.has_runnable() {
+        return;
+    }
+    let retry = kryo_hal::monotonic_time()
+        .unwrap()
+        .saturating_add(1_000_000);
+    let deadline = ipc
+        .waits
+        .next_deadline()
+        .map_or(retry, |deadline| deadline.min(retry));
+    unsafe { kryo_hal::arm_deadline(deadline) }.expect("Cannot arm device retirement retry");
+    kryo_hal::idle_until_interrupt().expect("Cannot wait for device retirement retry");
+    unsafe { kryo_hal::stop_timer() }.expect("Cannot stop retirement retry timer");
+    super::expire_waits(tasks, ipc);
 }
 
 #[cfg(not(feature = "boot-tests"))]

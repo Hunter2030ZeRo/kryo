@@ -1,0 +1,636 @@
+COMMAND: rustc --version
+rustc 1.101.0-nightly (3e92e1a2d 2026-11-01)
+EXIT: 0
+COMMAND: cargo test --offline --locked --target x86_64-unknown-linux-gnu -p kryo-core -p kryo-hal -p kryo-interfaces
+   Compiling scopeguard v1.2.0
+   Compiling bitflags v2.13.2
+   Compiling volatile v0.4.6
+   Compiling bit_field v0.10.3
+   Compiling kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/interfaces)
+   Compiling lock_api v0.4.14
+   Compiling x86_64 v0.15.5
+   Compiling spin v0.12.3
+   Compiling kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/kernel/core)
+   Compiling kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/hal)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.48s
+     Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/ea4ddae2b5c5b195/out/kryo_core-ea4ddae2b5c5b195)
+
+running 12 tests
+test capability::tests::generation_wrap_retires_handle_slots ... ok
+test capability::transfer::tests::released_max_generation_reservation_retires_its_slot ... ok
+test capability::transfer::tests::reservation_domains_never_wrap_or_reuse_identity ... ok
+test device::queue::tests::exhausted_tickets_never_publish_or_wrap_after_reset ... ok
+test ipc::endpoint::tests::reply_generation_wrap_retires_the_slot_and_rejects_unaccepted_calls ... ok
+test object::tests::generation_wrap_retires_object_slots ... ok
+test ipc::budget::tests::lease_keeps_account_alive_after_all_factory_owners_drop ... ok
+test object::tests::reference_overflow_preserves_the_original_reference ... ok
+test process::table::tests::generation_wrap_retires_the_process_slot ... ok
+test resource::tests::retained_charge_owns_account_after_all_budget_handles_drop ... ok
+test sync::wait::tests::generation_wrap_retires_wait_slots ... ok
+test task::tests::generation_wrap_retires_the_slot ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/allocation_failure.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/e59ddb34550bce6c/out/allocation_failure-e59ddb34550bce6c)
+
+running 4 tests
+test object_and_handle_oom_preserve_strong_ownership_and_allow_retry ... ok
+test budgeted_metadata_oom_refunds_charges_before_retry ... ok
+test task_and_process_oom_return_the_exact_unpublished_owner ... ok
+test wait_and_endpoint_oom_do_not_register_or_accept_a_partial_request ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/capability.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/4a983628a5da0c0e/out/capability-4a983628a5da0c0e)
+
+running 11 tests
+test close_removes_one_handle_but_does_not_revoke_other_references ... ok
+test description_checks_handle_generation_without_cloning_or_adding_authority ... ok
+test dropping_a_handle_table_releases_its_strong_references ... ok
+test duplicate_requires_authority_and_cannot_amplify_rights ... ok
+test failed_duplicate_does_not_leak_an_object_reference ... ok
+test handles_reject_zero_unknown_slots_and_stale_generations ... ok
+test insertion_failure_returns_the_original_strong_reference ... ok
+test live_references_prevent_arena_slot_reuse ... ok
+test lookup_checks_kind_and_required_rights_before_retaining_reference ... ok
+test payload_is_destroyed_only_after_the_last_strong_reference ... ok
+test rights_reject_unknown_bits ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/capability_transfer.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/823b0e76d9d8c60d/out/capability_transfer-823b0e76d9d8c60d)
+
+running 16 tests
+test accepted_reference_survives_sender_death_and_last_receiver_handle_close ... ok
+test cancelled_unaccepted_delegation_keeps_the_source_and_returns_capacity ... ok
+test delegation_cannot_add_rights ... ok
+test delegation_requires_transfer_but_not_dup_and_keeps_the_original ... ok
+test dup_without_transfer_cannot_delegate ... ok
+test fixed_owner_receive_and_wait_rights_cannot_be_delegated ... ok
+test foreign_release_preserves_the_reservation_for_its_original_table ... ok
+test foreign_reservation_error_returns_both_owners_unchanged ... ok
+test insufficient_receiver_capacity_leaves_no_partial_reservation ... ok
+test offers_are_bounded_to_two_capabilities ... ok
+test receiver_table_may_move_while_a_reservation_is_pending ... ok
+test reserved_slots_cannot_be_stolen_by_insert_duplicate_or_guessed_close ... ok
+test second_invalid_offer_rolls_back_the_first_reference ... ok
+test staged_references_survive_source_close_before_acceptance ... ok
+test small_reservation_commit_failure_keeps_the_entire_batch ... ok
+test zero_capability_receive_uses_no_handle_slots ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/channel_budget.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/6acbd59f82620cdd/out/channel_budget-6acbd59f82620cdd)
+
+running 5 tests
+test cloned_factories_share_exhaustion_and_reservation_rollback ... ok
+test closed_endpoint_remains_charged_through_transfer_and_stale_references ... ok
+test failed_object_and_handle_publication_preserve_the_charge_until_rollback ... ok
+test factory_capabilities_delegate_creation_without_resetting_the_budget ... ok
+test notification_owner_death_does_not_refund_a_retained_payload ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/deadline.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/cb230cbd78853af1/out/deadline-cb230cbd78853af1)
+
+running 5 tests
+test deadlines_are_absolute_and_select_earliest_then_slot ... ok
+test failed_registration_preserves_deadline_and_capacity ... ok
+test taking_or_abandoning_removes_old_deadlines_before_slot_reuse ... ok
+test selection_does_not_complete_or_publish_a_parking_wait ... ok
+test untimed_waits_and_maximum_deadlines_need_no_sentinel ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/device.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/977fbf03604f892b/out/device-977fbf03604f892b)
+
+running 8 tests
+test access_size_alignment_and_full_width_are_checked_before_access ... ok
+test capability_attenuation_and_register_permissions_are_both_required ... ok
+test closing_a_handle_does_not_revoke_retained_device_state_or_alias_a_replacement ... ok
+test construction_rejects_empty_misaligned_overflowing_and_overlapping_windows ... ok
+test process_slot_reuse_does_not_inherit_device_authority ... ok
+test register_windows_allow_only_the_declared_aligned_words ... ok
+test revocation_blocks_access_before_cleanup_and_failed_cleanup_is_retryable ... ok
+test write_only_windows_do_not_grant_reads ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/dma.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/6a34ef004d7076a1/out/dma-6a34ef004d7076a1)
+
+running 17 tests
+test abandoning_an_inflight_owner_never_returns_frames_or_drops_translation ... ok
+test allocation_retains_frames_until_ordered_retirement ... ok
+test constrained_run_invalid_arguments_do_not_change_pool ... ok
+test constrained_runs_can_allocate_above_four_gib_without_truncation ... ok
+test constrained_runs_preserve_holes_occupied_frames_and_exact_bounds ... ok
+test constructor_cleanup_failure_returns_reachable_owner ... ok
+test device_mask_and_overflow_reject_entire_range_and_retire_mapping ... ok
+test failed_quiescence_keeps_all_owners_and_retries_before_unmap ... ok
+test failed_unmap_keeps_backing_and_does_not_repeat_quiescence ... ok
+test inclusive_device_limit_accepts_final_byte ... ok
+test initialization_and_mapping_errors_return_unpublished_backing ... ok
+test invalid_physical_limits_grant_no_authority ... ok
+test invalid_sizes_fail_before_allocating_or_touching_backend ... ok
+test temporary_initializer_borrow_ends_before_device_retention ... ok
+test panic_during_retirement_retains_backing_and_backend_owners ... ok
+test temporary_initializer_error_returns_unpublished_run_without_mapping ... ok
+test unpublished_owner_is_also_explicitly_retired ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/growth.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/c865a8072fa9a143/out/growth-c865a8072fa9a143)
+
+running 9 tests
+test explicit_quotas_return_unpublished_owners_and_reuse_retired_capacity ... ok
+test growing_capability_quotas_preserve_refs_and_atomic_reservations ... ok
+test storage_failure_does_not_publish_a_partial_growth ... ok
+test growing_exit_observers_all_receive_one_durable_result ... ok
+test growing_tasks_preserve_ids_and_cpu_owners_across_reallocation ... ok
+test growing_waits_preserve_deadlines_and_parking_handoffs ... ok
+test growing_arenas_and_handles_retain_refs_and_pending_reservations ... ok
+test growing_processes_keep_many_members_until_explicit_cleanup ... ok
+test growing_endpoint_preserves_fifo_and_all_accepted_reply_identities ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/ipc.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/86ca563d43d6ecc7/out/ipc-86ca563d43d6ecc7)
+
+running 16 tests
+test accepted_call_cancellation_reports_uncertainty_and_rejects_late_reply ... ok
+test call_waits_for_a_single_reply_from_the_bound_receiver ... ok
+test accepted_caller_death_revokes_reply_without_closing_the_endpoint ... ok
+test completion_before_park_is_not_published_as_an_early_wakeup ... ok
+test cancelling_before_acceptance_prevents_delivery ... ok
+test completed_and_reused_wait_slots_cannot_receive_stale_queued_messages ... ok
+test endpoint_close_drains_receiver_queued_call_and_accepted_call_once ... ok
+test malformed_reply_tokens_do_not_change_a_valid_call ... ok
+test multiple_queued_senders_are_received_in_fifo_order ... ok
+test notification_cancellation_and_owner_death_complete_once ... ok
+test notification_coalesces_signals_without_losing_signal_before_wait ... ok
+test owner_and_wait_identity_are_validated_before_registration ... ok
+test queued_senders_keep_fifo_order_and_capacity_failure_does_not_register_a_wait ... ok
+test receiver_owner_death_closes_the_endpoint_and_sender_death_detaches_requests ... ok
+test rendezvous_transfers_inline_data_and_completes_each_wait_once ... ok
+test zero_reply_capacity_rejects_calls_but_accepts_plain_rendezvous ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ipc_caps.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/4898da35a0eea2ce/out/ipc_caps-4898da35a0eea2ce)
+
+running 9 tests
+test accepted_capability_calls_keep_delivery_status_after_cancellation_or_death ... ok
+test cancelled_or_stale_receivers_do_not_leave_their_capacity_behind ... ok
+test cancelling_or_losing_queued_senders_never_accepts_their_capabilities ... ok
+test direct_capacity_rejection_keeps_both_waits_and_reply_slots_unchanged ... ok
+test direct_oversized_call_is_rejected_even_while_another_reply_is_pending ... ok
+test direct_and_queued_messages_keep_sender_and_capability_metadata ... ok
+test out_of_range_capability_counts_do_not_register_requests_or_receivers ... ok
+test queued_capacity_rejection_preserves_fifo_order_for_matching_senders ... ok
+test rejecting_the_last_queued_sender_keeps_the_receiver_waiting ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/native_elf.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/dc7f737565e22b2a/out/native_elf-dc7f737565e22b2a)
+
+running 23 tests
+test bss_only_data_pages_are_zeroed_without_reading_file_bytes ... ok
+test byte_disjoint_segments_must_not_share_a_page ... ok
+test dynamic_tls_and_unknown_program_headers_are_rejected ... ok
+test executable_plans_do_not_depend_on_section_tables ... ok
+test entry_must_be_inside_file_backed_executable_bytes ... ok
+test executable_stack_requests_are_rejected ... ok
+test file_ranges_reject_overflow_and_out_of_bounds_bytes ... ok
+test huge_valid_user_ranges_are_rejected_by_the_page_budget ... ok
+test invalid_identity_or_header_size_is_rejected ... ok
+test load_addresses_exclude_null_kernel_noncanonical_and_wrapping_ranges ... ok
+test load_alignment_checks_power_two_and_both_congruence_rules ... ok
+test null_note_and_phdr_headers_do_not_add_mappings ... ok
+test only_native_little_endian_amd64_static_images_are_supported ... ok
+test program_header_arithmetic_and_table_bounds_are_checked ... ok
+test program_header_count_and_size_are_bounded ... ok
+test segment_capacity_and_page_budget_are_independent ... ok
+test segment_file_size_must_not_exceed_memory_size ... ok
+test static_image_has_borrowed_pages_with_exact_permissions ... ok
+test writable_executable_and_unrepresentable_permissions_are_rejected ... ok
+test zero_length_loads_add_no_pages_and_cannot_supply_an_entry ... ok
+test every_truncated_prefix_is_rejected_without_panicking ... ok
+test partial_pages_and_bss_match_an_independent_byte_oracle ... ok
+test hostile_segment_fields_never_panic_or_exceed_the_plan_budget ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/normalize.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/2e1c3b8b356d3912/out/normalize-2e1c3b8b356d3912)
+
+running 11 tests
+test empty_input_and_fully_reserved_maps_need_no_output ... ok
+test adjacent_usable_regions_merge_even_when_output_is_full ... ok
+test invalid_raw_maps_are_rejected_instead_of_partially_accepted ... ok
+test non_usable_kinds_never_become_allocation_candidates ... ok
+test one_reservation_can_span_several_usable_regions ... ok
+test output_capacity_failure_cannot_be_mistaken_for_a_complete_plan ... ok
+test regions_without_complete_pages_produce_no_candidates ... ok
+test reservation_cover_overflow_is_an_error_even_outside_usable_ram ... ok
+test reservations_round_outward_and_union_overlaps_and_adjacency ... ok
+test touching_reservations_outside_a_region_do_not_remove_its_pages ... ok
+test generated_maps_match_an_independent_page_oracle ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/object_lifetime.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/42aa8a88a178f70c/out/object_lifetime-42aa8a88a178f70c)
+
+running 2 tests
+test forgotten_references_keep_backing_alive_after_arena_teardown ... ok
+test released_references_destroy_backing_before_arena_teardown ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/owned_capability.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/94f27a6cdf9425e2/out/owned_capability-94f27a6cdf9425e2)
+
+running 2 tests
+test owned_reference_commits_to_reserved_capacity_without_cloning ... ok
+test rejected_owned_commit_returns_the_same_reference_for_retry ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/pool.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/e5b0f6c1c7a12a34/out/pool-e5b0f6c1c7a12a34)
+
+running 23 tests
+test capacity_errors_leave_the_pool_uninitialized ... ok
+test boot_reserved_external_metadata_remains_outside_pool_authority ... ok
+test contiguous_failure_does_not_claim_frames_or_cross_reserved_holes ... ok
+test dropping_an_owner_does_not_recycle_the_frame ... ok
+test external_initialization_failure_returns_unchanged_storage_for_retry ... ok
+test contiguous_wrong_pool_preserves_owner_and_runs_are_explicitly_retired ... ok
+test contiguous_runs_cross_bitmap_words_and_preserve_single_frame_summaries ... ok
+test external_summary_failure_and_double_init_do_not_publish_or_reset ... ok
+test fragmented_free_frames_are_not_silently_treated_as_a_run ... ok
+test initialization_is_required ... ok
+test metadata_sizing_tracks_ram_and_rejects_unrepresentable_totals ... ok
+test physical_holes_do_not_consume_bitmap_capacity ... ok
+test reinitialization_preserves_live_allocations ... ok
+test selected_allocations_respect_holes_bounds_and_existing_owners ... ok
+test reservation_pages_are_never_allocated ... ok
+test released_frame_can_be_allocated_again ... ok
+test wrong_pool_returns_the_original_owner ... ok
+test summary_crosses_and_returns_across_4096_pages ... ok
+test external_metadata_manages_128_gib_without_backing_ram ... ok
+test external_metadata_extends_past_128_gib_and_sparse_high_addresses ... ok
+test tail_bits_never_allocate_outside_the_plan ... ok
+test operations_match_an_independent_free_set ... ok
+test host_threads_keep_allocations_exclusive ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/process_lifecycle.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/1cc5291ebe0e5975/out/process_lifecycle-1cc5291ebe0e5975)
+
+running 10 tests
+test an_exit_object_binds_once_before_publication ... ok
+test cancellation_and_timeout_detach_only_the_selected_observer ... ok
+test observer_capacity_failure_preserves_existing_waits_and_recovers_after_cancel ... ok
+test exit_that_wins_cannot_be_overwritten_by_timeout_or_cancel ... ok
+test observer_death_does_not_terminate_target_or_retain_a_stale_wait ... ok
+test observers_before_and_after_exit_receive_the_same_durable_result ... ok
+test retained_control_reference_survives_handle_close_and_task_reap ... ok
+test self_wait_and_foreign_or_completed_wait_ids_are_rejected ... ok
+test task_cleanup_retry_and_slot_reuse_do_not_change_old_control_result ... ok
+test terminal_observation_needs_no_pending_observer_capacity ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/process_threads.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/ac66e611078b2978/out/process_threads-ac66e611078b2978)
+
+running 10 tests
+test a_live_thread_cannot_detach_and_an_ended_member_prevents_process_reap ... ok
+test attach_rejects_capacity_duplicates_and_exiting_without_changing_ownership ... ok
+test cleanup_failure_keeps_resources_status_and_process_generation_for_retry ... ok
+test last_voluntary_exit_selects_process_status_in_either_handoff_order ... ok
+test stale_process_and_thread_generations_cannot_redirect_membership ... ok
+test dropping_a_registry_does_not_destroy_unretired_process_resources ... ok
+test the_first_process_exit_reason_wins_after_all_execution_handoffs ... ok
+test threads_share_one_resource_owner_until_every_private_cleanup_retires ... ok
+test unpublished_abort_retries_cleanup_without_losing_its_owner ... ok
+test zero_capacity_and_empty_processes_have_no_terminal_thread_event ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/range.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/23432b03b4d4465d/out/range-23432b03b4d4465d)
+
+running 5 tests
+test base_and_length_use_a_half_open_range ... ok
+test page_alignment_keeps_complete_frames_and_covers_partial_frames ... ok
+test short_and_empty_ranges_have_no_complete_frames ... ok
+test top_of_address_space_rejects_unrepresentable_page_cover ... ok
+test alignment_matches_integer_arithmetic_across_page_boundaries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/resource_budget.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/069e5975b8cc7133/out/resource_budget-069e5975b8cc7133)
+
+running 8 tests
+test duplicate_wait_failure_refunds_its_temporary_charge ... ok
+test handle_duplication_and_transfer_share_account_and_charge_receiver_reservations ... ok
+test inherited_accounts_share_charges_and_independent_accounts_do_not ... ok
+test multi_unit_charges_reject_zero_overflow_and_exhaustion_without_mutation ... ok
+test partial_reservation_and_failed_insert_return_all_unpublished_owners ... ok
+test ready_waits_remain_charged_until_consumed_or_abandoned ... ok
+test reservations_own_charges_through_token_loss_and_unused_commit_refunds ... ok
+test simultaneous_reservations_cannot_overcommit_an_account ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/resource_retirement.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/91ad6b20771f09da/out/resource_retirement-91ad6b20771f09da)
+
+running 1 test
+test failed_backing_retirement_cannot_refund_a_shared_page_charge_during_unwind ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/task.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/f8b480d2953c583c/out/task-f8b480d2953c583c)
+
+running 19 tests
+test a_reused_slot_never_accepts_the_old_task_id ... ok
+test call_waits_for_completion_and_yield_requeues ... ok
+test dropping_a_table_cannot_destroy_unreaped_resources ... ok
+test capacity_failure_preserves_the_rejected_resource ... ok
+test each_cpu_owns_a_distinct_running_task ... ok
+test failed_suspended_spawn_returns_ownership_without_changing_existing_state ... ok
+test fault_and_exit_retain_resources_until_cleanup_succeeds ... ok
+test invalid_cpu_indices_never_change_round_robin_or_owner_state ... ok
+test one_serialized_round_robin_cursor_remains_fair_across_cpu_batches ... ok
+test ordinary_spawn_remains_runnable_while_another_thread_is_suspended ... ok
+test process_policy_must_wait_for_all_cpu_handoffs_before_stopping_peers ... ok
+test round_robin_hands_off_one_saved_context_at_a_time ... ok
+test running_tasks_cannot_stop_or_reap_until_their_own_cpu_handoff ... ok
+test stale_returns_cannot_release_a_reused_task_on_another_cpu ... ok
+test stopping_blocked_or_runnable_tasks_does_not_make_them_running ... ok
+test successful_reap_returns_resources_for_explicit_destruction ... ok
+test suspended_thread_cannot_dispatch_before_explicit_publication ... ok
+test wrong_completion_cannot_release_another_tasks_execution_owner ... ok
+test wrong_cpu_completion_preserves_all_execution_owners ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/timeout.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/a917b8c99f9ffa60/out/timeout-a917b8c99f9ffa60)
+
+running 8 tests
+test a_reply_that_wins_cannot_be_replaced_by_timeout ... ok
+test accepted_timeout_retires_reply_token_and_allows_reuse ... ok
+test parking_timeout_waits_for_handoff ... ok
+test cancellation_or_closure_before_timeout_keeps_its_result ... ok
+test queued_sender_timeout_detaches_request_before_wait_reuse ... ok
+test receiver_timeout_does_not_consume_a_future_message ... ok
+test signal_and_timeout_select_one_result_without_losing_the_next_signal ... ok
+test timeout_batch_cannot_accept_an_expired_request_when_a_reply_slot_opens ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/transfer_ipc.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/16ca2b3b832401a3/out/transfer_ipc-16ca2b3b832401a3)
+
+running 5 tests
+test accepted_call_grant_survives_source_close_and_caller_cancellation ... ok
+test cancelling_a_receive_releases_reservations_before_a_full_capacity_retry ... ok
+test owner_death_releases_wait_reservations_and_unaccepted_batches_separately ... ok
+test receiver_commit_precedes_cleanup_of_an_earlier_ready_sender_slot ... ok
+test capacity_mismatch_retains_source_handles_and_staged_references ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/virtqueue.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/ebae5ecaaad05c2a/out/virtqueue-ebae5ecaaad05c2a)
+
+running 17 tests
+test empty_or_oversized_descriptor_lists_are_rejected ... ok
+test completion_cannot_exceed_writable_bytes_even_if_total_is_larger ... ok
+test even_large_user_offsets_never_become_device_addresses ... ok
+test hardware_descriptors_only_use_owned_packed_device_addresses ... ok
+test invalid_cpu_and_device_spans_are_rejected_before_access ... ok
+test overlap_is_rejected_but_adjacent_ranges_and_exact_capacity_are_valid ... ok
+test malformed_device_head_id_poisons_queue_until_hardware_reset ... ok
+test initialization_sets_polling_flags_and_preserves_bounce_payload ... ok
+test plan_snapshots_bounded_offsets_and_packs_device_storage ... ok
+test only_matching_live_ticket_can_consume_completion ... ok
+test software_reset_discards_stopped_work_without_reusing_old_tickets ... ok
+test unexpected_completion_count_poisons_instead_of_indexing_untrusted_slot ... ok
+test whole_memory_range_and_checked_arithmetic_are_enforced ... ok
+test unsolicited_completion_before_submission_is_rejected ... ok
+test zero_lengths_unknown_flags_and_reversed_direction_are_rejected ... ok
+test zero_and_partial_device_writes_are_bounded_valid_completions ... ok
+test ring_indices_wrap_without_confusing_pending_generation ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/vm.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/2bfbedde791f9c74/out/vm-2bfbedde791f9c74)
+
+running 31 tests
+test active_root_rejects_mutation_reads_and_close ... ok
+test charged_shared_creation_failure_refunds_all_unpublished_frames_and_credits ... ok
+test dropping_an_unclosed_space_forgets_its_shared_backing_lease ... ok
+test distinct_spaces_own_independent_data_at_the_same_virtual_address ... ok
+test failed_root_construction_returns_its_frame ... ok
+test duplicate_mapping_and_metadata_limits_preserve_owners ... ok
+test backend_failures_before_publication_release_all_prepared_frames ... ok
+test discarded_arena_cannot_refund_forgotten_shared_backing ... ok
+test configured_vm_limits_bound_aliases_and_include_the_root_table ... ok
+test dropping_a_space_does_not_reclaim_unretired_frames ... ok
+test failed_alias_restore_retains_the_unpublished_data_owner ... ok
+test failed_unmap_cleanup_preserves_frames_for_close_retry ... ok
+test invalid_ranges_and_contents_do_not_allocate ... ok
+test partial_table_allocation_failure_rolls_back ... ok
+test mixed_backing_close_retry_does_not_restore_or_release_shared_pages_early ... ok
+test mappings_keep_shared_storage_after_the_last_handle_is_closed ... ok
+test permissions_reject_write_execute ... ok
+test read_bounds_and_closed_spaces_are_checked ... ok
+test root_retirement_failure_preserves_tables_and_root ... ok
+test shared_duplicate_and_metadata_limits_do_not_retain_temporary_leases ... ok
+test shared_map_partial_table_allocation_failure_preserves_the_object ... ok
+test shared_mapping_failure_releases_tables_and_its_temporary_lease ... ok
+test shared_maps_reject_executable_aliases_and_bad_virtual_addresses ... ok
+test shared_memory_partial_allocation_failure_returns_unpublished_frames ... ok
+test shared_memory_partial_initialization_failure_returns_all_frame_owners ... ok
+test shared_memory_is_bounded_zeroed_once_and_released_by_its_owner ... ok
+test shared_reads_reject_a_writer_running_in_another_root ... ok
+test shared_payload_charge_survives_all_handles_and_failed_mapping_retirement ... ok
+test shared_unmap_failure_keeps_the_mapping_lease_until_close_retry ... ok
+test unmap_flushes_before_restoring_alias_and_reusing_the_data_frame ... ok
+test growing_vm_metadata_crosses_mapping_and_page_table_fixture_limits ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/wait.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-core/badddd8ca8912ddd/out/wait-badddd8ca8912ddd)
+
+running 9 tests
+test a_task_has_one_wait_until_its_completion_is_consumed ... ok
+test abandon_returns_any_recorded_value_and_invalidates_the_wait ... ok
+test completions_need_not_be_copyable ... ok
+test capacity_failure_preserves_the_existing_wait ... ok
+test late_completion_cannot_wake_a_reused_task_slot ... ok
+test early_completion_waits_for_execution_handoff ... ok
+test late_completion_returns_the_blocked_task_once ... ok
+test ready_scan_delivers_each_completed_wait_once ... ok
+test signal_and_cancellation_order_selects_one_result ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-hal/1e449565418ba506/out/kryo_hal-1e449565418ba506)
+
+running 73 tests
+test arch::x86_64::acpi::tests::duplicate_hpet_and_changed_length_fail_closed ... ok
+test arch::x86_64::acpi::tests::extended_checksum_and_root_shape_cannot_be_ignored ... ok
+test arch::x86_64::acpi::tests::legacy_and_extended_roots_find_checked_hpet ... ok
+test arch::x86_64::acpi::tests::gas_layout_and_address_are_constrained ... ok
+test arch::x86_64::apic::tests::base_decoder_separates_address_mode_and_boot_cpu ... ok
+test arch::x86_64::acpi::tests::truncated_and_corrupt_firmware_is_rejected ... ok
+test arch::x86_64::apic::tests::deadline_conversion_rounds_up_and_bounds_hardware_count ... ok
+test arch::x86_64::acpi::tests::root_bounds_missing_tables_and_reader_errors_propagate ... ok
+test arch::x86_64::apic::tests::delivered_timer_epoch_distinguishes_other_wakeups ... ok
+test arch::x86_64::apic::tests::delivery_epoch_never_wraps ... ok
+test arch::x86_64::apic::tests::idle_requires_disabled_interrupts_and_an_armed_controller ... ok
+test arch::x86_64::apic::tests::stopped_or_exhausted_calibration_is_rejected ... ok
+test arch::x86_64::clock::tests::clock_mapping_requires_a_full_aligned_kernel_page ... ok
+test arch::x86_64::clock::tests::clock_requires_64bit_counter_and_valid_declared_period ... ok
+test arch::x86_64::clock::tests::counter_conversion_checks_wrap_and_overflow ... ok
+test arch::x86_64::clock::tests::restoring_configuration_retains_the_running_counter_value ... ok
+test arch::x86_64::context::extended::tests::incomplete_cpu_support_and_unbounded_components_are_rejected ... ok
+test arch::x86_64::context::extended::tests::latent_xcr0_must_fit_the_preserved_feature_set ... ok
+test arch::x86_64::context::extended::tests::selection_supports_legacy_sse_and_bounded_avx ... ok
+test arch::x86_64::context::tests::assembly_register_layout_matches_the_saved_prefix ... ok
+test arch::x86_64::context::tests::bases_and_kernel_stacks_cannot_escape_their_address_ranges ... ok
+test arch::x86_64::context::extended::tests::state_storage_is_aligned_and_initial_registers_are_deterministic ... ok
+test arch::x86_64::context::tests::flags_cannot_grant_privilege_or_override_preemption ... ok
+test arch::x86_64::context::tests::tls_update_checks_the_base_before_changing_saved_state ... ok
+test arch::x86_64::context::tests::user_addresses_and_initial_alignment_are_validated ... ok
+test arch::x86_64::context::extended::tests::kernel_fp_areas_are_private_and_aligned_for_every_cpu ... ok
+test arch::x86_64::cpu::tests::cpu_sets_cross_word_boundaries_without_aliasing_or_tail_bits ... ok
+test arch::x86_64::cpu::tests::last_logical_cpu_supports_the_last_directed_xapic_id ... ok
+test arch::x86_64::cpu::tests::registration_preserves_sparse_apic_identity_and_slot_lifetime ... ok
+test arch::x86_64::cpu::tests::unrepresentable_ids_and_slots_do_not_publish_entries ... ok
+test arch::x86_64::hpet_device::tests::claim_requires_second_64bit_fsb_timer_and_no_active_source ... ok
+test arch::x86_64::cpu::tests::reverse_lookup_preserves_every_id_and_rejects_reassignment ... ok
+test arch::x86_64::hpet_device::tests::register_authority_has_exact_offsets_and_values ... ok
+test arch::x86_64::hpet_device::tests::restoration_keeps_clock_and_saved_retirement_metadata ... ok
+test arch::x86_64::hpet_device::tests::route_is_a_fixed_bsp_destination_and_device_vector ... ok
+test arch::x86_64::context::tests::cpu_run_slots_are_distinct_and_cache_line_aligned ... ok
+test arch::x86_64::paging::boot::tests::scratch_address_indices_do_not_share_kernel_image_slot ... ok
+test arch::x86_64::paging::boot::tests::table_frames_must_be_distinct_from_each_other_and_root ... ok
+test arch::x86_64::paging::direct_map::tests::direct_map_checks_full_frame ... ok
+test arch::x86_64::paging::direct_map::tests::frame_copy_bounds_reject_overflow_and_cross_page_access ... ok
+test arch::x86_64::paging::direct_map::tests::last_kernel_page_fits_and_addition_cannot_wrap ... ok
+test arch::x86_64::paging::direct_map::tests::physical_width_and_alignment_are_checked ... ok
+test arch::x86_64::paging::kernel_map::tests::large_pat_entries_are_rejected_without_reinterpretation ... ok
+test arch::x86_64::paging::kernel_map::tests::huge_split_preserves_physical_extent_and_permissions ... ok
+test arch::x86_64::paging::kernel_map::tests::only_the_verified_additional_root_slot_is_allowed ... ok
+test arch::x86_64::paging::region::tests::initial_region_may_contain_only_supervisor_nx_uc_device_leaves ... ok
+test arch::x86_64::paging::region::tests::parent_retirement_remains_retryable_after_link_was_removed ... ok
+test arch::x86_64::paging::region::tests::initial_region_parent_links_are_exact_and_have_no_extra_branches ... ok
+test arch::x86_64::paging::region::tests::ram_and_mmio_are_supervisor_writable_nx ... ok
+test arch::x86_64::paging::region::tests::region_bounds_leave_room_for_guards_and_reject_image_slot ... ok
+test arch::x86_64::paging::region::tests::unmap_keeps_physical_identity_until_every_flush_acknowledges ... ok
+test arch::x86_64::paging::user::tests::missing_table_frames_and_aliases_are_rejected_before_mutation ... ok
+test arch::x86_64::paging::user::tests::permissions_never_allow_write_and_execute ... ok
+test arch::x86_64::paging::user::tests::user_range_excludes_null_kernel_and_noncanonical_addresses ... ok
+test arch::x86_64::paging::region::tests::additional_leaf_retains_identity_through_a_missing_acknowledgement ... ok
+test arch::x86_64::pci::tests::address_and_offsets_cannot_escape_conventional_configuration ... ok
+test arch::x86_64::pci::tests::config_failure_returns_error_without_partial_inventory ... ok
+test arch::x86_64::smp::tests::acknowledgements_require_every_target_across_words_and_current_epoch ... ok
+test arch::x86_64::smp::tests::leases_reject_duplicate_ownership_across_words ... ok
+test arch::x86_64::virtio::tests::configuration_window_and_regions_are_bounded ... ok
+test arch::x86_64::smp::tests::early_wake_is_only_for_offline_aps_without_user_leases ... ok
+test arch::x86_64::virtio::tests::failed_or_reset_needed_status_never_becomes_ready ... ok
+test arch::x86_64::virtio::tests::duplicate_regions_and_enabled_interrupts_fail ... ok
+test arch::x86_64::virtio::tests::missing_cyclic_or_misaligned_capabilities_fail ... ok
+test arch::x86_64::virtio::tests::initialization_phases_reject_early_register_access ... ok
+test arch::x86_64::virtio::tests::only_selected_device_features_and_split_ring_transport_are_allowed ... ok
+test arch::x86_64::virtio::tests::malformed_lengths_bars_and_regions_fail ... ok
+test arch::x86_64::virtio::tests::queue_checks_sizes_alignment_and_full_range_overflow ... ok
+test arch::x86_64::virtio::tests::reserved_vendor_capabilities_are_ignored ... ok
+test arch::x86_64::pci::tests::empty_segment_only_reads_function_zero_identity ... ok
+test arch::x86_64::pci::tests::unknown_header_never_reads_possible_nonbar_registers ... ok
+test arch::x86_64::pci::tests::multifunction_and_nonzero_bus_inventory_preserves_raw_registers ... ok
+test arch::x86_64::pci::tests::single_function_header_does_not_probe_other_functions ... ok
+
+test result: ok. 73 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-interfaces/bc104644feab6f38/out/kryo_interfaces-bc104644feab6f38)
+
+running 7 tests
+test block::tests::each_gate_carries_its_own_authority ... ok
+test block::tests::readonly_device_rejects_mutation_after_gate_validation ... ok
+test block::tests::validates_full_fixed_block_and_capability_count ... ok
+test block::tests::rejects_bad_versions_unknown_operations_zero_ids_and_stale_instances ... ok
+test startup::tests::wire_kinds_and_record_limits_are_explicit ... ok
+test syscall::tests::unknown_calls_are_errors_and_status_does_not_overlap_handle_results ... ok
+test virtio::tests::records_have_fixed_width_and_alignment ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_hal
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_interfaces
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+EXIT: 0
+COMMAND: cargo test --offline --locked --manifest-path userspace/Cargo.toml --target x86_64-unknown-linux-gnu -p kryo-libsys -p kryo-services
+   Compiling kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/interfaces)
+   Compiling kryo-libsys v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/libsys)
+   Compiling kryo-services v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/services)
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.98s
+     Running unittests src/lib.rs (userspace/target/x86_64-unknown-linux-gnu/debug/build/kryo-libsys/fe775c1629de127f/out/kryo_libsys-fe775c1629de127f)
+
+running 4 tests
+test tests::startup_budget_assignment_requires_the_budget_kind ... ok
+test tests::startup_record_preserves_named_attenuated_grants ... ok
+test tests::startup_rejects_duplicate_roles_bad_kinds_and_rights ... ok
+test tests::startup_rejects_unknown_headers_and_invalid_lengths ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (userspace/target/x86_64-unknown-linux-gnu/debug/build/kryo-services/585c33b02273dcf8/out/kryo_services-585c33b02273dcf8)
+
+running 11 tests
+test tests::budget_inspection_cannot_smuggle_assignment_authority ... ok
+test tests::failed_start_consumes_generation_and_stale_registration_cannot_publish ... ok
+test tests::gateway_binding_controls_lookup_and_never_grants_transitive_authority ... ok
+test tests::generation_never_wraps_and_registry_reconstruction_keeps_history ... ok
+test tests::identifiers_and_invalid_inventory_do_not_create_authority ... ok
+test tests::malformed_policy_fails_closed ... ok
+test tests::manifest_requires_named_roles_and_rejects_unlisted_authority ... ok
+test tests::manifests_allow_only_explicit_transitive_rights ... ok
+test tests::registration_is_bound_to_expected_service_and_endpoint_authority ... ok
+test tests::stopping_withdraws_lookup_before_replacement_and_keeps_old_snapshot ... ok
+test tests::protocol_rejects_unknown_versions_and_operations ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_libsys
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_services
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+EXIT: 0
+COMMAND: python3 -m unittest discover -s tools -p test_*.py
+...........
+----------------------------------------------------------------------
+Ran 11 tests in 0.001s
+
+OK
+EXIT: 0

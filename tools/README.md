@@ -80,3 +80,10 @@ TLB-retirement fixture. Evidence includes requested guest bytes, managed frames,
 physical probe addresses, and sampled peak RSS. The 129-GiB matrix additionally
 requires at least 128 GiB of managed frames after reservations. These tests do
 not write every guest page or establish physical DRAM reliability.
+
+The block selection also checks the initial IPC service and independent clients.
+The first client has its accepted read cancelled, then awaits an Info barrier
+before reusing memory. Later clients test read/write authority and scratch block
+2 with pattern ((offset * 17 + 0x53) & 255). Normal mode retains the driver;
+boot tests request graceful Stop and require all resource accounts to restore.
+See [service validation](../docs/validation/2026-11-02-block-service/README.md).

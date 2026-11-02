@@ -1,0 +1,11 @@
+[package]
+name = "block-service"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+build = "../build.rs"
+
+[dependencies]
+kryo-libsys = { path = "../libsys" }
+kryo-interfaces = { path = "../../interfaces" }
+kryo-services = { path = "../services" }

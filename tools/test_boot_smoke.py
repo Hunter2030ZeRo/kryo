@@ -1,9 +1,22 @@
 import unittest
 
-from boot_smoke import block_checks, pci_checks, run_label
+from boot_smoke import block_checks, block_service_checks, pci_checks, run_label
 
 
 class PciEvidenceTests(unittest.TestCase):
+    def test_service_checks_bind_events_to_published_driver(self):
+        log = "BLOCK IPC: service dispatched id=0xabc\nBLOCK IPC: accepted cancellation retains loan\nBLOCK IPC: clients complete; service waiting\n"
+        log += "USERLOG: process=0xabc event=91 value=1\nUSERLOG: process=0xabc event=92 value=1\n"
+        for mode in (0, 1, 3): log += f"USERLOG: process=0xdef event=93 value={mode}\n"
+        self.assertTrue(all(block_service_checks(log, True).values()))
+        self.assertFalse(all(block_service_checks(log.replace("event=92", "event=99"), True).values()))
+        self.assertFalse(all(block_service_checks(log.replace("id=0xabc", "id=0x777"), True).values()))
+
+    def test_service_boot_checks_require_actual_retirement_marker(self):
+        checks = block_service_checks("", False)
+        self.assertFalse(checks["block_service_retired"])
+        self.assertTrue(block_service_checks("BLOCK IPC: graceful stop and resource retirement OK", False)["block_service_retired"])
+
     function = (
         "PCI: function bus=1 slot=0 function=0 vendor=0x1af4 device=0x1042 "
         "class=0x01 command=0x0000 bars=6\n"

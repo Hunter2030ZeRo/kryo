@@ -89,6 +89,22 @@ def block_checks(log, readonly, normal):
     return checks
 
 
+def block_service_checks(log, normal):
+    driver = re.search(r"(?m)^BLOCK IPC: service dispatched id=(0x[0-9a-f]+)$", log)
+    checks = {
+        "block_ipc_cancelled": "BLOCK IPC: accepted cancellation retains loan" in log,
+        "block_ipc_waiting": "BLOCK IPC: clients complete; service waiting" in log,
+    }
+    for event in (91, 92):
+        checks[f"block_service_event_{event}"] = bool(driver and
+            f"USERLOG: process={driver[1]} event={event} value=1" in log)
+    for mode in (0, 1, 3):
+        checks[f"block_client_{mode}"] = bool(re.search(rf"(?m)^USERLOG: process=0x[0-9a-f]+ event=93 value={mode}$", log))
+    if not normal:
+        checks["block_service_retired"] = "BLOCK IPC: graceful stop and resource retirement OK" in log
+    return checks
+
+
 def parse_memory(value):
     match = re.fullmatch(r"([1-9][0-9]*)([MG])", value.upper())
     if not match:
@@ -198,6 +214,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
         checks.update(pci_checks(log, pci_probe or block_probe))
         if block_probe:
             checks.update(block_checks(log, block_readonly, normal))
+            checks.update(block_service_checks(log, normal))
         checks["dma_buffer_ownership"] = "DMA: unpublished buffer zeroing and retirement OK pages=3" in log
         return checks
 
@@ -222,6 +239,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
     checks.update(pci_checks(log, pci_probe or block_probe))
     if block_probe:
         checks.update(block_checks(log, block_readonly, normal))
+        checks.update(block_service_checks(log, normal))
     checks["dma_buffer_ownership"] = "DMA: unpublished buffer zeroing and retirement OK pages=3" in log
     return checks
 
@@ -334,6 +352,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
             expected = bytearray(disk.read_bytes())
             if block_probe and not block_readonly:
                 expected[4096:8192] = bytes((offset * 37 + 11) & 255 for offset in range(4096))
+                expected[8192:12288] = bytes((offset * 17 + 0x53) & 255 for offset in range(4096))
             evidence["expected_disk_sha256"] = hashlib.sha256(expected).hexdigest()
             read_only = not block_probe or block_readonly
             command += [

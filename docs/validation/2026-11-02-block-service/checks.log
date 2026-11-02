@@ -1,0 +1,35 @@
+COMMAND: cargo fmt --all --check
+EXIT: 0
+COMMAND: cargo fmt --manifest-path userspace/Cargo.toml --all --check
+EXIT: 0
+COMMAND: cargo clippy --locked --offline -- -D warnings
+    Blocking waiting for file lock on build directory
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.38s
+EXIT: 0
+COMMAND: cargo clippy --locked --offline --all-features -- -D warnings
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.37s
+EXIT: 0
+COMMAND: cargo clippy --locked --offline --target x86_64-unknown-linux-gnu -p kryo-interfaces --all-targets -- -D warnings
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/interfaces)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+EXIT: 0
+COMMAND: cargo clippy --locked --offline --manifest-path userspace/Cargo.toml --workspace -- -D warnings
+    Blocking waiting for file lock on build directory
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/interfaces)
+   Compiling service-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/service-probe)
+   Compiling virtio-block v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/virtio-block)
+   Compiling device-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/device-probe)
+   Compiling service-peer v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/service-peer)
+   Compiling registry-client v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/registry-client)
+   Compiling block-service v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/block-service)
+   Compiling supervisor v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/supervisor)
+   Compiling block-client v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/block-client)
+   Compiling bootstrap-worker v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/bootstrap-worker)
+   Compiling scale-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/scale-probe)
+   Compiling echo-service v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/echo-service)
+   Compiling init v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/init)
+    Checking kryo-libsys v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/libsys)
+    Checking kryo-services v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-work/kryo/userspace/services)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 1.26s
+EXIT: 0

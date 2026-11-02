@@ -106,7 +106,7 @@ flush commands through private kernel queues. Only validated memory-object
 offsets cross this boundary; raw PCI configuration, physical addresses and
 hardware descriptors remain privileged. [ADR 0018](decisions/0018-mediated-virtio-block-transport.md)
 defines the mediated transport and reset-before-release contract. Completion is
-currently polled, with no storage IRQ or persistent block IPC service yet.
+currently polled, with storage IRQ completion still pending.
 
 The [BetAFS adapter contract](../userspace/filesystems/betafs/README.md) preserves
 4096-byte blocks and durable flush. BetAFS keeps its normal Ring 3 std dependency.
@@ -114,6 +114,17 @@ Cryolite needs a native platform contract, libc, C++ runtime/library support and
 Rust target/std platform support as separate deliverables.
 [ADR 0019](decisions/0019-native-runtime-and-standard-libraries.md) defines their
 implementation order; none of those runtime ports is complete.
+
+The initial block service now shares the normal runtime with the supervisor.
+It receives process-bound device authority and distinct read/write/control gates
+before its suspended thread becomes Runnable. Separate clients use versioned
+fixed-block IPC and memory loans. Normal boot retains the service; boot tests
+stop it through explicit control authority and verify resource retirement.
+This signed-disk configuration is not general device discovery or replacement.
+[ADR 0020](decisions/0020-initial-block-service.md) defines the IPC and loan rules.
+
+Native binary format is ELF64 AMD64; [ADR 0021](decisions/0021-native-elf-abi.md)
+records the currently limited bootstrap ABI and the general native user ABI gate.
 
 ## Isolation and recovery
 

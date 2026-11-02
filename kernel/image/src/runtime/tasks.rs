@@ -104,6 +104,21 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         &mut self,
         resources: Resources<'kernel, 'objects>,
     ) -> Result<TaskId, SpawnError<Resources<'kernel, 'objects>>> {
+        let task = self.spawn_suspended(resources)?;
+        self.threads
+            .wake(task)
+            .expect("Initial thread publication invariant");
+        Ok(task)
+    }
+
+    #[expect(
+        clippy::result_large_err,
+        reason = "Unpublished owners return to startup"
+    )]
+    pub(crate) fn spawn_suspended(
+        &mut self,
+        resources: Resources<'kernel, 'objects>,
+    ) -> Result<TaskId, SpawnError<Resources<'kernel, 'objects>>> {
         if self.reserve_process().is_err() {
             return Err(SpawnError {
                 error: TaskError::Capacity,
@@ -155,9 +170,6 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         {
             super::process::bind(control, task, process);
         }
-        self.threads
-            .wake(task)
-            .expect("Initial thread publication invariant");
         Ok(task)
     }
 

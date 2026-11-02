@@ -1,0 +1,236 @@
+[
+  {
+    "profile": "debug",
+    "program": "native-smoke",
+    "entry": 4194304,
+    "load_pages": 4,
+    "boot_bytes": 13240,
+    "boot_sha256": "d7044a4810611be4fdda8128e6b5012b20a10e222ce9abef5d0369337dc3b148",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "init",
+    "entry": 4194304,
+    "load_pages": 1,
+    "boot_bytes": 7848,
+    "boot_sha256": "b14eaf1b33a0b720e8a69c49b6bc09994f6fa3881338b235656b871f9e458ad5",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "bootstrap-worker",
+    "entry": 4194304,
+    "load_pages": 2,
+    "boot_bytes": 10448,
+    "boot_sha256": "2007d6c508e9c10a064750de94932b2cbfd0f35f5007f47c626919f7622c5be2",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "device-probe",
+    "entry": 4194304,
+    "load_pages": 1,
+    "boot_bytes": 8120,
+    "boot_sha256": "a60321992f3cde8e5a0d9b5cdbe18116a2bbb5a2079857df1e06ddff19c8c462",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "scale-probe",
+    "entry": 4194304,
+    "load_pages": 4,
+    "boot_bytes": 20256,
+    "boot_sha256": "9eef29dff053ad1d03bd32c1fcb65efa774d9344bae6ef90deeae8511afcd47d",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "service-probe",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 24000,
+    "boot_sha256": "7d095eb9669352ccf6005b483762d2e51ac56645356465bec98da2f026923031",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "service-peer",
+    "entry": 4194304,
+    "load_pages": 4,
+    "boot_bytes": 18808,
+    "boot_sha256": "dfd9b842cf2cceafc20ed2c2f8f1dd5a3619a76685ead6b34c6e03cdd6682767",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "supervisor",
+    "entry": 4194304,
+    "load_pages": 9,
+    "boot_bytes": 45136,
+    "boot_sha256": "8dc924e55c0198ad54a6a5a64cc91499f51ffbc94f77b93dd4abda731aa5638d",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "echo-service",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 25288,
+    "boot_sha256": "006a945b2bf85ced1b5beeedcbddd4467003ba38c9576884b37fdbb9319476c0",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "registry-client",
+    "entry": 4194304,
+    "load_pages": 7,
+    "boot_bytes": 36536,
+    "boot_sha256": "e41b2ef880475ef167789d1345c507117e04f24134670d4812976652dae62cc6",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "virtio-block",
+    "entry": 4194304,
+    "load_pages": 3,
+    "boot_bytes": 14352,
+    "boot_sha256": "1648e2849d3d283f434a38d6d77cdc06c8325c5d32cc2254da8fa7d4eb4a0f6c",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "block-service",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 25888,
+    "boot_sha256": "4ee50108e998fa5a6a38c948fa965d45aecc600e67498a66b34631df53900536",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "debug",
+    "program": "block-client",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 24936,
+    "boot_sha256": "4acf5e5e542c80bce90bcdfbfcdea2214baa38f99c7bbdf718410b4c694c4e1d",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "native-smoke",
+    "entry": 4194304,
+    "load_pages": 4,
+    "boot_bytes": 13240,
+    "boot_sha256": "cdbcfd795a4108b485d205aa3ab96d53fbd818f913a553a731f4940f838045fe",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "init",
+    "entry": 4194304,
+    "load_pages": 1,
+    "boot_bytes": 6168,
+    "boot_sha256": "e5e8d93e6793e321b00015c6d84ee2c17daad3068b12b322ac1a8cfecb1b8e08",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "bootstrap-worker",
+    "entry": 4194304,
+    "load_pages": 2,
+    "boot_bytes": 9336,
+    "boot_sha256": "a01551c5107e8c2a342e3a560531392a6af65554066de1e535beb7ef4596622c",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "device-probe",
+    "entry": 4194304,
+    "load_pages": 2,
+    "boot_bytes": 8888,
+    "boot_sha256": "2b4d9d40c29a5b42242861801bb0c01ed22e7899b7d989bedc5bc4c8c80b08e2",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "scale-probe",
+    "entry": 4194304,
+    "load_pages": 3,
+    "boot_bytes": 13384,
+    "boot_sha256": "dd38ab810d781ea73f1c35f7b6288313e168a8b101036364a040d32db3a5d949",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "service-probe",
+    "entry": 4194304,
+    "load_pages": 4,
+    "boot_bytes": 17608,
+    "boot_sha256": "9bef7578ea9d293a1e19d08b449b5aaeccc87b0a562651e364567ef8333b4bd4",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "service-peer",
+    "entry": 4194304,
+    "load_pages": 2,
+    "boot_bytes": 9112,
+    "boot_sha256": "248ce207c787631af5f4be5b2c00aa889ab7f84faf3e5b248d593767427e4c76",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "supervisor",
+    "entry": 4194304,
+    "load_pages": 7,
+    "boot_bytes": 32896,
+    "boot_sha256": "3539b3dd6d5069337cdb03c879aadea18899326dbe1ef90e1bc5a1b3849a682f",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "echo-service",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 23072,
+    "boot_sha256": "691f84d0f6ca079cd73d7821685da6150936c0af94657078c07afc82086fe7a0",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "registry-client",
+    "entry": 4194304,
+    "load_pages": 6,
+    "boot_bytes": 28648,
+    "boot_sha256": "fa056fc1e9246753adcec8aa6f043eb9c76f1829f9bd921312dfda4c085d75f2",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "virtio-block",
+    "entry": 4194304,
+    "load_pages": 1,
+    "boot_bytes": 9024,
+    "boot_sha256": "19c12c12cecc82da4aeca87a5b40329604dbf430e84fab6b024476bb2bb9dbc7",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "block-service",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 23176,
+    "boot_sha256": "5f968d52710313c3b940652a1057d6fe5e1ddb4cd140f2907f27c5dfbf2095cc",
+    "entry_load_preserved": true
+  },
+  {
+    "profile": "release",
+    "program": "block-client",
+    "entry": 4194304,
+    "load_pages": 5,
+    "boot_bytes": 22664,
+    "boot_sha256": "5feef1a51f1a499de56ead031e6b6fdd58ed2aac4b204e8fb4360478ae9419cd",
+    "entry_load_preserved": true
+  }
+]

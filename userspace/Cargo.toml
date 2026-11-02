@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["libsys", "services", "init", "bootstrap-worker", "device-probe", "scale-probe", "service-probe", "service-peer", "supervisor", "echo-service", "registry-client", "virtio-block"]
+members = ["libsys", "services", "init", "bootstrap-worker", "device-probe", "scale-probe", "service-probe", "service-peer", "supervisor", "echo-service", "registry-client", "virtio-block", "block-service", "block-client"]
 exclude = ["native-smoke"]
 
 [workspace.package]

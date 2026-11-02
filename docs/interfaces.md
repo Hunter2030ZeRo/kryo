@@ -188,6 +188,16 @@ No VFS/file ABI or native standard-library port is established by these calls.
 The [runtime direction](decisions/0019-native-runtime-and-standard-libraries.md)
 keeps the common native service representations independent of C/C++/Rust.
 
+## Block service version 1
+
+The initial service uses four u64 words and at most one memory capability for
+one 4096-byte block. Gate capabilities enforce read/write/control authority.
+Replies distinguish malformed, stale, range, denied, read-only, I/O, uncertain
+and unavailable states. Request IDs correlate replies without deduplication.
+Cancellation is not a loan-return acknowledgement; the single-threaded instance
+accepts a subsequent Info request as a sequencing barrier after cleanup.
+[ADR 0020](decisions/0020-initial-block-service.md) defines the records and lifetime.
+
 ## ABI decisions
 
 | Area | Required definition |
