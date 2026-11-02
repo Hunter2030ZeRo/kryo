@@ -10,6 +10,7 @@ pub mod ipc;
 pub mod mm;
 pub mod object;
 pub mod process;
+pub mod resource;
 pub mod sched;
 pub mod storage;
 pub mod sync;

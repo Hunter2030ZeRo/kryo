@@ -1,3 +1,4 @@
+pub(crate) mod budgets;
 pub(crate) mod channel_probe;
 mod channels;
 pub(crate) mod clock;
@@ -26,6 +27,7 @@ use kryo_core::ipc::{Endpoint, Notification};
 use kryo_core::mm::shared::{SharedMemory, SharedPage};
 use kryo_core::object::{ObjectRef, ObjectTable};
 use kryo_core::process::{ExitReason, ProcessExit, ProcessId};
+use kryo_core::resource::{Budget, Charge};
 use kryo_core::sched::ReturnReason;
 use kryo_core::sync::wait::WaitId;
 use kryo_core::task::TaskId;
@@ -67,6 +69,7 @@ pub(crate) enum KernelObject {
     Endpoint(RefCell<Endpoint<2, 2>>),
     Notification(RefCell<Notification>),
     ChannelFactory(kryo_core::ipc::ChannelBudget),
+    ResourceBudget(Budget),
     Memory(Memory),
     ProcessControl(RefCell<ProcessControl>),
     ThreadControl(RefCell<ProcessExit<0>>),
@@ -136,6 +139,7 @@ pub(crate) fn user_pages(slot: usize) -> [u64; 5] {
 }
 
 pub(crate) struct ProcessResources<'kernel, 'objects> {
+    pub(crate) account: Option<Budget>,
     pub(crate) space: UserSpace<'kernel, SharedLease<'objects>>,
     pub(crate) handles: Handles<'objects>,
     pub(crate) control: Option<Object<'objects>>,
@@ -161,6 +165,7 @@ pub(crate) struct ThreadResources<'kernel, 'objects> {
     pub(crate) user_slot: usize,
     pub(crate) user_stack_owned: bool,
     pub(crate) thread_control: Option<Object<'objects>>,
+    pub(crate) thread_charge: Option<Charge>,
 }
 
 pub(crate) struct Resources<'kernel, 'objects> {
@@ -181,6 +186,7 @@ pub(crate) struct Resources<'kernel, 'objects> {
     pub(crate) user_slot: usize,
     pub(crate) user_stack_owned: bool,
     pub(crate) thread_control: Option<Object<'objects>>,
+    pub(crate) thread_charge: Option<Charge>,
 }
 
 #[derive(Default)]
@@ -277,6 +283,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
                 user_slot: self.user_slot,
                 user_stack_owned: self.user_stack_owned,
                 thread_control: self.thread_control,
+                thread_charge: self.thread_charge,
             },
         )
     }
@@ -303,6 +310,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
             user_slot: thread.user_slot,
             user_stack_owned: thread.user_stack_owned,
             thread_control: thread.thread_control,
+            thread_charge: thread.thread_charge,
         }
     }
 

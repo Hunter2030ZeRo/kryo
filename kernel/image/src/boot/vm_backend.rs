@@ -200,16 +200,31 @@ pub(crate) fn new_space<'kernel>(
     new_shared_space(pool, kernel)
 }
 
+#[cfg(feature = "boot-tests")]
 pub(crate) fn new_shared_space<'kernel, S: SharedPage>(
     pool: &'static BootFramePool,
     kernel: &'kernel RefCell<KernelMemory>,
 ) -> Result<UserSpace<'kernel, S>, VmError<BackendError>> {
-    AddressSpace::new_growing(pool, |root| {
-        let direct = kernel.borrow().direct;
-        // Core owns this new root frame, and the BSP boot root remains active.
-        let tables = unsafe { UserPageTable::new(direct, root) }?;
-        Ok(UserBackend { tables, kernel })
-    })
+    new_shared_space_limited(pool, kernel, usize::MAX, usize::MAX)
+}
+
+pub(crate) fn new_shared_space_limited<'kernel, S: SharedPage>(
+    pool: &'static BootFramePool,
+    kernel: &'kernel RefCell<KernelMemory>,
+    mappings: usize,
+    tables_limit: usize,
+) -> Result<UserSpace<'kernel, S>, VmError<BackendError>> {
+    AddressSpace::new_limited(
+        pool,
+        |root| {
+            let direct = kernel.borrow().direct;
+            // Core owns this new root frame, and the BSP boot root remains active.
+            let tables = unsafe { UserPageTable::new(direct, root) }?;
+            Ok(UserBackend { tables, kernel })
+        },
+        mappings,
+        tables_limit,
+    )
 }
 
 // Fresh pool frames have never been exposed, and retain the established RW+NX

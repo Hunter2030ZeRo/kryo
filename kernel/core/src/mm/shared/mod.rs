@@ -1,5 +1,6 @@
 use crate::mm::frame::{FRAME_SIZE, FrameAllocError, OwnedFrame};
 use crate::mm::vm::FrameAllocator;
+use crate::resource::{Charge, Resource};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SharedError<E> {
@@ -30,6 +31,7 @@ pub struct SharedMemory<'pool, F: FrameAllocator, const PAGES: usize> {
     allocator: &'pool F,
     frames: [Option<OwnedFrame<'pool>>; PAGES],
     page_count: usize,
+    charge: Option<Charge>,
 }
 
 impl<'pool, F: FrameAllocator, const PAGES: usize> SharedMemory<'pool, F, PAGES> {
@@ -37,6 +39,27 @@ impl<'pool, F: FrameAllocator, const PAGES: usize> SharedMemory<'pool, F, PAGES>
         allocator: &'pool F,
         page_count: usize,
         backend: &mut B,
+    ) -> Result<Self, SharedError<B::Error>> {
+        Self::create(allocator, page_count, backend, None)
+    }
+
+    pub fn new_charged<B: SharedBackend>(
+        allocator: &'pool F,
+        page_count: usize,
+        backend: &mut B,
+        charge: Charge,
+    ) -> Result<Self, SharedError<B::Error>> {
+        if charge.resource() != Resource::SharedPages || charge.amount() != page_count {
+            return Err(SharedError::InvalidSize);
+        }
+        Self::create(allocator, page_count, backend, Some(charge))
+    }
+
+    fn create<B: SharedBackend>(
+        allocator: &'pool F,
+        page_count: usize,
+        backend: &mut B,
+        charge: Option<Charge>,
     ) -> Result<Self, SharedError<B::Error>> {
         if page_count == 0
             || page_count > PAGES
@@ -51,6 +74,7 @@ impl<'pool, F: FrameAllocator, const PAGES: usize> SharedMemory<'pool, F, PAGES>
             allocator,
             frames: [const { None }; PAGES],
             page_count,
+            charge,
         };
         for slot in &mut memory.frames[..page_count] {
             let frame = allocator.allocate().map_err(SharedError::Allocation)?;
@@ -83,6 +107,11 @@ impl<F: FrameAllocator, const PAGES: usize> Drop for SharedMemory<'_, F, PAGES> 
                 // The last object reference is gone. Every mapping lease must
                 // already have retired user access; the RW+NX alias stays fixed.
                 if unsafe { self.allocator.release(frame) }.is_err() {
+                    // Failed return retains backing. Do not turn retained
+                    // physical storage into newly available account credit.
+                    if let Some(charge) = self.charge.take() {
+                        core::mem::forget(charge);
+                    }
                     panic!("Shared frame ownership invariant");
                 }
             }

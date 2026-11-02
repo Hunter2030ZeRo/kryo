@@ -1,5 +1,5 @@
 use super::ipc_runtime::{IpcRuntime, map_error as map_ipc_error};
-use super::{CallStats, KernelObject, Memory, Object, SharedLease, Tasks};
+use super::{Batch, CallStats, KernelObject, Memory, Object, SharedLease, Tasks};
 use crate::runtime::KernelRegion;
 use kryo_core::capability::{CapabilityError, Handle, Rights, TransferSpec};
 use kryo_core::ipc::{Completion, Delivery, Message, ReplyToken};
@@ -7,6 +7,7 @@ use kryo_core::mm::shared::SharedError;
 use kryo_core::mm::vm::{Permissions, VmError};
 use kryo_core::object::ObjectKind;
 use kryo_core::process::{ExitReason, ExitStatus, ProcessId};
+use kryo_core::resource::Resource;
 use kryo_core::sched::TaskState;
 use kryo_core::task::TaskId;
 use kryo_hal::UserContext;
@@ -23,6 +24,52 @@ pub(crate) fn dispatch<'objects>(
     let result = Call::try_from(context.rax).and_then(|call| {
         let handle = Handle::from_raw(context.rdi);
         match call {
+            Call::ManifestBudget => {
+                let owner = tasks.process_for(caller).ok_or(Error::PeerClosed)?;
+                let resources = tasks.resources_mut(caller).unwrap();
+                super::startup::assign_budget(
+                    owner,
+                    handle,
+                    Handle::from_raw(context.rsi),
+                    &resources.process.handles,
+                )
+                .map(|()| Some(0))
+            }
+            Call::BudgetInfo => {
+                let object = lookup(
+                    tasks,
+                    caller,
+                    handle,
+                    ObjectKind::ResourceBudget,
+                    Rights::READ,
+                )?;
+                object
+                    .with(|object| match object {
+                        KernelObject::ResourceBudget(account) => {
+                            super::budgets::query(account, context.rsi, context.rdx, None)
+                        }
+                        _ => Err(Error::WrongType),
+                    })
+                    .map(Some)
+            }
+            Call::BudgetSelf => {
+                let resources = tasks.resources_mut(caller).unwrap();
+                let account = resources
+                    .process
+                    .account
+                    .as_ref()
+                    .ok_or(Error::InvalidCall)?;
+                super::budgets::query(
+                    account,
+                    context.rdi,
+                    context.rsi,
+                    Some((
+                        resources.process.space.mapped_pages(),
+                        resources.process.space.owned_tables(),
+                    )),
+                )
+                .map(Some)
+            }
             Call::ManifestCreate => {
                 let arena = ipc.arena.ok_or(Error::InvalidCall)?;
                 let owner = tasks.process_for(caller).ok_or(Error::PeerClosed)?;
@@ -165,7 +212,8 @@ pub(crate) fn dispatch<'objects>(
                 if context.rdi <= now() {
                     return Ok(Some(0));
                 }
-                let wait = ipc.sleep(caller, context.rdi)?;
+                let account = tasks.resources_mut(caller).unwrap().process.account.clone();
+                let wait = ipc.sleep_for(caller, context.rdi, account.as_ref())?;
                 tasks.resources_mut(caller).unwrap().wait = Some(wait);
                 ipc.waits.park(wait).expect("Cannot finish sleep handoff");
                 Ok(None)
@@ -220,27 +268,67 @@ pub(crate) fn dispatch<'objects>(
             Call::MemoryCreate => {
                 let arena = ipc.arena.ok_or(Error::InvalidCall)?;
                 let pages = usize::try_from(context.rdi).map_err(|_| Error::InvalidArgument)?;
+                if !(1..=8).contains(&pages) {
+                    return Err(Error::InvalidArgument);
+                }
                 let resources = tasks.resources_mut(caller).unwrap();
-                let memory =
-                    Memory::new(resources.pool, pages, &mut *resources.memory.borrow_mut())
-                        .map_err(|error| match error {
-                            SharedError::InvalidSize => Error::InvalidArgument,
-                            SharedError::Allocation(_) | SharedError::Backend(_) => {
-                                Error::OutOfResources
-                            }
-                        })?;
-                let object = arena
-                    .create(ObjectKind::Memory, KernelObject::Memory(memory))
-                    .map_err(|_| Error::OutOfResources)?;
+                let reservation = resources.process.handles.reserve(1).map_err(map_error)?;
+                let prepared = (|| {
+                    let memory = if let Some(account) = &resources.process.account {
+                        let charge = account
+                            .try_charge(Resource::SharedPages, pages)
+                            .map_err(|_| Error::OutOfResources)?;
+                        Memory::new_charged(
+                            resources.pool,
+                            pages,
+                            &mut *resources.memory.borrow_mut(),
+                            charge,
+                        )
+                    } else {
+                        Memory::new(resources.pool, pages, &mut *resources.memory.borrow_mut())
+                    }
+                    .map_err(|error| match error {
+                        SharedError::InvalidSize => Error::InvalidArgument,
+                        _ => Error::OutOfResources,
+                    })?;
+                    arena
+                        .create(ObjectKind::Memory, KernelObject::Memory(memory))
+                        .map_err(|_| Error::OutOfResources)
+                })();
+                let object = match prepared {
+                    Ok(object) => object,
+                    Err(error) => {
+                        resources
+                            .process
+                            .handles
+                            .release_reservation(reservation)
+                            .expect("Memory result reservation rollback invariant");
+                        return Err(error);
+                    }
+                };
                 resources
                     .process
                     .handles
-                    .insert(
-                        object,
-                        Rights::READ | Rights::WRITE | Rights::MAP | Rights::DUP | Rights::TRANSFER,
+                    .commit_transfer(
+                        reservation,
+                        Batch::from_object(
+                            object,
+                            Rights::READ
+                                | Rights::WRITE
+                                | Rights::MAP
+                                | Rights::DUP
+                                | Rights::TRANSFER,
+                        ),
                     )
-                    .map(|handle| Some(handle.as_raw()))
-                    .map_err(|error| map_error(error.error))
+                    .map(|handles| Some(handles[0].unwrap().as_raw()))
+                    .map_err(|failure| {
+                        resources
+                            .process
+                            .handles
+                            .release_reservation(failure.reservation)
+                            .expect("Memory commit rollback invariant");
+                        map_error(failure.error)
+                    })
             }
             Call::DeviceRead | Call::DeviceWrite => {
                 let rights = if call == Call::DeviceWrite {
@@ -560,7 +648,7 @@ fn wait_on<'objects>(
     } else {
         None
     };
-    let registration = ipc.begin_wait(caller, deadline);
+    let registration = ipc.begin_wait_for(caller, deadline, resources.process.account.as_ref());
     let wait = match registration {
         Ok(wait) => wait,
         Err(_) => {

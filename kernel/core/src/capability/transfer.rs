@@ -137,11 +137,17 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
         if found != count {
             return Err(CapabilityError::Capacity);
         }
+        let mut charges = [const { None }; MAX_TRANSFERS];
+        for charge in charges.iter_mut().take(count) {
+            *charge = self.charge_slot()?;
+        }
         if self.domain == 0 {
             self.domain = claim_domain(&NEXT_DOMAIN)?;
         }
-        for handle in slots.into_iter().take(count) {
-            self.slots[handle.parts().unwrap().0].reserved = true;
+        for (index, handle) in slots.into_iter().take(count).enumerate() {
+            let slot = &mut self.slots[handle.parts().unwrap().0];
+            slot.reserved = true;
+            slot.charge = charges[index].take();
         }
         Ok(HandleReservation {
             domain: self.domain,
@@ -180,6 +186,7 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
                 slot.entry = batch.entries[index].take();
                 received[index] = Some(handle);
             } else {
+                slot.charge = None;
                 advance_generation(slot);
             }
         }
@@ -196,6 +203,7 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
         for handle in reservation.slots.into_iter().take(reservation.capacity) {
             let slot = &mut self.slots[handle.parts().unwrap().0];
             slot.reserved = false;
+            slot.charge = None;
             advance_generation(slot);
         }
         Ok(())

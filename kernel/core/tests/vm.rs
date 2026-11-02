@@ -9,9 +9,194 @@ use kryo_core::mm::frame::{
 use kryo_core::mm::shared::{SharedBackend, SharedError, SharedMemory, SharedPage};
 use kryo_core::mm::vm::{AddressSpace, Permissions, VmBackend, VmError};
 use kryo_core::object::{ObjectKind, ObjectRef, ObjectTable};
+use kryo_core::resource::{Budget, Limits, Resource};
 
 type Pool = FramePool<1, 4, 1>;
 type Space<'pool> = AddressSpace<'pool, Pool, ModelBackend, 8, 16>;
+
+fn resource_budget(pages: usize) -> Budget {
+    Budget::new(Limits {
+        shared_pages: pages,
+        handles: 8,
+        waits: 8,
+        threads: 8,
+        mappings: 8,
+        tables: 8,
+    })
+}
+
+#[test]
+fn configured_vm_limits_bound_aliases_and_include_the_root_table() {
+    let pool = pool(32);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    assert!(matches!(
+        AddressSpace::<_, _, 0, 0>::new_limited(
+            &pool,
+            |root| { Ok(ModelBackend::new(root, model.clone())) },
+            1,
+            0
+        ),
+        Err(VmError::TableCapacity)
+    ));
+    assert_eq!(pool.stats(), before);
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| Ok(ModelBackend::new(root, model.clone())),
+        1,
+        4,
+    )
+    .unwrap();
+    assert_eq!(space.owned_tables(), 1);
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    assert_eq!(space.owned_tables(), 4);
+    let full = pool.stats();
+    assert!(matches!(
+        space.map_page(0x40_1000, Permissions::ReadWrite, &[]),
+        Err(VmError::MappingCapacity)
+    ));
+    assert_eq!(pool.stats(), full);
+    space.unmap_page(0x40_0000).unwrap();
+    let retained = pool.stats();
+    assert_eq!(space.owned_tables(), 4);
+    assert!(matches!(
+        space.map_page(0x60_0000, Permissions::ReadWrite, &[]),
+        Err(VmError::TableCapacity)
+    ));
+    assert_eq!(pool.stats(), retained);
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    space.close().unwrap();
+    assert_eq!(space.owned_tables(), 0);
+    assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn shared_payload_charge_survives_all_handles_and_failed_mapping_retirement() {
+    let pool = pool(32);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let budget = resource_budget(2);
+    let mut initializer = Initializer {
+        model: model.clone(),
+        fail_after: None,
+        calls: 0,
+    };
+    let memory = Memory::new_charged(
+        &pool,
+        2,
+        &mut initializer,
+        budget.try_charge(Resource::SharedPages, 2).unwrap(),
+    )
+    .unwrap();
+    let objects = Memories::new();
+    let object = objects.create(ObjectKind::Memory, memory).unwrap();
+    let mut first = AddressSpace::<_, _, 0, 0, Page<'_, '_>>::new_limited(
+        &pool,
+        |root| Ok(ModelBackend::new(root, model.clone())),
+        1,
+        4,
+    )
+    .unwrap();
+    let mut second = shared_space(&pool, &model);
+    first
+        .map_shared_page(
+            0x40_0000,
+            Permissions::ReadOnly,
+            Page::new(object.try_clone().unwrap(), 0),
+        )
+        .unwrap();
+    second
+        .map_shared_page(
+            0x40_0000,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 1),
+        )
+        .unwrap();
+    assert!(matches!(
+        first.map_shared_page(
+            0x40_1000,
+            Permissions::ReadOnly,
+            Page::new(object.try_clone().unwrap(), 0)
+        ),
+        Err(VmError::MappingCapacity)
+    ));
+    drop(object);
+    assert_eq!(budget.count(Resource::SharedPages), 2);
+    first.close().unwrap();
+    assert_eq!(budget.count(Resource::SharedPages), 2);
+    model.failure.set(Some(Failure::Unmap));
+    assert!(second.close().is_err());
+    assert_eq!(budget.count(Resource::SharedPages), 2);
+    second.close().unwrap();
+    assert_eq!(budget.count(Resource::SharedPages), 0);
+    assert_eq!(objects.live_count(), 0);
+    assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn charged_shared_creation_failure_refunds_all_unpublished_frames_and_credits() {
+    let pool = pool(4);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let budget = resource_budget(4);
+    let mut initializer = Initializer {
+        model,
+        fail_after: Some(1),
+        calls: 0,
+    };
+    assert!(matches!(
+        Memory::new_charged(
+            &pool,
+            2,
+            &mut initializer,
+            budget.try_charge(Resource::SharedPages, 2).unwrap()
+        ),
+        Err(SharedError::Backend(ModelError::Injected))
+    ));
+    assert_eq!(pool.stats(), before);
+    assert_eq!(budget.count(Resource::SharedPages), 0);
+    assert!(matches!(
+        Memory::new_charged(
+            &pool,
+            2,
+            &mut initializer,
+            budget.try_charge(Resource::SharedPages, 1).unwrap()
+        ),
+        Err(SharedError::InvalidSize)
+    ));
+    assert_eq!(pool.stats(), before);
+    assert_eq!(budget.count(Resource::SharedPages), 0);
+}
+
+#[test]
+fn discarded_arena_cannot_refund_forgotten_shared_backing() {
+    let pool = pool(8);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let budget = resource_budget(2);
+    let mut initializer = Initializer {
+        model,
+        fail_after: None,
+        calls: 0,
+    };
+    let memory = Memory::new_charged(
+        &pool,
+        2,
+        &mut initializer,
+        budget.try_charge(Resource::SharedPages, 2).unwrap(),
+    )
+    .unwrap();
+    let objects = Memories::new();
+    let object = objects.create(ObjectKind::Memory, memory).unwrap();
+    core::mem::forget(object);
+    drop(objects);
+    assert_eq!(pool.stats().free, before.free - 2);
+    assert_eq!(budget.count(Resource::SharedPages), 2);
+}
 
 #[test]
 fn growing_vm_metadata_crosses_mapping_and_page_table_fixture_limits() {

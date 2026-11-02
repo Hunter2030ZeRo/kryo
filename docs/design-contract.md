@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.4, 2026-11-01.
+Version 0.5, 2026-11-01.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -41,6 +41,14 @@ Initialize a frame before exposing it to another process or device. Keep frame-a
 ### Metadata allocation
 
 Process, thread, handle, object, wait, and VM metadata may grow with available memory. A compile-time fixture capacity must not become a normal service limit. Explicit quotas and address-space budgets remain valid policy limits and must be reported as resource errors.
+
+Bind processes to trusted resource accounts before initial execution. New threads
+and ordinary child creation inherit the account; selecting another account requires
+explicit ASSIGN and delegation authority. Restart preserves usage. Charge shared
+RAM through final payload retirement, handles through open/reserved slots, waits
+through consumption, and threads through successful execution-resource cleanup.
+Per-process mapping and page-table bounds include aliases and the root table.
+These bounds do not imply exact kernel-memory or CPU-time accounting.
 
 Reserve fallible metadata before publishing a runnable owner, process membership, accepted capability grant, or wait registration. Keep the unpublished owner on failure. Prepare the initial process membership and result-handle capacity before making its first thread runnable. Completion delivery must have the side-record storage it needs before the wait can block.
 

@@ -18,7 +18,7 @@ const WAIT_NS: u64 = 1_000_000_000;
 const POLL_NS: u64 = 1_000_000;
 const CHECK_NS: u64 = 5_000_000;
 const RETRY_NS: u64 = 100_000_000;
-const ROOT_ROLES: [RoleRule; 7] = [
+const ROOT_ROLES: [RoleRule; 10] = [
     RoleRule {
         role: role::FACTORY,
         kind: ObjectKind::ChannelFactory,
@@ -59,6 +59,24 @@ const ROOT_ROLES: [RoleRule; 7] = [
         role: role::DENIED_FACTORY,
         kind: ObjectKind::ChannelFactory,
         rights: sys::CREATE | sys::TRANSFER,
+        required: true,
+    },
+    RoleRule {
+        role: role::SERVER_BUDGET,
+        kind: ObjectKind::ResourceBudget,
+        rights: sys::READ | sys::ASSIGN | sys::TRANSFER,
+        required: true,
+    },
+    RoleRule {
+        role: role::ALLOWED_BUDGET,
+        kind: ObjectKind::ResourceBudget,
+        rights: sys::READ | sys::ASSIGN | sys::TRANSFER,
+        required: true,
+    },
+    RoleRule {
+        role: role::DENIED_BUDGET,
+        kind: ObjectKind::ResourceBudget,
+        rights: sys::READ | sys::ASSIGN | sys::TRANSFER,
         required: true,
     },
 ];
@@ -152,6 +170,9 @@ struct Authority {
     server_factory: Handle,
     allowed_factory: Handle,
     denied_factory: Handle,
+    server_budget: Handle,
+    allowed_budget: Handle,
+    denied_budget: Handle,
 }
 
 struct Server {
@@ -194,6 +215,9 @@ fn run(record: Handle) -> Result<(), Failure> {
         server_factory: grant(&startup, role::SERVER_FACTORY)?,
         allowed_factory: grant(&startup, role::ALLOWED_FACTORY)?,
         denied_factory: grant(&startup, role::DENIED_FACTORY)?,
+        server_budget: grant(&startup, role::SERVER_BUDGET)?,
+        allowed_budget: grant(&startup, role::ALLOWED_BUDGET)?,
+        denied_budget: grant(&startup, role::DENIED_BUDGET)?,
     };
     sys::close(record).map_err(|_| Failure::Cleanup)?;
     let mut records = [
@@ -209,8 +233,20 @@ fn run(record: Handle) -> Result<(), Failure> {
     let mut registry = Registry::new(&mut records, &access).map_err(|_| Failure::Policy)?;
     reject_malformed_registration(&authority)?;
     let mut server = start_server(&authority, &mut registry)?;
-    let mut allowed = start_client(&authority, &registry, ALLOWED, authority.allowed_factory)?;
-    let mut denied = start_client(&authority, &registry, DENIED, authority.denied_factory)?;
+    let mut allowed = start_client(
+        &authority,
+        &registry,
+        ALLOWED,
+        authority.allowed_factory,
+        authority.allowed_budget,
+    )?;
+    let mut denied = start_client(
+        &authority,
+        &registry,
+        DENIED,
+        authority.denied_factory,
+        authority.denied_budget,
+    )?;
     exercise(
         &authority,
         &mut registry,
@@ -223,6 +259,13 @@ fn run(record: Handle) -> Result<(), Failure> {
     close_client(&mut denied)?;
     if startup.argument == 1 {
         stop_server(&mut registry, server)?;
+        for budget in [
+            authority.server_budget,
+            authority.allowed_budget,
+            authority.denied_budget,
+        ] {
+            retired_budget(budget)?;
+        }
         for handle in [
             authority.factory,
             authority.server_image,
@@ -230,6 +273,9 @@ fn run(record: Handle) -> Result<(), Failure> {
             authority.server_factory,
             authority.allowed_factory,
             authority.denied_factory,
+            authority.server_budget,
+            authority.allowed_budget,
+            authority.denied_budget,
         ] {
             sys::close(handle).map_err(|_| Failure::Cleanup)?;
         }
@@ -475,6 +521,7 @@ fn start_server_for(
     ];
     let process = match launch(
         authority.server_image,
+        authority.server_budget,
         instance,
         argument,
         &SERVER_ROLES,
@@ -540,6 +587,7 @@ fn reject_malformed_registration(authority: &Authority) -> Result<(), Failure> {
     {
         return Err(Failure::Protocol);
     }
+    retired_budget(authority.server_budget)?;
     let mut channels = [None; 8];
     for slot in &mut channels {
         *slot =
@@ -550,6 +598,23 @@ fn reject_malformed_registration(authority: &Authority) -> Result<(), Failure> {
     }
     for channel in channels.into_iter().flatten() {
         sys::close(channel).map_err(|_| Failure::Cleanup)?;
+    }
+    Ok(())
+}
+
+fn retired_budget(budget: Handle) -> Result<(), Failure> {
+    for resource in [
+        sys::Resource::SharedPages,
+        sys::Resource::Handles,
+        sys::Resource::Waits,
+        sys::Resource::Threads,
+    ] {
+        if sys::budget_info(budget, resource, sys::BudgetQuery::Used)
+            .map_err(|_| Failure::Authority)?
+            != 0
+        {
+            return Err(Failure::Cleanup);
+        }
     }
     Ok(())
 }
@@ -599,6 +664,7 @@ fn start_client(
     registry: &Registry<'_, '_>,
     service: u64,
     factory: Handle,
+    budget: Handle,
 ) -> Result<Client, Failure> {
     let endpoint = sys::create_endpoint(authority.factory).map_err(|_| Failure::Authority)?;
     let checkpoint = match sys::create_endpoint(authority.factory) {
@@ -634,6 +700,7 @@ fn start_client(
     ];
     match launch(
         authority.client_image,
+        budget,
         Instance::new(id(service)?, 1).map_err(|_| Failure::Policy)?,
         0,
         &CLIENT_ROLES,
@@ -656,6 +723,7 @@ fn start_client(
 
 fn launch(
     image: Handle,
+    budget: Handle,
     instance: Instance,
     argument: u64,
     rules: &[RoleRule],
@@ -670,6 +738,7 @@ fn launch(
     let plan = sys::manifest_create(instance.service.get(), instance.generation, argument)
         .map_err(|_| Failure::Authority)?;
     let result = (|| {
+        sys::manifest_budget(plan, budget).map_err(|_| Failure::Authority)?;
         for grant in grants {
             sys::manifest_grant(
                 plan,

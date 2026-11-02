@@ -1,6 +1,7 @@
 use super::{Batch, KernelObject, Object, Objects, Tasks};
 use kryo_core::ipc::{Completion, Delivery, IpcError};
 use kryo_core::process::ExitStatus;
+use kryo_core::resource::Budget;
 use kryo_core::sched::TaskState;
 use kryo_core::storage::Slots;
 use kryo_core::sync::wait::{WaitId, WaitTable};
@@ -65,10 +66,23 @@ impl<'objects> IpcRuntime<'objects> {
         }
     }
 
+    #[cfg_attr(
+        not(feature = "boot-tests"),
+        expect(dead_code, reason = "Trusted unbudgeted fixture setup")
+    )]
     pub(crate) fn begin_wait(
         &mut self,
         task: TaskId,
         deadline: Option<u64>,
+    ) -> Result<WaitId, Error> {
+        self.begin_wait_for(task, deadline, None)
+    }
+
+    pub(crate) fn begin_wait_for(
+        &mut self,
+        task: TaskId,
+        deadline: Option<u64>,
+        account: Option<&Budget>,
     ) -> Result<WaitId, Error> {
         // Completion and cancellation cannot allocate. Reserve side records
         // before publishing any wait or lending capabilities to an endpoint.
@@ -86,9 +100,13 @@ impl<'objects> IpcRuntime<'objects> {
         self.observations
             .reserve_len(length, || None)
             .map_err(|_| Error::OutOfResources)?;
-        match deadline {
-            Some(deadline) => self.waits.begin_until(task, deadline),
-            None => self.waits.begin(task),
+        if let Some(account) = account {
+            self.waits.begin_budgeted(task, deadline, account)
+        } else {
+            match deadline {
+                Some(deadline) => self.waits.begin_until(task, deadline),
+                None => self.waits.begin(task),
+            }
         }
         .map_err(|_| Error::OutOfResources)
     }
@@ -205,8 +223,13 @@ impl<'objects> IpcRuntime<'objects> {
         Err(IpcError::InvalidWait)
     }
 
-    pub(crate) fn sleep(&mut self, task: TaskId, deadline: u64) -> Result<WaitId, Error> {
-        let wait = self.begin_wait(task, Some(deadline))?;
+    pub(crate) fn sleep_for(
+        &mut self,
+        task: TaskId,
+        deadline: u64,
+        account: Option<&Budget>,
+    ) -> Result<WaitId, Error> {
+        let wait = self.begin_wait_for(task, Some(deadline), account)?;
         *self
             .sleepers
             .iter_mut()

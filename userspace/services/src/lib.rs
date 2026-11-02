@@ -16,6 +16,9 @@ pub mod role {
     pub const ALLOWED_FACTORY: u64 = 8;
     pub const DENIED_FACTORY: u64 = 9;
     pub const CHECKPOINT: u64 = 10;
+    pub const SERVER_BUDGET: u64 = 11;
+    pub const ALLOWED_BUDGET: u64 = 12;
+    pub const DENIED_BUDGET: u64 = 13;
 }
 
 pub mod protocol {

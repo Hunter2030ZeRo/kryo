@@ -1,19 +1,22 @@
 use super::stacks::KernelStack;
 use super::{BootFramePool, DirectMap, ExtendedState, Handles, KernelMemory, KernelRegion};
 use super::{RefCell, Resources, SharedLease, UserContext, UserSpace};
-use crate::boot::vm_backend::new_shared_space;
+use crate::boot::vm_backend::new_shared_space_limited;
 use kryo_core::exec::{ElfImage, LoadLimits};
 use kryo_core::mm::vm::Permissions;
 use kryo_core::process::ExitReason;
+use kryo_core::resource::{Budget, Charge, Resource};
 use kryo_interfaces::syscall::Error;
 
 const USER_STACK: u64 = 0x80_0000;
 const STACK_PAGES: u64 = 4;
 const TLS: u64 = 0x90_0000;
+const MAX_IMAGE_PAGES: usize = 16;
 
 pub(crate) struct PendingLoad<'kernel, 'objects> {
     space: Option<UserSpace<'kernel, SharedLease<'objects>>>,
     stack: Option<KernelStack>,
+    thread_charge: Option<Charge>,
 }
 
 pub(crate) struct LoadFailure<'kernel, 'objects> {
@@ -37,6 +40,7 @@ impl PendingLoad<'_, '_> {
             }
             self.stack = None;
         }
+        self.thread_charge = None;
         true
     }
 }
@@ -50,6 +54,7 @@ impl<'kernel, 'objects> PendingLoad<'kernel, 'objects> {
                 Some(resources.process.space)
             },
             stack: Some(resources.stack),
+            thread_charge: resources.thread_charge,
         }
     }
 }
@@ -66,20 +71,53 @@ pub(crate) fn prepare<'kernel, 'objects>(
     first_slot: usize,
     bytes: &[u8],
 ) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
+    prepare_budgeted(pool, direct, memory, region, first_slot, bytes, None)
+}
+
+#[expect(
+    clippy::result_large_err,
+    reason = "Failed preparation retains mapping owners"
+)]
+pub(crate) fn prepare_budgeted<'kernel, 'objects>(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &'kernel RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+    first_slot: usize,
+    bytes: &[u8],
+    account: Option<Budget>,
+) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
     let mut pending = PendingLoad {
         space: None,
         stack: None,
+        thread_charge: None,
     };
     let result = (|| {
-        let image = ElfImage::<8>::parse(bytes, LoadLimits { max_pages: 8 })
-            .map_err(|_| Error::InvalidArgument)?;
+        pending.thread_charge = account
+            .as_ref()
+            .map(|budget| budget.try_charge(Resource::Threads, 1))
+            .transpose()
+            .map_err(|_| Error::OutOfResources)?;
+        let image = ElfImage::<8>::parse(
+            bytes,
+            LoadLimits {
+                max_pages: MAX_IMAGE_PAGES,
+            },
+        )
+        .map_err(|_| Error::InvalidArgument)?;
         for page in image.pages() {
             if super::threads::reserved_address(page.address()) {
                 return Err(Error::InvalidArgument);
             }
         }
         let extended = ExtendedState::new().map_err(|_| Error::InvalidArgument)?;
-        pending.space = Some(new_shared_space(pool, memory).map_err(|_| Error::OutOfResources)?);
+        let (mappings, tables) = account.as_ref().map_or((usize::MAX, usize::MAX), |budget| {
+            (budget.limits().mappings, budget.limits().tables)
+        });
+        pending.space = Some(
+            new_shared_space_limited(pool, memory, mappings, tables)
+                .map_err(|_| Error::OutOfResources)?,
+        );
         let space = pending.space.as_mut().unwrap();
         let mut buffer = [0; 4096];
         for page in image.pages() {
@@ -121,7 +159,10 @@ pub(crate) fn prepare<'kernel, 'objects>(
     Ok(Resources {
         process: super::ProcessResources {
             space: pending.space.take().unwrap(),
-            handles: Handles::growing(),
+            handles: account
+                .clone()
+                .map_or_else(Handles::growing, Handles::budgeted),
+            account,
             control: None,
             pending: None,
             pending_thread: None,
@@ -143,5 +184,14 @@ pub(crate) fn prepare<'kernel, 'objects>(
         user_slot: 0,
         user_stack_owned: true,
         thread_control: None,
+        thread_charge: pending.thread_charge.take(),
     })
+}
+
+impl Drop for PendingLoad<'_, '_> {
+    fn drop(&mut self) {
+        if self.space.is_some() || self.stack.is_some() {
+            core::mem::forget(self.thread_charge.take());
+        }
+    }
 }

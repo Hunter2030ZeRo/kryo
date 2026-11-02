@@ -1,0 +1,34 @@
+$ cargo fmt --all -- --check
+$ cargo clippy --locked --offline -p kryo --target x86_64-unknown-none -- -D warnings
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/budget-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s
+$ cargo clippy --locked --offline -p kryo --target x86_64-unknown-none --all-features -- -D warnings
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/budget-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.38s
+$ cargo clippy --locked --offline -p kryo-core --target x86_64-unknown-linux-gnu --lib --test resource_budget --test resource_retirement --test allocation_failure --test capability --test transfer --test vm --test wait -- -D warnings
+error: no test target named `transfer` in `kryo-core` package
+help: available test targets:
+    allocation_failure
+    capability
+    capability_transfer
+    channel_budget
+    deadline
+    device
+    growth
+    ipc
+    ipc_caps
+    native_elf
+    normalize
+    object_lifetime
+    owned_capability
+    pool
+    process_lifecycle
+    process_threads
+    range
+    resource_budget
+    resource_retirement
+    task
+    timeout
+    transfer_ipc
+    vm
+    wait

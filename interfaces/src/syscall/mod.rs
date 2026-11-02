@@ -63,6 +63,9 @@ pub enum Call {
     StartupRead = 43,
     HandleInfo = 44,
     ReceiveFor = 45,
+    ManifestBudget = 46,
+    BudgetInfo = 47,
+    BudgetSelf = 48,
 }
 
 impl TryFrom<u64> for Call {
@@ -116,6 +119,9 @@ impl TryFrom<u64> for Call {
             43 => Ok(Self::StartupRead),
             44 => Ok(Self::HandleInfo),
             45 => Ok(Self::ReceiveFor),
+            46 => Ok(Self::ManifestBudget),
+            47 => Ok(Self::BudgetInfo),
+            48 => Ok(Self::BudgetSelf),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -159,7 +165,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=45 {
+        for number in 0..=48 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

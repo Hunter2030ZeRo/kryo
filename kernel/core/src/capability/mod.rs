@@ -1,4 +1,5 @@
 use crate::object::{ObjectError, ObjectKind, ObjectRef};
+use crate::resource::{Budget, Charge, Resource};
 use crate::storage::Slots;
 use core::ops::BitOr;
 
@@ -48,9 +49,10 @@ impl Rights {
     pub const TRANSFER: Self = Self(1024);
     pub const EXECUTE: Self = Self(2048);
     pub const CREATE: Self = Self(4096);
+    pub const ASSIGN: Self = Self(8192);
 
     pub const fn from_bits(bits: u64) -> Option<Self> {
-        if bits & !8191 == 0 {
+        if bits & !16383 == 0 {
             Some(Self(bits))
         } else {
             None
@@ -102,11 +104,13 @@ struct Slot<'objects, T, const OBJECTS: usize> {
     retired: bool,
     reserved: bool,
     entry: Option<Entry<'objects, T, OBJECTS>>,
+    charge: Option<Charge>,
 }
 
 /// Process-local handles. Exclusive mutation serializes insert, close, and duplication.
 pub struct HandleTable<'objects, T, const OBJECTS: usize, const HANDLES: usize> {
     domain: u64,
+    budget: Option<Budget>,
     slots: Slots<Slot<'objects, T, OBJECTS>, HANDLES>,
 }
 
@@ -124,6 +128,7 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
     pub const fn new() -> Self {
         Self {
             domain: 0,
+            budget: None,
             slots: Slots::new(
                 [const {
                     Slot {
@@ -131,6 +136,7 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
                         retired: false,
                         reserved: false,
                         entry: None,
+                        charge: None,
                     }
                 }; HANDLES],
             ),
@@ -144,7 +150,15 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
     pub const fn limited(limit: usize) -> Self {
         Self {
             domain: 0,
+            budget: None,
             slots: Slots::limited(limit),
+        }
+    }
+
+    pub fn budgeted(budget: Budget) -> Self {
+        Self {
+            budget: Some(budget),
+            ..Self::growing()
         }
     }
 
@@ -165,6 +179,7 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
                 retired: false,
                 reserved: false,
                 entry: None,
+                charge: None,
             })
             .map_err(|_| CapabilityError::Capacity)
     }
@@ -192,6 +207,11 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
                 object,
             });
         };
+        let charge = match self.charge_slot() {
+            Ok(charge) => charge,
+            Err(error) => return Err(InsertError { error, object }),
+        };
+        self.slots[index].charge = charge;
         self.slots[index].entry = Some(Entry { object, rights });
         Ok(handle)
     }
@@ -232,6 +252,8 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
             .map_err(map_object_error)?;
         let result =
             Handle::new(index, self.slots[index].generation).ok_or(CapabilityError::Capacity)?;
+        let charge = self.charge_slot()?;
+        self.slots[index].charge = charge;
         self.slots[index].entry = Some(Entry { object, rights });
         Ok(result)
     }
@@ -241,12 +263,14 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
         let (index, _) = handle.parts().ok_or(CapabilityError::InvalidHandle)?;
         let slot = &mut self.slots[index];
         let removed = slot.entry.take();
+        let charge = slot.charge.take();
         if slot.generation == u32::MAX {
             slot.retired = true;
         } else {
             slot.generation += 1;
         }
         drop(removed);
+        drop(charge);
         Ok(())
     }
 
@@ -261,6 +285,14 @@ impl<'objects, T, const OBJECTS: usize, const HANDLES: usize>
         self.slots
             .iter()
             .position(|slot| !slot.retired && !slot.reserved && slot.entry.is_none())
+    }
+
+    fn charge_slot(&self) -> Result<Option<Charge>, CapabilityError> {
+        self.budget
+            .as_ref()
+            .map(|budget| budget.try_charge(Resource::Handles, 1))
+            .transpose()
+            .map_err(|_| CapabilityError::Capacity)
     }
 
     fn entry(&self, handle: Handle) -> Result<&Entry<'objects, T, OBJECTS>, CapabilityError> {

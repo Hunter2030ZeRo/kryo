@@ -1,3 +1,4 @@
+use crate::resource::{Budget, Charge, Resource};
 use crate::storage::Slots;
 use crate::task::TaskId;
 
@@ -49,6 +50,7 @@ struct Wait<T> {
     phase: Phase,
     completion: Option<T>,
     deadline: Option<u64>,
+    _charge: Option<Charge>,
 }
 
 struct Slot<T> {
@@ -114,6 +116,27 @@ impl<T, const WAITS: usize> WaitTable<T, WAITS> {
         task: TaskId,
         deadline: Option<u64>,
     ) -> Result<WaitId, WaitError> {
+        self.begin_charged(task, deadline, None)
+    }
+
+    pub fn begin_budgeted(
+        &mut self,
+        task: TaskId,
+        deadline: Option<u64>,
+        budget: &Budget,
+    ) -> Result<WaitId, WaitError> {
+        let charge = budget
+            .try_charge(Resource::Waits, 1)
+            .map_err(|_| WaitError::Capacity)?;
+        self.begin_charged(task, deadline, Some(charge))
+    }
+
+    fn begin_charged(
+        &mut self,
+        task: TaskId,
+        deadline: Option<u64>,
+        charge: Option<Charge>,
+    ) -> Result<WaitId, WaitError> {
         if self
             .slots
             .iter()
@@ -139,6 +162,7 @@ impl<T, const WAITS: usize> WaitTable<T, WAITS> {
             phase: Phase::Parking,
             completion: None,
             deadline,
+            _charge: charge,
         });
         Ok(id)
     }

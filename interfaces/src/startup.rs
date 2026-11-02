@@ -36,6 +36,7 @@ pub enum ObjectKind {
     ChannelFactory = 10,
     LaunchManifest = 11,
     StartupRecord = 12,
+    ResourceBudget = 13,
 }
 
 impl ObjectKind {
@@ -54,6 +55,7 @@ impl ObjectKind {
         const TRANSFER: u64 = 1024;
         const EXECUTE: u64 = 2048;
         const CREATE: u64 = 4096;
+        const ASSIGN: u64 = 8192;
         match self {
             Self::TaskControl => INSPECT | CONTROL | DUP | TRANSFER,
             Self::Memory => READ | WRITE | MAP | DUP | TRANSFER,
@@ -66,6 +68,7 @@ impl ObjectKind {
             Self::ChannelFactory => CREATE | DUP | TRANSFER,
             Self::LaunchManifest => READ | WRITE,
             Self::StartupRecord => READ,
+            Self::ResourceBudget => READ | ASSIGN | DUP | TRANSFER,
         }
     }
 }
@@ -87,6 +90,7 @@ impl TryFrom<u64> for ObjectKind {
             10 => Ok(Self::ChannelFactory),
             11 => Ok(Self::LaunchManifest),
             12 => Ok(Self::StartupRecord),
+            13 => Ok(Self::ResourceBudget),
             _ => Err(()),
         }
     }
@@ -98,14 +102,14 @@ mod tests {
 
     #[test]
     fn wire_kinds_and_record_limits_are_explicit() {
-        for raw in 1..=12 {
+        for raw in 1..=13 {
             let kind = ObjectKind::try_from(raw).unwrap();
             assert_eq!(kind as u64, raw);
             assert_ne!(kind.allowed_rights(), 0);
-            assert_eq!(kind.allowed_rights() & !8191, 0);
+            assert_eq!(kind.allowed_rights() & !16383, 0);
         }
         assert!(ObjectKind::try_from(0).is_err());
-        assert!(ObjectKind::try_from(13).is_err());
+        assert!(ObjectKind::try_from(14).is_err());
         assert_eq!(HEADER_WORDS + MAX_GRANTS * ENTRY_WORDS, 135);
         assert_eq!(ObjectKind::LaunchManifest.allowed_rights(), 128 | 256);
         assert_eq!(ObjectKind::StartupRecord.allowed_rights(), 128);

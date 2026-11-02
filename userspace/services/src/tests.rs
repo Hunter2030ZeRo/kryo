@@ -1,5 +1,5 @@
 use super::*;
-use kryo_libsys::{CONTROL, CREATE, DUP, RECEIVE};
+use kryo_libsys::{ASSIGN, CONTROL, CREATE, DUP, READ, RECEIVE};
 
 fn id(value: u64) -> ServiceId {
     ServiceId::new(value).unwrap()
@@ -91,6 +91,37 @@ fn manifests_allow_only_explicit_transitive_rights() {
         }
         .validate_grants(&[grant]),
         Ok(())
+    );
+}
+
+#[test]
+fn budget_inspection_cannot_smuggle_assignment_authority() {
+    let rules = [RoleRule {
+        role: role::SERVER_BUDGET,
+        kind: ObjectKind::ResourceBudget,
+        rights: READ,
+        required: true,
+    }];
+    let manifest = Manifest {
+        service: id(10),
+        roles: &rules,
+    };
+    let mut grant = StartupGrant {
+        role: role::SERVER_BUDGET,
+        kind: ObjectKind::ResourceBudget,
+        rights: READ,
+        handle: handle(1),
+    };
+    assert_eq!(manifest.validate_grants(&[grant]), Ok(()));
+    grant.rights |= ASSIGN;
+    assert_eq!(
+        manifest.validate_grants(&[grant]),
+        Err(PolicyError::DeniedRights)
+    );
+    grant.role = role::FACTORY;
+    assert_eq!(
+        manifest.validate_grants(&[grant]),
+        Err(PolicyError::UnknownRole)
     );
 }
 

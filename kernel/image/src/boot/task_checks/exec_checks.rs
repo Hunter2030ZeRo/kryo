@@ -158,6 +158,7 @@ fn new_task<'kernel, 'objects>(
     };
     Resources {
         process: crate::runtime::ProcessResources {
+            account: None,
             space,
             handles: super::Handles::new(),
             control: None,
@@ -181,6 +182,7 @@ fn new_task<'kernel, 'objects>(
         user_slot: 0,
         user_stack_owned: false,
         thread_control: None,
+        thread_charge: None,
     }
 }
 

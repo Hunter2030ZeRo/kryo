@@ -108,6 +108,12 @@ fn spawn_inner<'kernel, 'objects>(
                 .map_err(super::native::map_error)?,
         )
     };
+    let account = match &startup {
+        Startup::Legacy(_) => parent.process.account.clone(),
+        Startup::Manifest(manifest) => manifest
+            .account()
+            .or_else(|| parent.process.account.clone()),
+    };
     let mut reservation = Some(
         parent
             .process
@@ -117,7 +123,9 @@ fn spawn_inner<'kernel, 'objects>(
     );
     let (pool, direct, memory) = (parent.pool, parent.direct, parent.memory);
     let result = (|| {
-        let mut child = match launch::prepare(pool, direct, memory, region, first_slot, bytes) {
+        let mut child = match launch::prepare_budgeted(
+            pool, direct, memory, region, first_slot, bytes, account,
+        ) {
             Ok(child) => child,
             Err(failure) => {
                 retain_failed(tasks, caller, failure.pending, region);
@@ -284,7 +292,8 @@ pub(super) fn wait<'objects>(
     if tasks.process_for(caller) == Some(target) {
         return Err(Error::PermissionDenied);
     }
-    let wait = ipc.begin_wait(caller, deadline)?;
+    let account = tasks.resources_mut(caller).unwrap().process.account.clone();
+    let wait = ipc.begin_wait_for(caller, deadline, account.as_ref())?;
     tasks.resources_mut(caller).unwrap().wait = Some(wait);
     let result = control.with(|object| {
         let KernelObject::ProcessControl(process) = object else {

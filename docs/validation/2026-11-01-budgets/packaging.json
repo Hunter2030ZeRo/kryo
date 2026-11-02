@@ -1,0 +1,162 @@
+[
+  {
+    "program": "native-smoke",
+    "profile": "debug",
+    "boot_bytes": 13240,
+    "load_data_preserved": true,
+    "artifact_sha256": "4cc74335d0b323faa4ee884aa1e3e7cda17e119828a4bffb6d48cd4330ba2f09",
+    "boot_sha256": "b4cd7621fc45f5559607fca248722d1d325b68adbc6bb81a28f8ac5a2fd9647a"
+  },
+  {
+    "program": "init",
+    "profile": "debug",
+    "boot_bytes": 7848,
+    "load_data_preserved": true,
+    "artifact_sha256": "9281a9e3c406217ae6d45670cbbe187abe5d2933cb44f1527d79dc0f2dee38a4",
+    "boot_sha256": "a954a42b9af98135a6dc6395190add7bf2fadea796e0eb6eb21cf40cd3a14064"
+  },
+  {
+    "program": "bootstrap-worker",
+    "profile": "debug",
+    "boot_bytes": 10448,
+    "load_data_preserved": true,
+    "artifact_sha256": "3a0da09196f875bf0d57c6d34d67ff4a51dc3ad41005356c2e512b594009c656",
+    "boot_sha256": "40a331445ce60013f7ca2299973211e874293aedbdde956fe2ec5514e03710cf"
+  },
+  {
+    "program": "device-probe",
+    "profile": "debug",
+    "boot_bytes": 8120,
+    "load_data_preserved": true,
+    "artifact_sha256": "684829472bde02931f0f0bd9b4398627912f122126dd560790403baa3d0b1c0a",
+    "boot_sha256": "debbfd0499d942d8061c5d36073c5a5e0bfc649ab9d894019191b6b1b32731cf"
+  },
+  {
+    "program": "scale-probe",
+    "profile": "debug",
+    "boot_bytes": 20256,
+    "load_data_preserved": true,
+    "artifact_sha256": "e3a1ba625971b92266f8dd5ff68a3c4de170e3ed897d7b84bc75d97e5c593ecb",
+    "boot_sha256": "574cba8705eef0bb064e6a1a9440d49a2cc1125fe74051897df85e8e766b45de"
+  },
+  {
+    "program": "service-probe",
+    "profile": "debug",
+    "boot_bytes": 24000,
+    "load_data_preserved": true,
+    "artifact_sha256": "eaea82038c383ab3fa2b57902f1205df44e71016f5866806d6dcef6f5156243c",
+    "boot_sha256": "e303de44ee7b569d39736468968848609df35467a7893f18412457d92b5e97b7"
+  },
+  {
+    "program": "service-peer",
+    "profile": "debug",
+    "boot_bytes": 18808,
+    "load_data_preserved": true,
+    "artifact_sha256": "0f76b00954c9f82c4e096764e9182f5caffc962fbff2fd36e8a84625cf63fe52",
+    "boot_sha256": "13bbca9f434a9b371f75882c5aee37d2b885ed454dde6e83f4797eaa20e76f2e"
+  },
+  {
+    "program": "supervisor",
+    "profile": "debug",
+    "boot_bytes": 45136,
+    "load_data_preserved": true,
+    "artifact_sha256": "a6246c852c9f0aee0932db8a5dc702bc2968df99ae404ed4994e7c44f7f45dbc",
+    "boot_sha256": "6bc1a6b2c13776f7458d40e10cd07e5d33f26a8c6bd85a1cb40558f51ff68c59"
+  },
+  {
+    "program": "echo-service",
+    "profile": "debug",
+    "boot_bytes": 25280,
+    "load_data_preserved": true,
+    "artifact_sha256": "76b8cf9ef6326afa3a39ee6fb1100f22307e0a0f58efe3b4cfce301a7a8401ba",
+    "boot_sha256": "6f24c2bfa947c37a1556efcd9f6b4b2dbe0ddbd9f10b0c47d1522abdf018cddb"
+  },
+  {
+    "program": "registry-client",
+    "profile": "debug",
+    "boot_bytes": 36536,
+    "load_data_preserved": true,
+    "artifact_sha256": "3be54f29c6e05a6ef53a44d08c2abb17b5f9d9620a3d68b694e8a7ec14656ff9",
+    "boot_sha256": "f462d339c5194cb799b9bea1a6a8706516e4e2657a98c5d481ee1548cb2fab62"
+  },
+  {
+    "program": "native-smoke",
+    "profile": "release",
+    "boot_bytes": 13240,
+    "load_data_preserved": true,
+    "artifact_sha256": "12a60598ec2b5d36e352da3445fe8ce91aafbe01a11a216eb56c46e0d6037626",
+    "boot_sha256": "5127a3504aadf93f2f425ea56449b798576a3226d9e45b6383cbe6aa2a68da97"
+  },
+  {
+    "program": "init",
+    "profile": "release",
+    "boot_bytes": 6168,
+    "load_data_preserved": true,
+    "artifact_sha256": "40c5ceb456178f37e0564c76fa22544f80a9357d8332b7c59346be40a68f9b8c",
+    "boot_sha256": "9a668fe00ad1d8cbc7927d28a4f30de244cac1b3105262c4aea4df9456456760"
+  },
+  {
+    "program": "bootstrap-worker",
+    "profile": "release",
+    "boot_bytes": 9336,
+    "load_data_preserved": true,
+    "artifact_sha256": "7828ff5b715326a9105e9f92470920561f83142330680cfbf18e98e17e7a8767",
+    "boot_sha256": "0d95b746c57aeb067c8c4a347dcb1de8d21ca704222aa59c1b51f3cc41572113"
+  },
+  {
+    "program": "device-probe",
+    "profile": "release",
+    "boot_bytes": 8888,
+    "load_data_preserved": true,
+    "artifact_sha256": "68a3f1192a040b4b0752c3fc8b0bc98b30c24d2578b8ce0b76fed92766f5e446",
+    "boot_sha256": "248c730eb036cf49a8007e665ef048c8af5c4a2eaa51709694b1675fb017122b"
+  },
+  {
+    "program": "scale-probe",
+    "profile": "release",
+    "boot_bytes": 13384,
+    "load_data_preserved": true,
+    "artifact_sha256": "af123632abb63d3a887101e1a73d2155be711c494b29071f1dc612cb44d10962",
+    "boot_sha256": "b16fef842c43a3f2faaf9432b7c3dee516be6dc2b673b32ce79a6849321eb988"
+  },
+  {
+    "program": "service-probe",
+    "profile": "release",
+    "boot_bytes": 17608,
+    "load_data_preserved": true,
+    "artifact_sha256": "967d627f1a9d4acbc3ef0864466a313c812eff879bf3b8ca33d9d0875713bf04",
+    "boot_sha256": "2bc10775875bc74a8f25c79ecc274994e42b135426d18dee78e552a812ca8643"
+  },
+  {
+    "program": "service-peer",
+    "profile": "release",
+    "boot_bytes": 9112,
+    "load_data_preserved": true,
+    "artifact_sha256": "ffdd52af0a1c905a18036546a49f72142237660bd2da6dc37a76313433bc6f90",
+    "boot_sha256": "0e896ef021b1d5d5ef13972e69fe4b205146f2d236b84bb721715f05b3481dae"
+  },
+  {
+    "program": "supervisor",
+    "profile": "release",
+    "boot_bytes": 32888,
+    "load_data_preserved": true,
+    "artifact_sha256": "5ddfb9ded9192b376de0a645cfdf45e961c2f661ee6cdbaeca1277b70b11937b",
+    "boot_sha256": "36428df6aff5dc6390092cebbad4d216d87a5da1a851bcf5fa7704ed623d0659"
+  },
+  {
+    "program": "echo-service",
+    "profile": "release",
+    "boot_bytes": 23072,
+    "load_data_preserved": true,
+    "artifact_sha256": "2134afe064167f0688629407b2db52b904242c47544c925b554f4dbc2944b0e6",
+    "boot_sha256": "673444c6ac37d8875d9b09347c4beb6d4148c5ede364d0688ff0144a94b808a5"
+  },
+  {
+    "program": "registry-client",
+    "profile": "release",
+    "boot_bytes": 28648,
+    "load_data_preserved": true,
+    "artifact_sha256": "41e6d609d2c4f1f0e6784bbce5a2c485ea3308e6cc1e8192a9cf5988b58bf2c6",
+    "boot_sha256": "a4efae213b80a40a33b628e5cd8d4229e8fb71afa7adcff14660446e5ee053ed"
+  }
+]

@@ -7,6 +7,7 @@ use kryo_core::ipc::{Completion, Delivery};
 use kryo_core::mm::vm::{Permissions, VmError};
 use kryo_core::object::ObjectKind;
 use kryo_core::process::{ExitReason, ProcessExit};
+use kryo_core::resource::{Charge, Resource};
 use kryo_core::task::TaskId;
 use kryo_interfaces::syscall::Error;
 
@@ -15,6 +16,7 @@ pub(crate) struct PendingThread {
     stack: Option<KernelStack>,
     attempted: [bool; 5],
     user_slot: usize,
+    thread_charge: Option<Charge>,
 }
 
 impl PendingThread {
@@ -39,6 +41,7 @@ impl PendingThread {
                 }
             }
         }
+        self.thread_charge = None;
         true
     }
 }
@@ -91,6 +94,12 @@ pub(super) fn create<'kernel, 'objects>(
     {
         return Err(Error::InvalidArgument);
     }
+    let charge = owner
+        .account
+        .as_ref()
+        .map(|account| account.try_charge(Resource::Threads, 1))
+        .transpose()
+        .map_err(|_| Error::OutOfResources)?;
     let user_slot = (0..)
         .find(|slot| {
             !tasks
@@ -115,6 +124,7 @@ pub(super) fn create<'kernel, 'objects>(
         stack: None,
         attempted: [false; 5],
         user_slot,
+        thread_charge: charge,
     };
     let result = (|| {
         let extended = ExtendedState::new().map_err(|_| Error::InvalidArgument)?;
@@ -167,10 +177,12 @@ pub(super) fn create<'kernel, 'objects>(
             user_slot,
             user_stack_owned: true,
             thread_control: Some(thread_owner),
+            thread_charge: pending.thread_charge.take(),
         };
         let task = match tasks.spawn_thread(process, thread) {
             Ok(task) => task,
-            Err(failure) => {
+            Err(mut failure) => {
+                pending.thread_charge = failure.resources.thread_charge.take();
                 pending.stack = Some(failure.resources.stack);
                 return Err(Error::OutOfResources);
             }
@@ -232,7 +244,8 @@ pub(super) fn join<'objects>(
     {
         return Err(Error::TimedOut);
     }
-    let wait = ipc.begin_wait(caller, deadline)?;
+    let account = tasks.resources_mut(caller).unwrap().process.account.clone();
+    let wait = ipc.begin_wait_for(caller, deadline, account.as_ref())?;
     tasks.thread_mut(caller).unwrap().wait = Some(wait);
     let result = control.with(|object| {
         let KernelObject::ThreadControl(exit) = object else {
@@ -254,4 +267,12 @@ pub(super) fn join<'objects>(
     }
     ipc.waits.park(wait).expect("Thread join handoff invariant");
     Ok(None)
+}
+
+impl Drop for PendingThread {
+    fn drop(&mut self) {
+        if self.stack.is_some() || self.attempted.iter().any(|attempted| *attempted) {
+            core::mem::forget(self.thread_charge.take());
+        }
+    }
 }

@@ -33,9 +33,10 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
         .process_for(supervisor)
         .expect("Supervisor process membership invariant");
     let _ = kryo_hal::print(format_args!(
-        "BOOT: supervisor dispatched id={:#x} accounts={}\n",
+        "BOOT: supervisor dispatched id={:#x} accounts={} budgets={}\n",
         supervisor.as_raw(),
-        initial.budgets.len()
+        initial.budgets.len(),
+        initial.resources.len()
     ));
     loop {
         reap(&mut tasks, &mut ipc, pool, &mut region);

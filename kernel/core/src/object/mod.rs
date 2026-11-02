@@ -3,6 +3,7 @@ use spin::Mutex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ObjectKind {
+    ResourceBudget,
     LaunchManifest,
     StartupRecord,
     ChannelFactory,

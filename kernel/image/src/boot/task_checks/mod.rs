@@ -113,6 +113,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         context.r13 = SEED_B;
         Self {
             process: ProcessResources {
+                account: None,
                 space,
                 handles: Handles::new(),
                 control: None,
@@ -136,6 +137,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
             user_slot: 0,
             user_stack_owned: false,
             thread_control: None,
+            thread_charge: None,
         }
     }
 }

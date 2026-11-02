@@ -3,6 +3,7 @@ use alloc::vec::Vec;
 use kryo_core::capability::{Handle, Rights, TransferSpec};
 use kryo_core::object::ObjectKind;
 use kryo_core::process::ProcessId;
+use kryo_core::resource::Budget;
 use kryo_interfaces::startup::{
     ENTRY_WORDS, Entry, HEADER_WORDS, MAGIC, MAX_GRANTS, Metadata, ObjectKind as WireKind, VERSION,
 };
@@ -12,11 +13,13 @@ pub(crate) struct LaunchManifest {
     owner: ProcessId,
     metadata: Metadata,
     entries: Vec<Entry>,
+    budget: Option<Handle>,
 }
 
 pub(crate) struct Prepared<'objects> {
     metadata: Metadata,
     grants: Vec<PreparedGrant<'objects>>,
+    account: Option<Budget>,
 }
 
 struct PreparedGrant<'objects> {
@@ -40,6 +43,7 @@ pub(crate) fn create<'objects>(
             owner,
             metadata,
             entries: Vec::new(),
+            budget: None,
         })),
         ObjectKind::LaunchManifest,
         Rights::READ | Rights::WRITE,
@@ -103,7 +107,7 @@ pub(crate) fn prepare<'objects>(
     let object = handles
         .lookup(manifest, ObjectKind::LaunchManifest, Rights::READ)
         .map_err(super::native::map_error)?;
-    let (metadata, entries) = object.with(|object| {
+    let (metadata, entries, budget) = object.with(|object| {
         let KernelObject::LaunchManifest(manifest) = object else {
             unreachable!()
         };
@@ -116,9 +120,12 @@ pub(crate) fn prepare<'objects>(
             .try_reserve_exact(manifest.entries.len())
             .map_err(|_| Error::OutOfResources)?;
         entries.extend_from_slice(&manifest.entries);
-        Ok((manifest.metadata, entries))
+        Ok((manifest.metadata, entries, manifest.budget))
     })?;
     validate_metadata(metadata)?;
+    let account = budget
+        .map(|handle| account_from(handles, handle))
+        .transpose()?;
     let mut grants = Vec::new();
     grants
         .try_reserve_exact(entries.len())
@@ -129,10 +136,17 @@ pub(crate) fn prepare<'objects>(
             batch: stage(entry, handles)?,
         });
     }
-    Ok(Prepared { metadata, grants })
+    Ok(Prepared {
+        metadata,
+        grants,
+        account,
+    })
 }
 
 impl<'objects> Prepared<'objects> {
+    pub(crate) fn account(&self) -> Option<Budget> {
+        self.account.clone()
+    }
     /// Install only in an unpublished child. Failure discards its whole handle
     /// table; no partially installed capability has been exposed.
     pub(crate) fn install(
@@ -301,6 +315,7 @@ pub(crate) const fn wire_kind(kind: ObjectKind) -> WireKind {
         ObjectKind::ChannelFactory => WireKind::ChannelFactory,
         ObjectKind::LaunchManifest => WireKind::LaunchManifest,
         ObjectKind::StartupRecord => WireKind::StartupRecord,
+        ObjectKind::ResourceBudget => WireKind::ResourceBudget,
     }
 }
 
@@ -308,3 +323,45 @@ pub(crate) const fn wire_kind(kind: ObjectKind) -> WireKind {
 pub(crate) mod checks;
 #[cfg(feature = "boot-tests")]
 pub(crate) mod receive_checks;
+
+pub(crate) fn assign_budget(
+    owner: ProcessId,
+    manifest: Handle,
+    account: Handle,
+    handles: &Handles<'_>,
+) -> Result<(), Error> {
+    let object = handles
+        .lookup(manifest, ObjectKind::LaunchManifest, Rights::WRITE)
+        .map_err(super::native::map_error)?;
+    object.with(|object| {
+        let KernelObject::LaunchManifest(manifest) = object else {
+            unreachable!()
+        };
+        if manifest.borrow().owner != owner {
+            return Err(Error::PermissionDenied);
+        }
+        Ok(())
+    })?;
+    drop(account_from(handles, account)?);
+    object.with(|object| {
+        let KernelObject::LaunchManifest(manifest) = object else {
+            unreachable!()
+        };
+        manifest.borrow_mut().budget = Some(account);
+    });
+    Ok(())
+}
+
+fn account_from(handles: &Handles<'_>, handle: Handle) -> Result<Budget, Error> {
+    let account = handles
+        .lookup(
+            handle,
+            ObjectKind::ResourceBudget,
+            Rights::ASSIGN | Rights::TRANSFER,
+        )
+        .map_err(super::native::map_error)?;
+    account.with(|object| match object {
+        KernelObject::ResourceBudget(account) => Ok(account.clone()),
+        _ => Err(Error::WrongType),
+    })
+}

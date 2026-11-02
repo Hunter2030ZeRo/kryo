@@ -6,6 +6,8 @@ use core::panic::PanicInfo;
 use kryo_libsys::{self as sys, Grant, Handle, ObjectKind};
 use kryo_services::{Manifest, RoleRule, ServiceId, protocol, role};
 
+mod budgets;
+
 const ECHO_SERVICE: u64 = 10;
 const ALLOWED: u64 = 20;
 const DENIED: u64 = 21;
@@ -61,6 +63,10 @@ enum Failure {
     Clock,
     Quota,
     Cleanup,
+    BudgetHandles,
+    BudgetMemory,
+    BudgetThreads,
+    BudgetPolicy,
 }
 
 extern "C" fn client_main(raw: u64) -> ! {
@@ -93,6 +99,7 @@ fn run(record: Handle) -> Result<(), Failure> {
     let factory = startup.grant(role::FACTORY).ok_or(Failure::Startup)?.handle;
     let debug = startup.grant(role::DEBUG).ok_or(Failure::Startup)?.handle;
     sys::close(record).map_err(|_| Failure::Cleanup)?;
+    budgets::check(factory, debug, startup.service)?;
     let callback = sys::create_endpoint(factory).map_err(|_| Failure::Authority)?;
     if startup.service == ALLOWED {
         allowed(gateway, checkpoint, callback)?;

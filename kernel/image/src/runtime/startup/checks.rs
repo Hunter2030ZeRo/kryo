@@ -404,3 +404,7 @@ fn spawn_failure(
         before.free - (memory.borrow().retained_pages() - retained_before)
     );
 }
+
+pub(crate) fn fail_publication() {
+    FAIL_PUBLICATION.store(true, Ordering::Relaxed);
+}

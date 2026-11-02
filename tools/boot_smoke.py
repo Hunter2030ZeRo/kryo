@@ -52,6 +52,7 @@ MARKERS = {
     "startup_publication": "STARTUP: spawn publication rollback OK cases=3",
     "supervisor_authority": "SUPERVISOR: manifests and authority isolation OK instances=2",
     "relative_receive": "RECEIVE: relative admission and absolute expiry OK",
+    "resource_budgets": "BUDGET: inheritance, retained owners and recovery OK",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
 
@@ -140,10 +141,12 @@ def resident_memory(pid):
 
 
 def observed_checks(log, cpu=None, normal=False, cpus=1):
+    budget_stages = {int(value) for value in re.findall(r"(?m)^USERLOG: process=0x[0-9a-f]+ event=12 value=(\d+)$", log)}
+    budget_clients = all((service << 32) | stage in budget_stages for service in (20, 21) for stage in (1, 2, 3))
     if normal:
         supervision = log.partition("BOOT: supervisor dispatched")[2]
         spawned = re.findall(r"(?m)^PROCESS: spawned id=(0x[0-9a-f]+) parent=(0x[0-9a-f]+)$", supervision)
-        root = re.search(r"(?m)^BOOT: supervisor dispatched id=(0x[0-9a-f]+) accounts=4$", log)
+        root = re.search(r"(?m)^BOOT: supervisor dispatched id=(0x[0-9a-f]+) accounts=4 budgets=4$", log)
         ready = re.findall(r"(?m)^USERLOG: process=(0x[0-9a-f]+) event=6 value=2$", supervision)
         persistent = re.findall(r"(?m)^USERLOG: process=(0x[0-9a-f]+) event=7 value=2$", supervision)
         checks = {
@@ -157,6 +160,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1):
                 and all(parent == root[1] for _, parent in spawned),
             "authority_and_restart": root is not None and ready == [root[1]],
             "persistent_supervisor": root is not None and persistent.count(root[1]) == 1,
+            "client_budget_exhaustion": budget_clients,
         }
         checks.update(memory_checks(log, normal))
         return checks
@@ -166,6 +170,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1):
         for name, marker in MARKERS.items()
     }
     checks["device"] = "DEVICE: register authority and IRQ wakeup OK cases=4" in log
+    checks["client_budget_exhaustion"] = budget_clients
     checks["smp_online"] = f"SMP: online={cpus} " in log
     checks["smp_retired"] = "SMP: AP resources retired" in log
     checks["smp_tlb"] = "SMP: remote TLB retirement OK" in log

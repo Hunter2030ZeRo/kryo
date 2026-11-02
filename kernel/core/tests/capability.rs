@@ -228,7 +228,8 @@ fn payload_is_destroyed_only_after_the_last_strong_reference() {
 fn rights_reject_unknown_bits() {
     assert_eq!(Rights::from_bits(2048), Some(Rights::EXECUTE));
     assert_eq!(Rights::from_bits(4096), Some(Rights::CREATE));
-    assert_eq!(Rights::from_bits(8192), None);
+    assert_eq!(Rights::from_bits(8192), Some(Rights::ASSIGN));
+    assert_eq!(Rights::from_bits(16384), None);
     assert_eq!(Rights::from_bits(u64::MAX), None);
     assert_eq!(Rights::from_bits(0).unwrap().bits(), 0);
     assert_eq!(

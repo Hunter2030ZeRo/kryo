@@ -53,20 +53,32 @@ impl<
         allocator: &'pool F,
         create: impl FnOnce(u64) -> Result<B, B::Error>,
     ) -> Result<Self, VmError<B::Error>> {
-        Self::create(allocator, create, false)
+        Self::create(allocator, create, None)
     }
 
     pub fn new_growing(
         allocator: &'pool F,
         create: impl FnOnce(u64) -> Result<B, B::Error>,
     ) -> Result<Self, VmError<B::Error>> {
-        Self::create(allocator, create, true)
+        Self::create(allocator, create, Some((usize::MAX, usize::MAX)))
+    }
+
+    /// Limits mapping records and all owned user table frames, including root.
+    /// Shared backing is charged by its memory object, independently of aliases.
+    pub fn new_limited(
+        allocator: &'pool F,
+        create: impl FnOnce(u64) -> Result<B, B::Error>,
+        mapping_limit: usize,
+        table_limit: usize,
+    ) -> Result<Self, VmError<B::Error>> {
+        let intermediate = table_limit.checked_sub(1).ok_or(VmError::TableCapacity)?;
+        Self::create(allocator, create, Some((mapping_limit, intermediate)))
     }
 
     fn create(
         allocator: &'pool F,
         create: impl FnOnce(u64) -> Result<B, B::Error>,
-        growing: bool,
+        limits: Option<(usize, usize)>,
     ) -> Result<Self, VmError<B::Error>> {
         let root = allocator.allocate().map_err(VmError::Allocation)?;
         let backend = match create(root.address()) {
@@ -91,13 +103,13 @@ impl<
             allocator,
             backend,
             root: Some(root),
-            mappings: if growing {
-                Slots::growing()
+            mappings: if let Some((mappings, _)) = limits {
+                Slots::limited(mappings)
             } else {
                 Slots::new([const { None }; MAPPINGS])
             },
-            tables: if growing {
-                Slots::growing()
+            tables: if let Some((_, tables)) = limits {
+                Slots::limited(tables)
             } else {
                 Slots::new([const { None }; TABLES])
             },
@@ -301,6 +313,10 @@ impl<
 
     pub fn retained_tables(&self) -> usize {
         self.table_count
+    }
+
+    pub fn owned_tables(&self) -> usize {
+        self.table_count + usize::from(self.root.is_some())
     }
 
     /// The exclusive borrow prevents mapping mutation or close during execution.

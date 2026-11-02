@@ -54,8 +54,11 @@ The public service ABI is not stable. Experimental task calls are defined below;
 | 43 | StartupRead | Startup-record handle | Word index | Record word |
 | 44 | HandleInfo | Handle | Unused | Wire object kind; R8=actual rights |
 | 45 | ReceiveFor | Endpoint handle | Capability capacity, 0..2 | As Receive; input RDX=relative duration in nanoseconds |
+| 46 | ManifestBudget | Manifest handle | Resource-budget handle | 0 |
+| 47 | BudgetInfo | Resource-budget handle | Resource index | Limit/usage; input RDX=query |
+| 48 | BudgetSelf | Resource index | Query | Caller account limit/usage |
 
-TaskStatus requires INSPECT; TaskStop and CancelWait require CONTROL. They also accept process-control handles; a retained terminal result continues to report Exited after reaping, and stop/cancel cannot target a replacement generation. Duplicate requires DUP and a subset of the original rights. Rights bits are INSPECT=1, CONTROL=2, DUP=4, SEND=8, RECEIVE=16, WAIT=32, SIGNAL=64, READ=128, WRITE=256, MAP=512, TRANSFER=1024, EXECUTE=2048, CREATE=4096. Send/Call and their Caps variants require SEND, Receive/Reply require RECEIVE, and EndpointClose requires CONTROL. Wait and Signal require their matching rights. Handles are process-local and opaque; zero is invalid. Close removes one reference, not all authority to an object. A task-control object can outlive its task and report Exited without keeping its VM or stack alive.
+TaskStatus requires INSPECT; TaskStop and CancelWait require CONTROL. They also accept process-control handles; a retained terminal result continues to report Exited after reaping, and stop/cancel cannot target a replacement generation. Duplicate requires DUP and a subset of the original rights. Rights bits are INSPECT=1, CONTROL=2, DUP=4, SEND=8, RECEIVE=16, WAIT=32, SIGNAL=64, READ=128, WRITE=256, MAP=512, TRANSFER=1024, EXECUTE=2048, CREATE=4096, ASSIGN=8192. Send/Call and their Caps variants require SEND, Receive/Reply require RECEIVE, and EndpointClose requires CONTROL. Wait and Signal require their matching rights. Handles are process-local and opaque; zero is invalid. Close removes one reference, not all authority to an object. A task-control object can outlive its task and report Exited without keeping its VM or stack alive.
 
 EndpointCreate and NotificationCreate require CREATE on a channel factory. The kernel mints factories during trusted startup; neither call creates a new account. Duplication and copy delegation retain the same finite live-channel budget across processes and threads. Exhaustion returns OutOfResources. Creation reserves result-handle capacity before charging or publishing an object; all unpublished state rolls back on failure.
 
@@ -135,9 +138,30 @@ roles, kinds, rights and handles. Per-service role allowlists belong in user spa
 HandleInfo describes a handle already in the caller's table; it adds no authority
 over the target. Wire kinds are TaskControl=1, Memory=2, Endpoint=3, Notification=4,
 ProcessControl=5, ThreadControl=6, Image=7, DebugConsole=8, Device=9,
-ChannelFactory=10, LaunchManifest=11 and StartupRecord=12. They are independent of
+ChannelFactory=10, LaunchManifest=11, StartupRecord=12 and ResourceBudget=13. They are independent of
 Rust enum layout. [ADR 0015](decisions/0015-service-startup-and-authority.md) defines
 the transaction and discovery trust boundaries.
+
+ManifestBudget requires manifest WRITE and source-budget ASSIGN|TRANSFER. The
+manifest stores a descriptive handle and revalidates it at spawn. Without a
+selection, both spawn modes inherit the caller's account. Accounts are created
+only by trusted startup; no syscall raises limits. Binding happens before initial
+thread, VM and handle publication. The version-1 startup record is unchanged.
+
+BudgetInfo requires READ. BudgetSelf inspects the caller's bound account without
+granting assignment authority; unbudgeted trusted fixtures return InvalidCall.
+Queries are Limit=0 and Used=1. Resource indices are SharedPages=0, Handles=1,
+Waits=2, Threads=3, Mappings=4 and Tables=5. The first four report shared-account
+usage. Mapping/table limits are per process; BudgetSelf reports the caller's
+current mappings and root-inclusive owned tables. BudgetInfo rejects Used for
+those two indices because there is no aggregate counter. Unknown indices/queries
+return InvalidArgument. Exhausted allocation returns OutOfResources.
+
+Shared-page charges outlive creator exit and remain through mappings. Handles
+include reserved destination slots. Wait charges remain through Ready until
+consumption; live-thread charges survive control-handle closure and failed
+cleanup. [ADR 0016](decisions/0016-service-resource-budgets.md) describes the limits
+and the remaining kernel-memory/CPU accounting boundary.
 
 Use kernel IPC for small control requests and capability transfer. Use registered shared memory and bounded request/completion queues for bulk data. Measure registration, mapping, copying, and wakeup costs before selecting a path for a workload.
 

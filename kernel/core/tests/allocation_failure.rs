@@ -5,6 +5,7 @@ use kryo_core::capability::{CapabilityError, HandleTable, Rights};
 use kryo_core::ipc::{Completion, Endpoint, IpcError, Message};
 use kryo_core::object::{ObjectError, ObjectKind, ObjectTable};
 use kryo_core::process::{ProcessTable, ProcessTableError};
+use kryo_core::resource::{Budget, Limits, Resource};
 use kryo_core::sync::{WaitError, WaitTable};
 use kryo_core::task::{TaskError, TaskTable};
 
@@ -51,6 +52,42 @@ fn fail_allocations<T>(operation: impl FnOnce() -> T) -> T {
     FAIL.with(|flag| flag.set(true));
     let _reset = Reset;
     operation()
+}
+
+#[test]
+fn budgeted_metadata_oom_refunds_charges_before_retry() {
+    let budget = Budget::new(Limits {
+        shared_pages: 0,
+        handles: 1,
+        waits: 1,
+        threads: 1,
+        mappings: 0,
+        tables: 0,
+    });
+    let objects = ObjectTable::<(), 1>::new();
+    let object = objects.create(ObjectKind::Memory, ()).unwrap();
+    let mut handles = HandleTable::<(), 1, 0>::budgeted(budget.clone());
+    let failure = fail_allocations(|| handles.insert(object, Rights::READ)).unwrap_err();
+    assert_eq!(failure.error, CapabilityError::Capacity);
+    assert_eq!(failure.object.reference_count(), 1);
+    assert_eq!(budget.count(Resource::Handles), 0);
+    let handle = handles.insert(failure.object, Rights::READ).unwrap();
+    assert_eq!(budget.count(Resource::Handles), 1);
+    handles.close(handle).unwrap();
+    assert_eq!(budget.count(Resource::Handles), 0);
+
+    let mut tasks = TaskTable::<(), 1>::new();
+    let task = tasks.spawn(()).unwrap();
+    let mut waits = WaitTable::<(), 0>::growing();
+    assert_eq!(
+        fail_allocations(|| waits.begin_budgeted(task, None, &budget)),
+        Err(WaitError::Capacity)
+    );
+    assert_eq!(budget.count(Resource::Waits), 0);
+    let wait = waits.begin_budgeted(task, None, &budget).unwrap();
+    assert_eq!(budget.count(Resource::Waits), 1);
+    waits.abandon(wait).unwrap();
+    assert_eq!(budget.count(Resource::Waits), 0);
 }
 
 #[test]

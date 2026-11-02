@@ -20,6 +20,25 @@ pub const MAP: u64 = 512;
 pub const TRANSFER: u64 = 1024;
 pub const EXECUTE: u64 = 2048;
 pub const CREATE: u64 = 4096;
+pub const ASSIGN: u64 = 8192;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u64)]
+pub enum Resource {
+    SharedPages = 0,
+    Handles = 1,
+    Waits = 2,
+    Threads = 3,
+    Mappings = 4,
+    Tables = 5,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u64)]
+pub enum BudgetQuery {
+    Limit = 0,
+    Used = 1,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Handle(u64);
@@ -203,6 +222,68 @@ pub fn manifest_grant(
 
 pub fn spawn_manifest(image: Handle, manifest: Handle) -> Result<Handle, Error> {
     handle_result(invoke(Call::SpawnManifest, image.raw(), manifest.raw())?)
+}
+
+pub fn manifest_budget(manifest: Handle, budget: Handle) -> Result<(), Error> {
+    invoke(Call::ManifestBudget, manifest.raw(), budget.raw()).map(|_| ())
+}
+
+pub fn budget_info(budget: Handle, resource: Resource, query: BudgetQuery) -> Result<u64, Error> {
+    let status;
+    let result;
+    unsafe {
+        asm!(
+            "int 0x80",
+            inlateout("rax") Call::BudgetInfo as u64 => status,
+            in("rdi") budget.raw(),
+            in("rsi") resource as u64,
+            inlateout("rdx") query as u64 => result,
+            lateout("r8") _, lateout("r9") _, lateout("r10") _, lateout("r11") _,
+            options(nostack),
+        );
+    }
+    check(status)?;
+    Ok(result)
+}
+
+pub fn budget_self(resource: Resource, query: BudgetQuery) -> Result<u64, Error> {
+    invoke(Call::BudgetSelf, resource as u64, query as u64)
+}
+
+pub fn memory_create(pages: usize) -> Result<Handle, Error> {
+    handle_result(invoke(Call::MemoryCreate, pages as u64, 0)?)
+}
+
+/// # Safety
+/// The caller must own this vacant address range and preserve every runtime
+/// mapping/reference that can overlap it, including concurrent thread accesses.
+pub unsafe fn memory_map(
+    memory: Handle,
+    address: u64,
+    page: usize,
+    writable: bool,
+) -> Result<(), Error> {
+    let status;
+    unsafe {
+        asm!(
+            "int 0x80",
+            inlateout("rax") Call::MemoryMap as u64 => status,
+            in("rdi") memory.raw(),
+            in("rsi") address,
+            inlateout("rdx") page as u64 => _,
+            inlateout("r8") u64::from(writable) => _,
+            lateout("r9") _, lateout("r10") _, lateout("r11") _,
+            options(nostack),
+        );
+    }
+    check(status)
+}
+
+/// # Safety
+/// No Rust reference or concurrent access may remain into this page. The caller
+/// must own its mapping lifetime and must not remove runtime/code/stack storage.
+pub unsafe fn memory_unmap(address: u64) -> Result<(), Error> {
+    invoke(Call::MemoryUnmap, address, 0).map(|_| ())
 }
 
 pub fn startup_word(record: Handle, index: usize) -> Result<u64, Error> {
@@ -755,5 +836,17 @@ mod tests {
             invalid[index] = value;
             assert_eq!(decode(&invalid), Err(Error::InvalidResponse));
         }
+    }
+
+    #[test]
+    fn startup_budget_assignment_requires_the_budget_kind() {
+        let mut record = words();
+        record[12] = ObjectKind::ResourceBudget as u64;
+        record[13] = READ | ASSIGN | TRANSFER;
+        let budget = decode(&record).unwrap().grant(2).unwrap();
+        assert_eq!(budget.kind, ObjectKind::ResourceBudget);
+        assert_eq!(budget.rights, READ | ASSIGN | TRANSFER);
+        record[12] = ObjectKind::ChannelFactory as u64;
+        assert_eq!(decode(&record), Err(Error::InvalidResponse));
     }
 }

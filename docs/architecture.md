@@ -57,6 +57,15 @@ The image sizes frame-allocation bitmaps from the boot memory map before enablin
 
 Normal service execution grows process, thread, membership, object, handle, wait, observation, and VM metadata as needed. Explicit inline constructors retain bounded storage for exhaustion fixtures. Registry growth uses fallible reservation; creation errors return unpublished owners and incomplete cleanup stays reachable. Generational slot histories remain until their registry retires. Moving metadata never moves CPU-local GDT/TSS storage, changes IDs, or transfers an active execution owner.
 
+Production processes now bind to boot-minted resource accounts before startup.
+Handles, active waits, live threads and shared-memory payload pages retain charges
+through actual retirement. Ordinary children inherit their parent's account;
+selecting another requires ASSIGN and TRANSFER. Per-process VM mapping/table
+limits also constrain aliases. These are service policy bounds, not global
+process/thread limits or exact physical-RAM accounting. CPU-time budgets and
+kernel-metadata byte accounting remain pending. [ADR 0016](decisions/0016-service-resource-budgets.md)
+defines charge ownership and the scheduler/SIMD boundary.
+
 An image-owned page allocator obtains physically contiguous runs from the frame pool and uses their retained HHDM aliases. Each allocation stores its run token in a private prefix and returns the entire run on deallocation. It allocates whole pages and can fail from physical fragmentation even when enough total RAM remains free. Slab allocation, CPU-local caches, and virtually contiguous heap backing are later work.
 
 Kernel entry stacks use guarded cells in a shared supervisor branch. Additional leaf tables extend the branch up to one GiB without replacing the parent links already cloned into user roots. Table owners remain retained through global TLB retirement. Private user stacks and TLS occupy a reserved user VA arena. These address budgets, physical memory, and retained resources still bound execution capacity. Frame metadata has no fixed four-GiB or 128-GiB size limit; raw boot-map and normalized-range counts remain bounded.
@@ -75,7 +84,7 @@ HHDM split-table ownership grows as finer alias permissions are needed. Publishe
 | Drivers | Operate devices through restricted IRQ, MMIO, and DMA authority |
 | Filesystems and networking | Implement storage and network protocols outside the kernel |
 
-Initial programs and startup authority come from the boot image, without a VFS or storage dependency. Normal boot now starts a native supervisor with an immutable version-1 startup record. Its root inventory contains image authority, debug delegation and separate channel factories for its gates and each configured service. User-space manifests select required roles, object kinds and maximum rights. SpawnManifest revalidates source authority and installs all child grants before execution; descriptive service labels grant no authority.
+Initial programs and startup authority come from the boot image, without a VFS or storage dependency. Normal boot now starts a native supervisor with an immutable version-1 startup record. Its root inventory contains image authority, debug delegation, separate channel factories and assignable service resource accounts. User-space manifests select required roles, object kinds and maximum rights. SpawnManifest revalidates source authority and installs all child grants before execution; descriptive service labels grant no authority.
 
 The configured supervisor registers an echo service through a private instance gate and gives each client a private directory gateway. Discovery uses the principal bound to that gateway, checks an allowlist and returns SEND alone. A separate bootstrap checkpoint capability coordinates validation; lookup authority cannot stop a service. Replacement consumes a fresh generation, withdraws the old entry and publishes a fresh endpoint. [ADR 0015](decisions/0015-service-startup-and-authority.md) records these boundaries. Dedicated device management, dynamic manifests, scalable discovery waits and supervisor recovery remain pending.
 

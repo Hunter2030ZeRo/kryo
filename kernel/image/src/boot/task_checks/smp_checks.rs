@@ -465,6 +465,7 @@ fn prepare_pair<'kernel, 'objects>(
         user_slot: 1,
         user_stack_owned: true,
         thread_control: None,
+        thread_charge: None,
     };
     [first, tasks.spawn_thread(process, second).unwrap()]
 }
