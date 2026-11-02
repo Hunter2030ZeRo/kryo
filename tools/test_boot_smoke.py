@@ -1,9 +1,20 @@
 import unittest
 
-from boot_smoke import block_checks, block_service_checks, cpu_checks, pci_checks, run_label
+from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, pci_checks, run_label
 
 
 class PciEvidenceTests(unittest.TestCase):
+    def test_abi_requires_preemption_and_actual_retirement(self):
+        ready = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=1\n"
+        retired = "ABI: startup and execution resources retired\n"
+        self.assertTrue(all(abi_checks(ready + retired, True).values()))
+        for log in (ready, retired, ready.replace("=1", "=0") + retired):
+            self.assertFalse(all(abi_checks(log, True).values()))
+        self.assertEqual(abi_checks("", False), {})
+
+    def test_abi_evidence_does_not_replace_normal_boot(self):
+        self.assertNotEqual(run_label("debug"), run_label("debug", abi_probe=True))
+
     def test_cpu_baseline_requires_each_logical_cpu_once(self):
         log = "".join(f"CPU: x86-64-v3 hardware admitted cpu={cpu}\n" for cpu in (2, 0, 3, 1))
         self.assertTrue(cpu_checks(log, 4)["cpu_baseline"])

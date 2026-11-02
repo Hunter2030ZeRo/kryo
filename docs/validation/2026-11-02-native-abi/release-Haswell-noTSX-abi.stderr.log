@@ -1,0 +1,4 @@
+qemu-system-x86_64: warning: TCG doesn't support requested feature: CPUID[eax=01h].ECX.pcid [bit 17]
+qemu-system-x86_64: warning: TCG doesn't support requested feature: CPUID[eax=01h].ECX.tsc-deadline [bit 24]
+qemu-system-x86_64: warning: TCG doesn't support requested feature: CPUID[eax=07h,ecx=00h].EBX.invpcid [bit 10]
+qemu-system-x86_64: terminating on signal 15 from pid 13 (/home/entity27th/anaconda3/bin/python3)

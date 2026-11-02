@@ -25,7 +25,36 @@ make user
 python3 tools/build_user.py --profile release --output build/native-smoke.elf
 ```
 
-`make iso` builds the kernel and four user ELFs. Limine tags are `kryo-init`, `kryo-worker`, `kryo-native-smoke`, and `kryo-device-probe`. Normal boot selects init and worker; boot tests additionally use native-smoke. Module selection rejects missing, duplicate, empty, or oversized images. `tools/build_user.py --program init` and `--program bootstrap-worker` build the new workspace; the default program remains native-smoke.
+`make iso` builds the kernel and thirteen freestanding Rust boot images.
+The normal image starts the configured supervisor; boot tests additionally run
+the legacy fixtures. Module selection rejects missing, duplicate, empty or
+oversized images. `build_user.py --program` selects an image; the default remains
+native-smoke.
+
+## Native language ABI probe
+
+`make iso ABI_PROBE=1` additionally builds the mixed C/C++/Rust probe with the
+isolated x86-64-v3 hard-float target. `make abi` builds just that ELF. This path
+needs Clang/Clang++ and rust-src matching the validated Rust revision in
+`targets/cryolite-toolchain.json`; it does not change ordinary kernel/user flags.
+The builder rejects a different compiler revision and defaults to locked offline
+dependencies. `tools/build_abi.py --fetch-dependencies` explicitly permits the
+initial download of missing Rust sysroot dependencies.
+
+```sh
+python3 tools/boot_smoke.py --profile debug --cpu Haswell-noTSX --abi-probe
+python3 tools/boot_smoke.py --profile release --cpu max --cpus 4 --normal --abi-probe
+```
+
+The output adds `-abi`. Checks require C/Rust/C++ mixed calls, owned argc/argv/
+envp/auxv, separate version-1 startup authority, live YMM state across native
+waits and a timer-preempted AVX2 interval, followed by complete resource retirement.
+Ordinary runs omit the module and skip the probe before allocating resources.
+This is not libc, libc++ or Rust std support. See
+[the bootstrap contract](../docs/decisions/0024-native-bootstrap-stack.md).
+
+Each smoke label uses a private kernel target directory so parallel normal and
+boot-test recipes cannot replace each other's kernel before ISO copying.
 
 `boot_smoke.py` builds a test ISO and runs it once under headless QEMU TCG:
 

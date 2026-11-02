@@ -14,7 +14,8 @@ Develop one verifiable capability at a time. The [design contract](design-contra
 ## Next: service authority and runtime
 
 The native platform minimum is x86-64-v3; Intel is the first Vulkan hardware
-target. The next user ABI gate must use the v3 hard-float convention. Review
+target. An opt-in mixed-language probe now tests the v3 hard-float convention
+and owned initial stack; general startup/TLS and mlibc support remain pending. Review
 libc selection, parallel kernel ownership and the GPU-service interface before
 freezing their ABI. Measure IPC, scheduler, heap and I/O costs alongside runtime
 porting rather than postponing them until desktop integration. See

@@ -2,6 +2,12 @@
 
 Snapshot: 2026-11-02. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [native ABI milestone](validation/2026-11-02-native-abi/README.md) adds a
+dedicated v3 hard-float target, an allocation-free initial-stack builder and an
+opt-in mixed C/C++/Rust executable. It records six QEMU cases, 402 Rust host
+tests and 14 Python tests. The probe is freestanding; mlibc and other language
+standard libraries are not implemented.
+
 The [v3 admission milestone](validation/2026-11-02-v3/README.md) records five
 positive and three negative QEMU cases, 395 Rust host tests and 12 Python tests.
 [ADR 0022](decisions/0022-platform-baseline-and-performance.md) fixes the CPU and
@@ -52,7 +58,8 @@ psABI levels, AVX2/FMA and bounded standard XSAVE/YMM storage. Early admission
 does not depend on the bootloader enabling CR4.OSXSAVE; extended entry enables
 OSFXSR/OSXSAVE and XCR0 before user execution. There is no platform fallback to
 an older ISA. The kernel and existing compiled boot programs retain their
-freestanding soft-float target; the dedicated v3 hard-float user ABI is pending.
+freestanding soft-float target. A separate v3 hard-float target runs the optional
+mixed C/C++/Rust ABI probe; the general native runtime remains pending.
 
 Extended tasks eagerly preserve x87/SSE/YMM through bounded standard XSAVE on
 admitted hardware. FXSAVE selection remains covered by HAL model tests. Kernel
@@ -319,12 +326,12 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 ## Next work
 
 Connect the initial block service to VFS, the native runtime and BetAFS. Establish
-the dedicated user ABI and process startup before claiming standard-library support. Add storage IRQ
+the general user runtime, mapped ELF metadata and TLS before claiming standard-library support. Add storage IRQ
 completion and general device assignment while retaining the private queue
 boundary. The current HPET grant remains a bootstrap device path. CPU-time
 accounting must measure individual CPU jobs; preemption counts and BSP batch wall
 time do not establish service fairness. SIMD remains user-state preservation for
-x87/SSE/optional AVX with kernel soft-float. Efficient heap backing, scalable event
+x87/SSE/YMM on admitted v3 hardware with kernel soft-float. Efficient heap backing, scalable event
 waits, dynamic configuration, private/kernel memory accounting and supervisor
 recovery remain follow-ups. x2APIC, memory hotplug and NUMA remain separate.
 General user runtimes, PTY and compatibility execution are required before

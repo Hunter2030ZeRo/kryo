@@ -1,0 +1,65 @@
+cargo build --locked -p kryo --target x86_64-unknown-none --profile dev --features "boot-tests"
+python3 tools/build_abi.py --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/abi-probe.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/abi-probe.elf: 4750952 -> 34160 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/abi/x86_64-unknown-cryolite/debug/abi-probe
+python3 tools/build_user.py --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/native-smoke.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/native-smoke.elf: 26192 -> 13240 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/native-smoke
+python3 tools/build_user.py --program init --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/init.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/init.elf: 884736 -> 7848 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/init
+python3 tools/build_user.py --program bootstrap-worker --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/bootstrap-worker.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/bootstrap-worker.elf: 887888 -> 10448 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/bootstrap-worker
+python3 tools/build_user.py --program device-probe --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/device-probe.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/device-probe.elf: 891624 -> 8120 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/device-probe
+python3 tools/build_user.py --program scale-probe --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/scale-probe.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/scale-probe.elf: 930840 -> 20256 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/scale-probe
+python3 tools/build_user.py --program service-probe --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/service-probe.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/service-probe.elf: 939352 -> 24000 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/service-probe
+python3 tools/build_user.py --program service-peer --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/service-peer.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/service-peer.elf: 894936 -> 18808 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/service-peer
+python3 tools/build_user.py --program supervisor --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/supervisor.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/supervisor.elf: 1125264 -> 45136 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/supervisor
+python3 tools/build_user.py --program echo-service --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/echo-service.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/echo-service.elf: 1001840 -> 25288 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/echo-service
+python3 tools/build_user.py --program registry-client --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/registry-client.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/registry-client.elf: 1123624 -> 36536 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/registry-client
+python3 tools/build_user.py --program virtio-block --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/virtio-block.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/virtio-block.elf: 920032 -> 14352 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/virtio-block
+python3 tools/build_user.py --program block-service --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/block-service.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/block-service.elf: 1070208 -> 25880 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/block-service
+python3 tools/build_user.py --program block-client --profile "debug" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/block-client.elf"
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/block-client.elf: 1011072 -> 24936 bytes, entry/load data preserved; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/userspace/x86_64-unknown-none/debug/block-client
+rm -rf "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root"
+mkdir -p "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/limine"
+mkdir -p "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/EFI/BOOT"
+cp "target/x86_64-unknown-none/debug/kryo" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/kryo"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/native-smoke.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/native-smoke.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/init.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/init.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/bootstrap-worker.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/bootstrap-worker.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/device-probe.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/device-probe.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/scale-probe.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/scale-probe.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/service-probe.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/service-probe.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/service-peer.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/service-peer.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/supervisor.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/supervisor.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/echo-service.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/echo-service.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/registry-client.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/registry-client.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/virtio-block.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/virtio-block.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/block-service.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/block-service.elf"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/block-client.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/block-client.elf"
+cp boot/limine.conf "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/limine/"
+cp "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/abi-probe.elf" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/abi-probe.elf"
+python3 -c 'from pathlib import Path; c=Path("/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/limine/limine.conf"); c.write_text(c.read_text()+"\tmodule_path: boot():/boot/abi-probe.elf\n\tmodule_cmdline: kryo-abi-probe\n")'
+cp "/usr/share/limine/limine-bios-cd.bin" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/limine/"
+cp "/usr/share/limine/limine-uefi-cd.bin" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/limine/"
+cp "/usr/share/limine/limine-bios.sys" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/boot/limine/"
+cp "/usr/share/limine/BOOTX64.EFI" "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root/EFI/BOOT/"
+mkdir -p "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi"
+xorriso -as mkisofs -R -r -J \
+	-b boot/limine/limine-bios-cd.bin \
+	-no-emul-boot \
+	-boot-load-size 4 \
+	-boot-info-table \
+	--efi-boot boot/limine/limine-uefi-cd.bin \
+	--efi-boot-part \
+	--efi-boot-image \
+	--protective-msdos-label \
+	"/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root" -o "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/kryo.iso"
+limine bios-install "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/kryo.iso"

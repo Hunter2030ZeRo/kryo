@@ -142,8 +142,11 @@ Experimental native calls use version 0 of the int 0x80 register interface. Thei
 
 Every participating CPU must satisfy the x86-64-v3 hardware baseline before
 user execution. The kernel keeps the conservative soft-float
-`x86_64-unknown-none` target; a dedicated v3 hard-float user target remains
-pending. Intel is the first Vulkan hardware target, with the native GPU-service
+`x86_64-unknown-none` target. An isolated v3 hard-float user target runs the
+optional mixed C/C++/Rust probe with an owned SysV-style stack and separate
+startup capability; the general native runtime remains pending. Intel is the
+first Vulkan hardware target, with the native GPU-service
 interface still open. [ADR 0022](decisions/0022-platform-baseline-and-performance.md)
 records the requirements, performance work and decisions requiring review.
+[ADR 0024](decisions/0024-native-bootstrap-stack.md) defines the bootstrap gate.
 Kernel hot replacement is a separate research topic from user-space service replacement.

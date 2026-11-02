@@ -2,7 +2,7 @@ use super::stacks::KernelStack;
 use super::{BootFramePool, DirectMap, ExtendedState, Handles, KernelMemory, KernelRegion};
 use super::{RefCell, Resources, SharedLease, UserContext, UserSpace};
 use crate::boot::vm_backend::new_shared_space_limited;
-use kryo_core::exec::{ElfImage, LoadLimits};
+use kryo_core::exec::{AuxEntry, ElfImage, LoadLimits, build_initial_stack};
 use kryo_core::mm::vm::Permissions;
 use kryo_core::process::ExitReason;
 use kryo_core::resource::{Budget, Charge, Resource};
@@ -12,6 +12,17 @@ const USER_STACK: u64 = 0x80_0000;
 const STACK_PAGES: u64 = 4;
 const TLS: u64 = 0x90_0000;
 const MAX_IMAGE_PAGES: usize = 16;
+
+pub(crate) struct NativeImage<'a> {
+    pub(crate) bytes: &'a [u8],
+    pub(crate) argv: &'a [&'a [u8]],
+    pub(crate) envp: &'a [&'a [u8]],
+}
+
+struct Image<'a> {
+    bytes: &'a [u8],
+    arguments: Option<NativeImage<'a>>,
+}
 
 pub(crate) struct PendingLoad<'kernel, 'objects> {
     space: Option<UserSpace<'kernel, SharedLease<'objects>>>,
@@ -87,6 +98,60 @@ pub(crate) fn prepare_budgeted<'kernel, 'objects>(
     bytes: &[u8],
     account: Option<Budget>,
 ) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
+    prepare_image(
+        pool,
+        direct,
+        memory,
+        region,
+        first_slot,
+        Image {
+            bytes,
+            arguments: None,
+        },
+        account,
+    )
+}
+
+#[expect(
+    clippy::result_large_err,
+    reason = "Failed preparation retains mapping owners"
+)]
+pub(crate) fn prepare_native<'kernel, 'objects>(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &'kernel RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+    first_slot: usize,
+    image: NativeImage<'_>,
+    account: Option<Budget>,
+) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
+    prepare_image(
+        pool,
+        direct,
+        memory,
+        region,
+        first_slot,
+        Image {
+            bytes: image.bytes,
+            arguments: Some(image),
+        },
+        account,
+    )
+}
+
+#[expect(
+    clippy::result_large_err,
+    reason = "Failed preparation retains mapping owners"
+)]
+fn prepare_image<'kernel, 'objects>(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &'kernel RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+    first_slot: usize,
+    request: Image<'_>,
+    account: Option<Budget>,
+) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
     let mut pending = PendingLoad {
         space: None,
         stack: None,
@@ -99,7 +164,7 @@ pub(crate) fn prepare_budgeted<'kernel, 'objects>(
             .transpose()
             .map_err(|_| Error::OutOfResources)?;
         let image = ElfImage::<8>::parse(
-            bytes,
+            request.bytes,
             LoadLimits {
                 max_pages: MAX_IMAGE_PAGES,
             },
@@ -126,17 +191,56 @@ pub(crate) fn prepare_budgeted<'kernel, 'objects>(
                 .map_page(page.address(), page.permissions(), &buffer)
                 .map_err(|_| Error::OutOfResources)?;
         }
-        for index in 0..STACK_PAGES {
-            space
-                .map_page(USER_STACK + index * 4096, Permissions::ReadWrite, &[])
-                .map_err(|_| Error::OutOfResources)?;
-        }
+        let native = request.arguments.is_some();
+        let stack_pointer = if let Some(arguments) = request.arguments {
+            let mut stack = [0u8; STACK_PAGES as usize * 4096];
+            let pointer = build_initial_stack(
+                &mut stack,
+                USER_STACK,
+                arguments.argv,
+                arguments.envp,
+                &[
+                    AuxEntry {
+                        kind: 6,
+                        value: 4096,
+                    },
+                    AuxEntry {
+                        kind: 9,
+                        value: image.entry(),
+                    },
+                ],
+            )
+            .map_err(|_| Error::InvalidArgument)?;
+            for (index, page) in stack.as_chunks::<4096>().0.iter().enumerate() {
+                space
+                    .map_page(
+                        USER_STACK + index as u64 * 4096,
+                        Permissions::ReadWrite,
+                        page,
+                    )
+                    .map_err(|_| Error::OutOfResources)?;
+            }
+            pointer
+        } else {
+            for index in 0..STACK_PAGES {
+                space
+                    .map_page(USER_STACK + index * 4096, Permissions::ReadWrite, &[])
+                    .map_err(|_| Error::OutOfResources)?;
+            }
+            USER_STACK + STACK_PAGES * 4096
+        };
         space
             .map_page(TLS, Permissions::ReadWrite, &[])
             .map_err(|_| Error::OutOfResources)?;
-        let mut context = UserContext::new(image.entry(), USER_STACK + STACK_PAGES * 4096)
-            .map_err(|_| Error::InvalidArgument)?;
-        context.rdx = u64::from(extended.avx_enabled());
+        let mut context =
+            UserContext::new(image.entry(), stack_pointer).map_err(|_| Error::InvalidArgument)?;
+        // SysV entry reserves RDX for the runtime finalizer, absent here. The
+        // older boot convention instead reports its optional AVX probe flag.
+        context.rdx = if native {
+            0
+        } else {
+            u64::from(extended.avx_enabled())
+        };
         match KernelStack::try_new(pool, direct, region, first_slot) {
             Ok(stack) => pending.stack = Some(stack),
             Err(failure) => {

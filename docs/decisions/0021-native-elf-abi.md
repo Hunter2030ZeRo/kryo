@@ -35,24 +35,27 @@ Preserving XMM state is required but does not configure a compiler's calling ABI
 Existing Rust boot programs still use x86_64-unknown-none with small/static code
 model overrides. The installed target specifies rustc-abi=softfloat and disables
 SSE/SSE2. They do not establish general hard-float SysV AMD64 C/C++ interoperability.
-No dedicated Cryolite target or standard-library sysroot is validated here.
+A separate experimental x86-64-v3 hard-float Cryolite target now serves a mixed
+C/C++/Rust freestanding probe. It does not migrate those older programs or
+provide a standard-library sysroot. See [bootstrap ABI](0024-native-bootstrap-stack.md).
 
 Manifest startup currently passes a read-only startup-record handle in RDI;
 legacy startup passes two handles in RDI/RSI. The initial stack is aligned but
-does not contain argc/argv/envp/auxv. A private TLS page and FS setup do not
+does not contain argc/argv/envp/auxv. The explicit new probe entry uses an owned
+SysV-style stack plus a separate startup capability. A private TLS page and FS setup do not
 implement PT_TLS templates or language TLS destructors. There is no general crt0,
 constructor invocation, dynamic linker or exception/unwind runtime yet.
 
-## Next executable gate
+## Executable gate and remaining runtime
 
-Build a dedicated x86-64-v3 hard-float user target and validate real C-to-Rust and
-Rust-to-C mixed integer/floating calls across native entries. Then add the
-defined process initial stack and crt0. Do not fabricate AT_PHDR unless program
+The dedicated x86-64-v3 hard-float probe tests mixed calls across C, C++ and Rust,
+owned argument/environment storage, auxiliary values and live AVX2 state.
+General crt0, mapped ELF metadata and TLS remain pending. Do not fabricate AT_PHDR unless program
 headers are actually mapped, or AT_RANDOM without real supplied entropy. The
 current loader's executable mappings do not include its ELF header by default.
 
 The platform minimum is x86-64-v3, including OS-enabled AVX/YMM state; SSE2-only
-compilation is not the final native target. Early hardware admission is now
+compilation is not the native target. Early hardware admission is
 separate from conservative kernel code generation. See
 [platform requirements](0022-platform-baseline-and-performance.md).
 

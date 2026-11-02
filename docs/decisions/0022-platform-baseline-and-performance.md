@@ -15,7 +15,9 @@ selecting a lower instruction baseline. Early code remains conservatively
 compiled. The kernel stays soft-float; applying general user SIMD flags to it
 would violate the current entry and state-saving contract. Existing Rust boot
 programs still use their freestanding target. A dedicated v3 hard-float native
-target and standard-library sysroot remain separate, unverified work.
+target now serves the explicitly enabled freestanding mixed-language probe;
+the standard-library sysroot remains unimplemented. See
+[bootstrap ABI](0024-native-bootstrap-stack.md).
 
 Intel is the first hardware Vulkan target. The observed development machine has
 a Meteor Lake-P Arc iGPU, PCI ID 8086:7d55. This read-only host inventory is not

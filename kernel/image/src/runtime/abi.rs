@@ -1,0 +1,150 @@
+use super::{
+    BootFramePool, CallStats, IpcRuntime, KernelMemory, KernelObject, KernelRegion, Objects,
+    RefCell, Tasks,
+};
+use kryo_core::capability::Rights;
+use kryo_core::object::ObjectKind;
+use kryo_core::process::ExitReason;
+use kryo_core::resource::{Budget, Limits, Resource};
+use kryo_core::sched::TaskState;
+use kryo_hal::DirectMap;
+use kryo_interfaces::startup::{Entry, Metadata, ObjectKind as WireKind};
+
+pub(crate) fn check(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+) {
+    let image = match crate::boot::module_image("kryo-abi-probe") {
+        Ok(image) => image,
+        Err(crate::boot::ModuleError::Missing) => return,
+        Err(error) => panic!("Invalid native ABI probe module: {:?}", error),
+    };
+    let before = pool.stats();
+    let retained = memory.borrow().retained_pages();
+    {
+        let objects = Objects::new();
+        let mut tasks = Tasks::new();
+        let mut ipc = IpcRuntime::with_objects(&objects);
+        let account = Budget::new(Limits {
+            shared_pages: 0,
+            handles: 8,
+            waits: 2,
+            threads: 1,
+            mappings: 64,
+            tables: 32,
+        });
+        let slot = region
+            .find_stack(pool, direct)
+            .expect("No ABI entry-stack cell");
+        let mut resources = super::launch::prepare_native(
+            pool,
+            direct,
+            memory,
+            region,
+            slot,
+            super::launch::NativeImage {
+                bytes: image,
+                argv: &[b"abi-probe", b"cryolite-v3"],
+                envp: &[b"KRYO_ABI=1"],
+            },
+            Some(account.clone()),
+        )
+        .unwrap_or_else(|mut failure| {
+            failure.pending.close(pool, region);
+            panic!("Cannot prepare native ABI probe: {:?}", failure.error);
+        });
+        assert!(
+            resources.extended.is_some(),
+            "Hard-float users require extended CPU state"
+        );
+        let debug = objects
+            .create(ObjectKind::DebugConsole, KernelObject::DebugConsole)
+            .unwrap();
+        let debug = resources
+            .process
+            .handles
+            .insert(debug, Rights::WRITE)
+            .unwrap()
+            .as_raw();
+        let startup = super::startup::install_record(
+            Metadata {
+                service: 50,
+                instance: 1,
+                argument: 0,
+            },
+            &[Entry {
+                role: 1,
+                handle: debug,
+                kind: WireKind::DebugConsole,
+                rights: Rights::WRITE.bits(),
+            }],
+            &mut resources.process.handles,
+            &objects,
+        )
+        .expect("Cannot install ABI startup capability");
+        resources.context.rdi = startup.as_raw();
+        resources.context.rsi = 0;
+        let task = tasks
+            .spawn(resources)
+            .unwrap_or_else(|_| panic!("Cannot publish native ABI probe"));
+        let owner = tasks.process_for(task).unwrap();
+        let mut calls = CallStats::default();
+        let mut start_ticks = None;
+        let mut avx_preemptions = None;
+        let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
+        while tasks.terminal(owner).is_none() {
+            assert!(
+                kryo_hal::monotonic_time().unwrap() < deadline,
+                "Native ABI probe stalled"
+            );
+            super::expire_waits(&mut tasks, &mut ipc);
+            if tasks.has_runnable() {
+                super::smp::step(&mut tasks, &mut calls, &mut ipc, region);
+            } else {
+                super::idle_until_deadline(&mut tasks, &mut ipc);
+            }
+            if calls.last_debug == Some((task, 90, 0)) && start_ticks.is_none() {
+                start_ticks = Some(tasks.thread_mut(task).unwrap().ticks);
+            }
+            if calls.last_debug == Some((task, 90, 1)) && avx_preemptions.is_none() {
+                let ticks = tasks.thread_mut(task).unwrap().ticks;
+                let before = start_ticks.expect("Missing AVX2 interval start");
+                assert!(ticks > before, "AVX2 interval was not preempted");
+                avx_preemptions = Some(ticks - before);
+            }
+        }
+        let status = tasks.terminal(owner).unwrap();
+        assert_eq!(status.reason, ExitReason::Exited);
+        assert_eq!(status.code, 0, "C/C++/Rust native ABI failed");
+        assert_eq!(calls.last_debug, Some((task, 90, 2)));
+        let preemptions = avx_preemptions.expect("Missing AVX2 preemption proof");
+        ipc.settle(&mut tasks);
+        assert_eq!(tasks.state(task), Ok(TaskState::Dying));
+        drop(
+            tasks
+                .reap(task, |resources| resources.close(pool, region))
+                .unwrap(),
+        );
+        drop(ipc);
+        assert_eq!(objects.live_count(), 0);
+        for resource in [
+            Resource::SharedPages,
+            Resource::Handles,
+            Resource::Waits,
+            Resource::Threads,
+        ] {
+            assert_eq!(account.count(resource), 0);
+        }
+        let _ = kryo_hal::print(format_args!(
+            "ABI: v3 SysV C C++ Rust stack and state OK preemptions={}\n",
+            preemptions
+        ));
+    }
+    assert_eq!(
+        pool.stats().free + memory.borrow().retained_pages() - retained,
+        before.free
+    );
+    kryo_hal::emergency_write_str("ABI: startup and execution resources retired\n");
+}

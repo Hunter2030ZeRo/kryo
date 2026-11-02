@@ -1,6 +1,6 @@
 # Native libc port evaluation
 
-Date: 2026-11-02. Status: mlibc evaluated first; provider not finalized.
+Date: 2026-11-02. Status: mlibc is the primary port candidate; full adoption pending validation.
 
 ## Comparison
 
@@ -65,7 +65,9 @@ source or toolchain was installed by this evaluation.
 
 ## Verification order
 
-1. Actual v3 C/Rust/C++ calling-boundary tests and static ELF startup.
+1. Actual v3 C/Rust/C++ calling-boundary tests and static ELF startup. The
+   freestanding [bootstrap gate](0024-native-bootstrap-stack.md) now connects
+   these checks; it does not provide libc.
 2. Honest static C execution with argument storage, exit status, constructors,
    zeroed allocation, per-thread TLS and negative resource cases.
 3. Pthread/wait races, service-backed standard streams and VFS descriptors.

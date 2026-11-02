@@ -64,6 +64,15 @@ def cpu_checks(log, cpus):
     return {"cpu_baseline": sorted(map(int, admitted)) == list(range(cpus))}
 
 
+def abi_checks(log, enabled):
+    if not enabled:
+        return {}
+    return {
+        "native_abi": bool(re.search(r"(?m)^ABI: v3 SysV C C\+\+ Rust stack and state OK preemptions=[1-9][0-9]*$", log)),
+        "native_abi_retired": "ABI: startup and execution resources retired" in log,
+    }
+
+
 def pci_checks(log, attached=False):
     inventory = re.search(
         r"(?m)^PCI: inventory complete functions=(\d+) virtio_block=(\d+) command_unchanged=true$", log)
@@ -194,7 +203,7 @@ def resident_memory(pid):
     return {key: int(value) * 1024 for key, value in values.items()}
 
 
-def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_probe=False, block_readonly=False):
+def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_probe=False, block_readonly=False, abi_probe=False):
     budget_stages = {int(value) for value in re.findall(r"(?m)^USERLOG: process=0x[0-9a-f]+ event=12 value=(\d+)$", log)}
     budget_clients = all((service << 32) | stage in budget_stages for service in (20, 21) for stage in (1, 2, 3))
     if normal:
@@ -218,6 +227,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
         }
         checks.update(memory_checks(log, normal))
         checks.update(cpu_checks(log, cpus))
+        checks.update(abi_checks(log, abi_probe))
         checks.update(pci_checks(log, pci_probe or block_probe))
         if block_probe:
             checks.update(block_checks(log, block_readonly, normal))
@@ -242,6 +252,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
     checks["breakpoint"] = bool(re.search(r"(?:^|\n)ABC\s*\Z", log))
     checks["avx_context"] = bool(re.search(r"(?m)^ELF: native execution OK .*xsave=true avx=true$", log))
     checks.update(cpu_checks(log, cpus))
+    checks.update(abi_checks(log, abi_probe))
     checks.update(memory_checks(log, normal))
     checks.update(pci_checks(log, pci_probe or block_probe))
     if block_probe:
@@ -273,21 +284,22 @@ def stop_qemu(process):
             return "host_sigkill_timeout"
 
 
-def run_label(profile, cpu=None, normal=False, cpus=1, memory="512M", pci_probe=False, block_probe=False, block_readonly=False):
+def run_label(profile, cpu=None, normal=False, cpus=1, memory="512M", pci_probe=False, block_probe=False, block_readonly=False, abi_probe=False):
     label = profile + ("-normal" if normal else "")
     label = label if cpu is None else f"{label}-{cpu}"
     label = label if cpus == 1 else f"{label}-smp{cpus}"
     label = label if memory == "512M" else f"{label}-ram{memory}"
+    label += "-abi" if abi_probe else ""
     return label + ("-block-ro" if block_readonly else "-block-rw" if block_probe else "-pci" if pci_probe else "")
 
 
-def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limit_mib=2048, pci_probe=False, block_probe=False, block_readonly=False):
+def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limit_mib=2048, pci_probe=False, block_probe=False, block_readonly=False, abi_probe=False):
     memory = parse_memory(memory)
     if rss_limit_mib <= 0:
         raise ValueError("Resident-memory limit must be positive")
     if block_readonly and not block_probe:
         raise ValueError("Read-only block mode requires the block probe")
-    label = run_label(profile, cpu, normal, cpus, memory, pci_probe, block_probe, block_readonly)
+    label = run_label(profile, cpu, normal, cpus, memory, pci_probe, block_probe, block_readonly, abi_probe)
     output = ROOT / "build" / "smoke" / label
     output.mkdir(parents=True, exist_ok=True)
     logs = {
@@ -308,12 +320,13 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
         "pci_probe": pci_probe,
         "block_probe": block_probe,
         "block_readonly": block_readonly,
+        "abi_probe": abi_probe,
         "memory_bytes": memory_bytes(memory),
         "rss_limit_bytes": rss_limit_mib * (1 << 20),
         "peak_rss_bytes": 0,
         "status": "failed",
         "reason": "build not completed",
-        "checks": observed_checks("", cpu, normal, cpus, pci_probe, block_probe, block_readonly),
+        "checks": observed_checks("", cpu, normal, cpus, pci_probe, block_probe, block_readonly, abi_probe),
         "mode": "normal" if normal else "boot-tests",
         "logs": {name: str(path) for name, path in logs.items()},
         "guest_exit_verified": False,
@@ -328,7 +341,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
         print(f"{profile}: building ISO", flush=True)
         with logs["build_stdout"].open("w") as stdout, logs["build_stderr"].open("w") as stderr:
             build = subprocess.run(
-                ["make", "iso", f"BUILD_DIR={output}", f"PROFILE={profile}", "FEATURES=" + ("" if normal else "boot-tests"), f"BLOCK_PROBE={int(block_probe)}"],
+                ["make", "iso", f"BUILD_DIR={output}", f"CARGO_TARGET_DIR={output / 'kernel-target'}", f"PROFILE={profile}", "FEATURES=" + ("" if normal else "boot-tests"), f"BLOCK_PROBE={int(block_probe)}", f"ABI_PROBE={int(abi_probe)}"],
                 cwd=ROOT, stdout=stdout, stderr=stderr, check=False,
             )
         evidence["build_exit_code"] = build.returncode
@@ -374,7 +387,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
             boot_started = time.monotonic()
             while True:
                 log = logs["debug"].read_text(errors="replace")
-                evidence["checks"] = observed_checks(log, cpu, normal, cpus, pci_probe, block_probe, block_readonly)
+                evidence["checks"] = observed_checks(log, cpu, normal, cpus, pci_probe, block_probe, block_readonly, abi_probe)
                 evidence["memory_observed"] = memory_details(log)
                 usage = resident_memory(process.pid)
                 if usage is not None:
@@ -447,6 +460,7 @@ def main():
     parser.add_argument("--memory", type=parse_memory, default="512M", help="guest RAM, for example 128G; demand-backed")
     parser.add_argument("--rss-limit-mib", type=int, default=2048, help="stop own emulator above this measured resident-memory limit")
     parser.add_argument("--normal", action="store_true", help="verify normal init and its user-space restart policy")
+    parser.add_argument("--abi-probe", action="store_true", help="build and run the freestanding v3 C/C++/Rust SysV startup and state probe")
     parser.add_argument("--pci-probe", action="store_true", help="attach a disposable read-only VirtIO block device behind a PCI bridge; discovery only")
     parser.add_argument("--block-probe", action="store_true", help="opt in to Ring 3 block read/write/flush on a disposable signed disk")
     parser.add_argument("--block-readonly", action="store_true", help="test device-rejected writes; requires --block-probe")
@@ -458,9 +472,9 @@ def main():
     profiles = ("debug", "release") if arguments.all else (arguments.profile,)
     passed = True
     for profile in profiles:
-        result = run_profile(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.rss_limit_mib, arguments.pci_probe, arguments.block_probe, arguments.block_readonly)
+        result = run_profile(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.rss_limit_mib, arguments.pci_probe, arguments.block_probe, arguments.block_readonly, arguments.abi_probe)
         print(f"{profile}: {result['status']} — {result['reason']}")
-        label = run_label(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.pci_probe, arguments.block_probe, arguments.block_readonly)
+        label = run_label(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.pci_probe, arguments.block_probe, arguments.block_readonly, arguments.abi_probe)
         print(f"  evidence: {ROOT / 'build' / 'smoke' / label / 'evidence.json'}")
         if result["status"] == "interrupted":
             return 130

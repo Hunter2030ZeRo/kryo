@@ -21,6 +21,7 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
     let mmio = crate::boot::platform::apic_mapping();
     super::clock::initialize(&mut region);
     smp::start(mmio);
+    super::abi::check(pool, direct, &memory, &mut region);
     super::transport::run(pool, direct, &memory, &mut region);
     super::devices::probe(pool, direct, &memory, &mut region, false);
     super::channel_probe::run(pool, direct, &memory, &mut region);

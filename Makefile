@@ -3,6 +3,7 @@ PROFILE := debug
 CARGO_PROFILE := $(if $(filter debug,$(PROFILE)),dev,$(PROFILE))
 FEATURES ?=
 BLOCK_PROBE ?= 0
+ABI_PROBE ?= 0
 FEATURE_FLAGS := $(if $(strip $(FEATURES)),--features "$(FEATURES)")
 
 BUILD_DIR := build
@@ -21,6 +22,7 @@ CLIENT_ELF := $(BUILD_DIR)/registry-client.elf
 BLOCK_ELF := $(BUILD_DIR)/virtio-block.elf
 BLOCK_SERVICE_ELF := $(BUILD_DIR)/block-service.elf
 BLOCK_CLIENT_ELF := $(BUILD_DIR)/block-client.elf
+ABI_ELF := $(BUILD_DIR)/abi-probe.elf
 
 CARGO_TARGET_DIR ?= target
 KERNEL := $(CARGO_TARGET_DIR)/$(TARGET)/$(PROFILE)/kryo
@@ -32,14 +34,17 @@ MEMORY ?= 512M
 QEMU := qemu-system-x86_64
 QEMU_FLAGS := -M q35,memory-backend=ram -object memory-backend-ram,id=ram,size=$(MEMORY),prealloc=off,reserve=off -overcommit mem-lock=off -global hpet.msi=on -m $(MEMORY) -smp $(CPUS) -cpu $(CPU) -serial stdio -no-reboot -debugcon "file:$(BUILD_DIR)/debug.log"
 
-.PHONY: all kernel user iso run check test smoke clean
+.PHONY: all kernel user abi iso run check test smoke clean
 
 all: iso
 
 kernel:
 	cargo build --locked -p kryo --target $(TARGET) --profile $(CARGO_PROFILE) $(FEATURE_FLAGS)
 
-user:
+abi:
+	python3 tools/build_abi.py --profile "$(PROFILE)" --output "$(ABI_ELF)"
+
+user: $(if $(filter 1,$(ABI_PROBE)),abi)
 	python3 tools/build_user.py --profile "$(PROFILE)" --output "$(USER_ELF)"
 	python3 tools/build_user.py --program init --profile "$(PROFILE)" --output "$(INIT_ELF)"
 	python3 tools/build_user.py --program bootstrap-worker --profile "$(PROFILE)" --output "$(WORKER_ELF)"
@@ -74,6 +79,10 @@ iso: kernel user
 	cp "$(BLOCK_SERVICE_ELF)" "$(ISO_ROOT)/boot/block-service.elf"
 	cp "$(BLOCK_CLIENT_ELF)" "$(ISO_ROOT)/boot/block-client.elf"
 	cp boot/limine.conf "$(ISO_ROOT)/boot/limine/"
+ifeq ($(ABI_PROBE),1)
+	cp "$(ABI_ELF)" "$(ISO_ROOT)/boot/abi-probe.elf"
+	python3 -c 'from pathlib import Path; c=Path("$(ISO_ROOT)/boot/limine/limine.conf"); c.write_text(c.read_text()+"\tmodule_path: boot():/boot/abi-probe.elf\n\tmodule_cmdline: kryo-abi-probe\n")'
+endif
 ifeq ($(BLOCK_PROBE),1)
 	python3 -c 'from pathlib import Path; p=Path("$(ISO_ROOT)/boot"); (p/"block-probe.enabled").write_bytes(b"KRYO-BLOCK-PROBE-V1\n"); c=p/"limine/limine.conf"; c.write_text(c.read_text()+"\tmodule_path: boot():/boot/block-probe.enabled\n\tmodule_cmdline: kryo-block-probe-enabled\n")'
 endif

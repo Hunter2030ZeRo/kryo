@@ -1,0 +1,43 @@
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.10s
+   Compiling abi-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/userspace/abi-probe)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.45s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.02s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.03s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.08s
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.01s
+xorriso 1.5.8.pl02 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/kryo.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data,  226g free
+Added to ISO image: directory '/'='/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/iso_root'
+xorriso : UPDATE :      24 files added in 1 seconds
+xorriso : UPDATE :      24 files added in 1 seconds
+ISO image produced: 11247 sectors
+Written to medium : 11247 sectors at LBA 0
+Writing to 'stdio:/home/entity27th/문서/ChatGPT/프로젝트 Kryo/abi-work/kryo/build/smoke/debug-Haswell-noTSX-abi/kryo.iso' completed successfully.
+
+Physical block size of 512 bytes.
+Installing to GPT. Logical block size of 512 bytes.
+Detected ISOHYBRID with a GUID partition table (GPT).
+Converting to MBR for improved compatibility...
+Conversion successful.
+No active partition found, some systems may not boot.
+Setting partition 1 as active to work around the issue...
+Installing to MBR.
+Stage 2 to be located at byte offset 0x1000.
+Reminder: Remember to copy the limine-bios.sys file in either
+          the root, /boot, /limine, or /boot/limine directories of
+          one of the partitions on the device, or boot will fail!
+Limine BIOS stages installed successfully.

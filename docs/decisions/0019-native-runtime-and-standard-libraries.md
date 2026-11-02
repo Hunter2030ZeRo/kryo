@@ -60,7 +60,9 @@ behavior.
    target. Begin with static x86-64 ELF, a C-compatible call boundary and a
    consistent user FP/SIMD ABI. Preserve the kernel's separate compilation flags.
    Pin compiler/runtime revisions; the final target name and libc provider remain
-   undecided.
+   undecided. The finite [bootstrap gate](0024-native-bootstrap-stack.md) now
+   uses an experimental v3 target and a mixed C/C++/Rust probe. mlibc is the
+   primary port candidate; the general runtime/sysroot remains pending.
 2. Add `crt0`, compiler builtins, private allocation, ELF TLS and the shared
    platform client. Verify startup arguments, thread-local state, allocation
    failure, cleanup and process exit in actual user execution.

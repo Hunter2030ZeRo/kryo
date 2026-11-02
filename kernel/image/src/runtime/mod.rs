@@ -1,3 +1,4 @@
+pub(crate) mod abi;
 pub(crate) mod block_service;
 pub(crate) mod budgets;
 pub(crate) mod channel_probe;
