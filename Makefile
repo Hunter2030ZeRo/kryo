@@ -27,9 +27,10 @@ KERNEL := $(CARGO_TARGET_DIR)/$(TARGET)/$(PROFILE)/kryo
 LIMINE := /usr/share/limine
 
 CPUS ?= 4
+CPU ?= max
 MEMORY ?= 512M
 QEMU := qemu-system-x86_64
-QEMU_FLAGS := -M q35,memory-backend=ram -object memory-backend-ram,id=ram,size=$(MEMORY),prealloc=off,reserve=off -overcommit mem-lock=off -global hpet.msi=on -m $(MEMORY) -smp $(CPUS) -serial stdio -no-reboot -debugcon "file:$(BUILD_DIR)/debug.log"
+QEMU_FLAGS := -M q35,memory-backend=ram -object memory-backend-ram,id=ram,size=$(MEMORY),prealloc=off,reserve=off -overcommit mem-lock=off -global hpet.msi=on -m $(MEMORY) -smp $(CPUS) -cpu $(CPU) -serial stdio -no-reboot -debugcon "file:$(BUILD_DIR)/debug.log"
 
 .PHONY: all kernel user iso run check test smoke clean
 

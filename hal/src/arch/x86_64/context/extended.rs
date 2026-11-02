@@ -5,7 +5,7 @@ use core::cell::UnsafeCell;
 use x86_64::registers::control::{Cr0, Cr0Flags, Cr4, Cr4Flags};
 use x86_64::registers::xcontrol::XCr0;
 
-const AREA_SIZE: usize = 1024;
+const AREA_SIZE: usize = super::super::isa::EXTENDED_STATE_BYTES;
 const HEADER: usize = 512;
 const HEADER_END: usize = 576;
 const LEGACY_MASK: u64 = 3;

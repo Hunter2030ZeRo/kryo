@@ -1,0 +1,5 @@
+
+PANIC
+file: kernel/image/src/main.rs
+line: 0x000000000000003a
+message: x86-64-v3 hardware required: MissingFeature("AVX2")

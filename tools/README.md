@@ -37,7 +37,11 @@ python3 tools/boot_smoke.py --profile debug --cpu max
 python3 tools/boot_smoke.py --all --cpu max
 ```
 
-`--all` runs debug and release once each for the selected CPU. Without `--cpu`, QEMU selects its default CPU. `--cpu qemu64` and `--cpu max` select explicit models and keep separate output directories.
+`--all` runs debug and release once each for the selected CPU. Without `--cpu`,
+the runner explicitly selects `max`; `make run` also defaults to `CPU=max`.
+Use `--cpu Haswell-noTSX` to exercise an earlier v3-capable CPU model. Explicit
+models keep separate output directories. `qemu64` lacks the required baseline
+and is rejected during early boot; it cannot pass an ordinary smoke run.
 
 Required markers cover memory allocation/zeroing, mapping and VM rollback, 16 user-isolation cases, eight timer-driven switches, capability rejection, invalid saved-state isolation, pending-interrupt drain, and full task teardown.
 
@@ -47,7 +51,14 @@ An additional shared-RO write must fault with vector 14/error 7, isolate the tas
 
 Native ELF markers require two instances in independent address spaces, actual timer preemption of both, data/BSS checks, distinct x87/SSE/TLS state across yields and timer returns, and complete frame reclamation. Startup passes instance 41/42 in RDI, a private TLS page in RSI, and an AVX flag in RDX bit 0. Call 19 sets the validated FS base; the sample supplies manual TLS storage, and PT_TLS remains rejected. Rust code remains soft-float and assembly supplies the SIMD probes.
 
-The default CPU can use the FXSAVE fallback. `--cpu max` additionally requires the `avx_context` check: the native execution marker must report `xsave=true avx=true`, and the sample must preserve a YMM upper half. The kernel uses a private 64-byte-aligned, 1024-byte state area per extended context and allows only x87/SSE plus bounded optional AVX. A scalar-mode `fldz` check must still produce #NM after native execution. These are CPU-state checks for this static native fixture, not a general std/C ABI or dynamic-loader claim.
+All boots require exactly one v3 hardware admission marker per participating
+CPU. Boot tests also require the `avx_context` check: native execution must
+report `xsave=true avx=true`, and the sample must preserve a YMM upper half.
+The kernel uses a private 64-byte-aligned, 1024-byte standard state area per
+extended context. Earlier FXSAVE support remains internally tested but is not
+a fallback for unsupported platform hardware. A scalar-mode `fldz` check must
+still produce #NM after native execution. These are CPU-state checks for this
+static native fixture, not general std/C ABI or dynamic-loader support.
 
 Each profile has a 90-second host boot deadline. Logs and JSON evidence are saved under `build/smoke/debug/` or `build/smoke/release/` for the default CPU, and `build/smoke/debug-max/` or `build/smoke/release-max/` for `--cpu max`. Explicit qemu64 runs use the corresponding `-qemu64` suffix. Failure output is preserved; the runner does not retry automatically. It stops only its own QEMU process after the checks or deadline.
 
@@ -55,7 +66,7 @@ Clock markers require checked ACPI discovery, a progressing 64-bit HPET counter,
 
 `xtask/` and `debug/` are reserved for future tooling.
 
-`--normal` checks a kernel built without `boot-tests`. Separate `debug-normal`/`release-normal` evidence (with an optional CPU suffix) requires actual user logs, two different child generations, two observed exit codes, and init readiness. Regression mode also requires launch rollback and supervision teardown markers. Both modes have the same 30-second host deadline and use the common kernel runtime.
+`--normal` checks a kernel built without `boot-tests`. Separate `debug-normal`/`release-normal` evidence (with an optional CPU suffix) requires actual user logs, two different child generations, two observed exit codes, and init readiness. Regression mode also requires launch rollback and supervision teardown markers. Both modes have the same 90-second host deadline and use the common kernel runtime.
 
 Thread markers require nine lifecycle/retirement cases and successful private-state checks in a shared process. Normal boots additionally require four distinct created thread generations, two within each worker process. Debug metadata construction uses a 512-KiB Limine entry stack per CPU; release uses 256 KiB. Per-thread entry stacks remain guarded 16-KiB mappings. These checks do not establish hardware stack high-water limits.
 

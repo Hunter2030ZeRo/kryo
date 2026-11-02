@@ -1,6 +1,13 @@
 # Implementation status
 
-Snapshot: 2026-11-01. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+Snapshot: 2026-11-02. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+
+The [v3 admission milestone](validation/2026-11-02-v3/README.md) records five
+positive and three negative QEMU cases, 395 Rust host tests and 12 Python tests.
+[ADR 0022](decisions/0022-platform-baseline-and-performance.md) fixes the CPU and
+Intel Vulkan requirements; [ADR 0023](decisions/0023-libc-port-evaluation.md)
+evaluates libc candidates and the remaining native runtime boundary. No native
+libc/std or GPU support is implied by those requirements.
 
 ## Memory and boot
 
@@ -39,7 +46,19 @@ Wait slots retain optional absolute deadlines. Endpoint and notification timeout
 
 Boot tests now load a separately compiled static native ELF from a Limine module. Core validates its page plan; image code builds private RX/RO/RW mappings, zeroed BSS, a guarded user stack, and a private TLS page. Two instances execute ordinary compiled Rust startup/checks and assembly state probes.
 
-Extended tasks eagerly preserve x87/SSE through FXSAVE64 or bounded standard XSAVE, with optional AVX. Kernel FP state and raw control state restore before returning. SetTls validates an FS base; user FSGSBASE access is disabled. Scalar entry still rejects FP and is checked again after extended execution.
+Every participating CPU now passes allocation-free x86-64-v3 hardware admission
+before BSP/AP initialization and user publication. The check includes the earlier
+psABI levels, AVX2/FMA and bounded standard XSAVE/YMM storage. Early admission
+does not depend on the bootloader enabling CR4.OSXSAVE; extended entry enables
+OSFXSR/OSXSAVE and XCR0 before user execution. There is no platform fallback to
+an older ISA. The kernel and existing compiled boot programs retain their
+freestanding soft-float target; the dedicated v3 hard-float user ABI is pending.
+
+Extended tasks eagerly preserve x87/SSE/YMM through bounded standard XSAVE on
+admitted hardware. FXSAVE selection remains covered by HAL model tests. Kernel
+FP state and raw control state restore before returning. SetTls validates an FS
+base; user FSGSBASE access is disabled. Scalar entry still rejects FP and is
+checked again after extended execution.
 
 The shared `kernel/image/src/runtime/` now connects these mechanisms in normal boot and guest checks. A generational process registry owns ProcessResources address spaces, shared handles, controls, and retained creation state. A separate thread scheduler owns CPU/FP state, guarded stacks, TLS, and waits. Process resources remain until the final attached thread retires successfully. Fallible ELF/stack creation prepares private resources before runnable publication and preserves cleanup owners on failure.
 

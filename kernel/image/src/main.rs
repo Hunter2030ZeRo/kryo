@@ -55,6 +55,8 @@ fn panic(info: &PanicInfo<'_>) -> ! {
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::disable();
+    kryo_hal::validate_cpu_baseline().expect("x86-64-v3 hardware required");
+    kryo_hal::emergency_write_str("CPU: x86-64-v3 hardware admitted cpu=0\n");
     init_gdt();
     init_idt();
     boot::check_protocol();

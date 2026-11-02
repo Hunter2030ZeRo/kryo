@@ -140,4 +140,10 @@ The bootstrap memory model is specified in [ADR 0002](decisions/0002-user-addres
 
 Experimental native calls use version 0 of the int 0x80 register interface. Their numbers and layout are not stable. Published IPC layout, user-space target and runtime, service quotas, heap efficiency, scheduling priorities, per-CPU run queues, and optional FRED support remain unresolved. The current scheduler uses round-robin selection with linear registry scans; kernel policy remains serialized on the BSP.
 
-The kernel currently uses the built-in `x86_64-unknown-none` target without an `x86-64-v3` requirement. Kernel hot replacement is a separate research topic from user-space service replacement.
+Every participating CPU must satisfy the x86-64-v3 hardware baseline before
+user execution. The kernel keeps the conservative soft-float
+`x86_64-unknown-none` target; a dedicated v3 hard-float user target remains
+pending. Intel is the first Vulkan hardware target, with the native GPU-service
+interface still open. [ADR 0022](decisions/0022-platform-baseline-and-performance.md)
+records the requirements, performance work and decisions requiring review.
+Kernel hot replacement is a separate research topic from user-space service replacement.

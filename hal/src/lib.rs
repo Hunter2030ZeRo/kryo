@@ -38,6 +38,7 @@ pub use arch::x86_64::cpu::{
 };
 pub use arch::x86_64::gdt::init_gdt;
 pub use arch::x86_64::interrupts::idt::init_idt;
+pub use arch::x86_64::isa::{CpuBaselineError, validate_cpu_baseline};
 pub use arch::x86_64::paging::{
     BootPageSlot, DirectMap, KernelDirectMap, KernelRegion, PagePermissions, PagingError,
     RegionPermissions, UserPageTable,

@@ -163,11 +163,16 @@ pub(crate) fn start(apic_mapping: u64) -> usize {
 
 unsafe extern "C" fn ap_entry(info: &MpInfo) -> ! {
     unsafe { core::arch::asm!("cli", "cld", options(nostack)) };
+    kryo_hal::validate_cpu_baseline().expect("x86-64-v3 hardware required");
     let cpu = info.extra_argument() as usize;
     assert!(cpu > 0 && cpu < kryo_hal::MAX_CPUS);
     kryo_hal::init_gdt();
     kryo_hal::init_idt();
     assert_eq!(kryo_hal::current_cpu().unwrap().index(), cpu);
+    let _ = kryo_hal::print(format_args!(
+        "CPU: x86-64-v3 hardware admitted cpu={}\n",
+        cpu
+    ));
     unsafe {
         Efer::write_raw(Efer::read_raw() | (1 << 11));
         Cr3::write(

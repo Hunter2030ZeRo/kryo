@@ -1,9 +1,15 @@
 import unittest
 
-from boot_smoke import block_checks, block_service_checks, pci_checks, run_label
+from boot_smoke import block_checks, block_service_checks, cpu_checks, pci_checks, run_label
 
 
 class PciEvidenceTests(unittest.TestCase):
+    def test_cpu_baseline_requires_each_logical_cpu_once(self):
+        log = "".join(f"CPU: x86-64-v3 hardware admitted cpu={cpu}\n" for cpu in (2, 0, 3, 1))
+        self.assertTrue(cpu_checks(log, 4)["cpu_baseline"])
+        for invalid in ("", log.replace("cpu=3", "cpu=2"), log + log, log.replace("cpu=3", "cpu=4")):
+            self.assertFalse(cpu_checks(invalid, 4)["cpu_baseline"])
+
     def test_service_checks_bind_events_to_published_driver(self):
         log = "BLOCK IPC: service dispatched id=0xabc\nBLOCK IPC: accepted cancellation retains loan\nBLOCK IPC: clients complete; service waiting\n"
         log += "USERLOG: process=0xabc event=91 value=1\nUSERLOG: process=0xabc event=92 value=1\n"

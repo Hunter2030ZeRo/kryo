@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BOOT_TIMEOUT = 90
+DEFAULT_CPU = "max"
 MARKERS = {
     "heap": "HEAP: alignment/reuse/failure OK",
     "growth": "SCALE: native growth OK processes=7 threads=127 waits=127",
@@ -56,6 +57,11 @@ MARKERS = {
     "resource_budgets": "BUDGET: inheritance, retained owners and recovery OK",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
+
+
+def cpu_checks(log, cpus):
+    admitted = re.findall(r"(?m)^CPU: x86-64-v3 hardware admitted cpu=(\d+)$", log)
+    return {"cpu_baseline": sorted(map(int, admitted)) == list(range(cpus))}
 
 
 def pci_checks(log, attached=False):
@@ -211,6 +217,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
             "client_budget_exhaustion": budget_clients,
         }
         checks.update(memory_checks(log, normal))
+        checks.update(cpu_checks(log, cpus))
         checks.update(pci_checks(log, pci_probe or block_probe))
         if block_probe:
             checks.update(block_checks(log, block_readonly, normal))
@@ -233,8 +240,8 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
         checks["smp_wakeup"] = "SMP: blocked thread wakeup OK" in log
         checks["smp_fault_policy"] = "SMP: fatal process policy precedes peer call OK" in log
     checks["breakpoint"] = bool(re.search(r"(?:^|\n)ABC\s*\Z", log))
-    if cpu == "max":
-        checks["avx_context"] = bool(re.search(r"(?m)^ELF: native execution OK .*xsave=true avx=true$", log))
+    checks["avx_context"] = bool(re.search(r"(?m)^ELF: native execution OK .*xsave=true avx=true$", log))
+    checks.update(cpu_checks(log, cpus))
     checks.update(memory_checks(log, normal))
     checks.update(pci_checks(log, pci_probe or block_probe))
     if block_probe:
@@ -295,7 +302,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
     }
     evidence = {
         "profile": profile,
-        "cpu": cpu or "default",
+        "cpu": cpu or DEFAULT_CPU,
         "cpus": cpus,
         "memory": memory,
         "pci_probe": pci_probe,
@@ -338,8 +345,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
             "-debugcon", f"file:{logs['debug']}",
             "-cdrom", str(output / "kryo.iso"), "-boot", "d",
         ]
-        if cpu is not None:
-            command += ["-cpu", cpu]
+        command += ["-cpu", cpu or DEFAULT_CPU]
         if pci_probe or block_probe:
             # Every attached disk is disposable and has no filesystem. Block
             # tests opt in to writes; discovery-only fixtures stay read-only.
@@ -436,7 +442,7 @@ def main():
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--profile", choices=("debug", "release"), default="debug")
     selection.add_argument("--all", action="store_true", help="test debug and release once each")
-    parser.add_argument("--cpu", choices=("max", "qemu64"), help="test a specific QEMU CPU in a separate output directory")
+    parser.add_argument("--cpu", choices=("max", "Haswell-noTSX", "qemu64"), help="QEMU CPU; default: max (x86-64-v3 required; qemu64 is unsupported)")
     parser.add_argument("--cpus", type=int, choices=(1, 2, 4, 8, 16, 32, 64, 65, 128, 192, 255), default=1, help="number of guest CPUs")
     parser.add_argument("--memory", type=parse_memory, default="512M", help="guest RAM, for example 128G; demand-backed")
     parser.add_argument("--rss-limit-mib", type=int, default=2048, help="stop own emulator above this measured resident-memory limit")

@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.7, 2026-11-02.
+Version 0.8, 2026-11-02.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -71,6 +71,14 @@ Kernel mappings are supervisor-only. User executable memory must satisfy W^X acr
 Prepare executable images privately. Remove write access and finish device writes before publishing executable mappings. The initial design keeps the resulting execution state immutable. JIT and later permission transitions need a separate contract.
 
 ## CPU and thread state
+
+The native platform requires x86-64-v3 hardware on every participating CPU.
+Admit CPUs before user publication and enable the required x87/SSE/YMM state
+before executing general native programs. Hardware capability checks do not
+replace compiler ABI configuration. Keep the kernel's soft-float compilation
+independent from the user target. Vulkan support targets Intel hardware first;
+GPU drivers and the graphics API remain in user space. See
+[platform requirements](decisions/0022-platform-baseline-and-performance.md).
 
 CPU-local state owns the CPU ID, current thread, GDT/TSS/IST, idle and emergency stacks, entry context, and preemption state.
 

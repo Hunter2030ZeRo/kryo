@@ -45,11 +45,16 @@ constructor invocation, dynamic linker or exception/unwind runtime yet.
 
 ## Next executable gate
 
-Build a dedicated hard-float/SSE2 user target and validate real C-to-Rust and
+Build a dedicated x86-64-v3 hard-float user target and validate real C-to-Rust and
 Rust-to-C mixed integer/floating calls across native entries. Then add the
 defined process initial stack and crt0. Do not fabricate AT_PHDR unless program
 headers are actually mapped, or AT_RANDOM without real supplied entropy. The
 current loader's executable mappings do not include its ELF header by default.
+
+The platform minimum is x86-64-v3, including OS-enabled AVX/YMM state; SSE2-only
+compilation is not the final native target. Early hardware admission is now
+separate from conservative kernel code generation. See
+[platform requirements](0022-platform-baseline-and-performance.md).
 
 Only after these foundations and the common native services are tested should
 the target/sysroot claim libc, libc++ or Rust std support. BetAFS remains a normal

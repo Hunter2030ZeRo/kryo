@@ -6,6 +6,7 @@ pub(crate) mod cpu;
 pub(crate) mod gdt;
 pub(crate) mod hpet_device;
 pub(crate) mod interrupts;
+pub(crate) mod isa;
 pub(crate) mod paging;
 pub(crate) mod pci;
 pub(crate) mod smp;

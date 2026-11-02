@@ -13,6 +13,13 @@ Develop one verifiable capability at a time. The [design contract](design-contra
 
 ## Next: service authority and runtime
 
+The native platform minimum is x86-64-v3; Intel is the first Vulkan hardware
+target. The next user ABI gate must use the v3 hard-float convention. Review
+libc selection, parallel kernel ownership and the GPU-service interface before
+freezing their ABI. Measure IPC, scheduler, heap and I/O costs alongside runtime
+porting rather than postponing them until desktop integration. See
+[ADR 0022](decisions/0022-platform-baseline-and-performance.md).
+
 CPU-local state, Limine AP startup, parallel user execution, remote wakeups, and acknowledged TLB retirement now connect through the shared runtime. [ADR 0010](decisions/0010-smp-execution.md) describes execution ownership; [ADR 0012](decisions/0012-growing-registries.md) extends CPU sets to 255 directed xAPIC processors and adds fallible metadata growth. Kernel policy remains serialized on the BSP. Per-CPU run queues, parallel syscall processing, hotplug, topology policy, and physical performance validation remain separate work.
 
 Frame metadata now scales with the normalized Usable RAM inventory. The image reserves its backing before initializing the frame pool or heap. [ADR 0013](decisions/0013-runtime-frame-metadata.md) records bootstrap exclusion, physical-address selection, and the large-memory proof scope. Further memory work includes fragmented metadata backing, memory hotplug, NUMA policy, and physical-hardware validation.
