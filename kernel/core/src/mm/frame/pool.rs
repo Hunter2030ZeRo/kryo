@@ -310,6 +310,19 @@ impl<const RANGES: usize, const WORDS: usize, const SUMMARIES: usize>
     /// Allocates a contiguous run without modifying the pool on failure.
     /// Runs never cross a hole between physical memory ranges.
     pub fn allocate_run(&self, pages: usize) -> Result<OwnedRun<'_>, FrameAllocError> {
+        self.allocate_run_in(
+            pages,
+            PhysRange::from_base_len(0, !(FRAME_SIZE - 1)).unwrap(),
+        )
+    }
+
+    /// Allocates a contiguous run wholly inside a page-aligned physical span.
+    /// The range restricts existing pool authority, including across RAM holes.
+    pub fn allocate_run_in(
+        &self,
+        pages: usize,
+        range: PhysRange,
+    ) -> Result<OwnedRun<'_>, FrameAllocError> {
         let mut state = self.state.lock();
         if !state.initialized {
             return Err(FrameAllocError::NotInitialized);
@@ -318,14 +331,26 @@ impl<const RANGES: usize, const WORDS: usize, const SUMMARIES: usize>
         if pages == 0 || pages.checked_mul(FRAME_SIZE).is_none() {
             return Err(FrameAllocError::InvalidCount);
         }
+        if range.is_empty()
+            || !range.start().is_multiple_of(FRAME_SIZE)
+            || !range.end().is_multiple_of(FRAME_SIZE)
+        {
+            return Err(FrameAllocError::InvalidRange);
+        }
         if pages > state.stats.free {
             return Err(FrameAllocError::OutOfMemory);
         }
 
         let mut found = None;
         for region in 0..state.range_count {
-            let first = state.first_frame[region];
-            let count = state.ranges[region].len() / FRAME_SIZE;
+            let managed = state.ranges[region];
+            let start = range.start().max(managed.start());
+            let end = range.end().min(managed.end());
+            if start >= end {
+                continue;
+            }
+            let first = state.first_frame[region] + (start - managed.start()) / FRAME_SIZE;
+            let count = (end - start) / FRAME_SIZE;
             if count < pages {
                 continue;
             }
@@ -336,7 +361,8 @@ impl<const RANGES: usize, const WORDS: usize, const SUMMARIES: usize>
                 length = if free { length + 1 } else { 0 };
                 if length == pages {
                     let start = index + 1 - pages;
-                    let address = state.ranges[region].start() + (start - first) * FRAME_SIZE;
+                    let address =
+                        managed.start() + (start - state.first_frame[region]) * FRAME_SIZE;
                     found = Some((start, address));
                     break;
                 }

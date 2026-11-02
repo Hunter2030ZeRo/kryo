@@ -2,6 +2,14 @@
 
 The root [Makefile](../Makefile) provides build, ISO, host-test, and QEMU targets.
 
+`boot_smoke.py --pci-probe` attaches a disposable read-only modern VirtIO block
+device behind a configured PCI bridge. It checks nonzero-bus discovery, inventory
+counts and unchanged command bits. The raw fixture has no filesystem; no block
+request is submitted. Its hash is checked again after the owned emulator stops.
+Ordinary runs use a separate output directory and also require the PCI inventory
+and unpublished DMA-buffer checks. Run `python3 -m unittest discover -s tools`
+for the evidence parser tests. See [storage validation](../docs/validation/2026-11-02-storage/README.md).
+
 `build_user.py` builds the separate `userspace/native-smoke` package with isolated small-code-model static user flags. It clears inherited Rust flags and writes a static ET_EXEC ELF; it does not link the kernel, Linux, NT, std, or dynamic libraries.
 
 ```sh

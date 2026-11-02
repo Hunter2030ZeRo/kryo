@@ -1,0 +1,90 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001eb37000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007e000) bytes=512000
+MEM[1]: kind=0 [0x000000000007e000, 0x000000000009f000) bytes=135168
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001eacd000) bytes=513593344
+MEM[7]: kind=5 [0x000000001eacd000, 0x000000001eae8000) bytes=110592
+MEM[8]: kind=6 [0x000000001eae8000, 0x000000001eaef000) bytes=28672
+MEM[9]: kind=5 [0x000000001eaef000, 0x000000001eaf1000) bytes=8192
+MEM[10]: kind=6 [0x000000001eaf1000, 0x000000001eaf7000) bytes=24576
+MEM[11]: kind=5 [0x000000001eaf7000, 0x000000001eaf9000) bytes=8192
+MEM[12]: kind=6 [0x000000001eaf9000, 0x000000001eb02000) bytes=36864
+MEM[13]: kind=5 [0x000000001eb02000, 0x000000001eb04000) bytes=8192
+MEM[14]: kind=6 [0x000000001eb04000, 0x000000001eb07000) bytes=12288
+MEM[15]: kind=5 [0x000000001eb07000, 0x000000001eb09000) bytes=8192
+MEM[16]: kind=6 [0x000000001eb09000, 0x000000001eb0e000) bytes=20480
+MEM[17]: kind=5 [0x000000001eb0e000, 0x000000001eb10000) bytes=8192
+MEM[18]: kind=6 [0x000000001eb10000, 0x000000001eb14000) bytes=16384
+MEM[19]: kind=5 [0x000000001eb14000, 0x000000001eb16000) bytes=8192
+MEM[20]: kind=6 [0x000000001eb16000, 0x000000001eb19000) bytes=12288
+MEM[21]: kind=5 [0x000000001eb19000, 0x000000001eb1b000) bytes=8192
+MEM[22]: kind=6 [0x000000001eb1b000, 0x000000001eb1e000) bytes=12288
+MEM[23]: kind=5 [0x000000001eb1e000, 0x000000001eb20000) bytes=8192
+MEM[24]: kind=6 [0x000000001eb20000, 0x000000001eb22000) bytes=8192
+MEM[25]: kind=5 [0x000000001eb22000, 0x000000001eb24000) bytes=8192
+MEM[26]: kind=6 [0x000000001eb24000, 0x000000001eb28000) bytes=16384
+MEM[27]: kind=5 [0x000000001eb28000, 0x000000001eb37000) bytes=61440
+MEM[28]: kind=6 [0x000000001eb37000, 0x000000001f449000) bytes=9510912
+MEM[29]: kind=5 [0x000000001f449000, 0x000000001ffdf000) bytes=12148736
+MEM[30]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[31]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[32]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[33]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[34]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[35]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[36]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[37]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+FRAME metadata: start=0x7e000 end=0x82000 bytes=16384 bitmap_words=1960 summary_words=31 usable_frames=125422 managed_frames=125418
+MEM normalized: ranges=2 frames=125418
+AVAILABLE[0]: [0x0000000000082000, 0x000000000009f000) frames=29
+AVAILABLE[1]: [0x0000000000100000, 0x000000001eacd000) frames=125389
+FRAME: ready total=125418 free=125418
+PCI: function bus=0 slot=0 function=0 vendor=0x8086 device=0x29c0 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=1 function=0 vendor=0x1234 device=0x1111 class=0x03 command=0x0103 bars=6
+PCI: function bus=0 slot=2 function=0 vendor=0x8086 device=0x10d3 class=0x02 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=0 vendor=0x8086 device=0x2918 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=2 vendor=0x8086 device=0x2922 class=0x01 command=0x0107 bars=6
+PCI: function bus=0 slot=31 function=3 vendor=0x8086 device=0x2930 class=0x0c command=0x0103 bars=6
+PCI: inventory complete functions=6 virtio_block=0 command_unchanged=true
+
+FB: addr=0xffff8000fd000000 1280x800 pitch=5120 bpp=32 model=1
+FB masks: R=8@16 G=8@8 B=8@0
+Kryo: value=42, hex=0x2a
+0x000000000000002a
+ABC
+DMA: unpublished buffer zeroing and retirement OK pages=3
+CLOCK: HPET monotonic ready lapic_counts=622545 sample_ns=10087560
+SMP: online=1 discovered=1 limit=255
+THREAD: created id=0x100000002 process=0x100000001
+DEVICE: register authority and IRQ wakeup OK cases=4
+PROCESS: spawned id=0x100000002 parent=0x100000001
+PROCESS: spawned id=0x200000002 parent=0x100000001
+USERLOG: process=0x100000001 event=4 value=2
+SERVICE: native IPC and restart OK instances=2 quota=8
+BOOT: supervisor dispatched id=0x100000001 accounts=4 budgets=4
+PROCESS: spawned id=0x100000002 parent=0x100000001
+PROCESS: spawned id=0x200000002 parent=0x100000001
+USERLOG: process=0x200000002 event=7 value=1
+PROCESS: spawned id=0x100000003 parent=0x100000001
+PROCESS: spawned id=0x100000004 parent=0x100000001
+USERLOG: process=0x100000003 event=12 value=85899345921
+USERLOG: process=0x100000004 event=12 value=90194313217
+USERLOG: process=0x100000003 event=12 value=85899345922
+THREAD: created id=0x100000005 process=0x100000003
+THREAD: created id=0x100000006 process=0x100000003
+THREAD: created id=0x100000007 process=0x100000003
+USERLOG: process=0x100000004 event=12 value=90194313218
+THREAD: created id=0x100000008 process=0x100000004
+THREAD: created id=0x100000009 process=0x100000004
+THREAD: created id=0x10000000a process=0x100000004
+USERLOG: process=0x100000003 event=12 value=85899345923
+USERLOG: process=0x100000004 event=12 value=90194313219
+PROCESS: spawned id=0x300000002 parent=0x100000001
+USERLOG: process=0x300000002 event=7 value=2
+USERLOG: process=0x100000003 event=8 value=20
+USERLOG: process=0x100000004 event=8 value=21
+USERLOG: process=0x100000001 event=6 value=2
+USERLOG: process=0x100000001 event=7 value=2

@@ -4,6 +4,10 @@ Kryo is the Rust `no_std` microkernel for Cryolite. It targets x86-64 and boots 
 
 The kernel provides owned memory, shared pages, SMP user execution, calibrated timer preemption, and IPC with capability delegation and deadlines. Metadata grows through fallible allocation within configured service accounts: handles, waits, shared payload pages and live threads retain charges through retirement, while VM mappings/tables have per-process bounds. CPU storage and multiword masks cover 255 directed xAPIC identities; [implementation status](docs/status.md) records verified guest inventories. Threads execute with private stacks, TLS, and FP/SIMD state. Restricted device registers and a real HPET interrupt connect to a Ring 3 probe through owned handles. The BSP coordinates native calls and memory retirement between execution batches. Normal boot starts a native supervisor with versioned startup grants, role allowlists, private discovery gateways and service replacement.
 
+BetAFS is the filesystem target. PCI discovery and owned DMA buffer storage are
+implemented as the initial storage foundation; block I/O and the native BetAFS
+adapter remain pending. See [the storage boundary](docs/decisions/0017-pci-discovery-and-dma-storage.md).
+
 ## Build
 
 Requirements: Rust nightly, the `x86_64-unknown-none` target, Limine, xorriso, QEMU, Python 3, and llvm-objcopy or GNU objcopy. The Makefile uses `/usr/share/limine` by default.

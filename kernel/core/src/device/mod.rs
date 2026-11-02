@@ -1,5 +1,7 @@
 use crate::process::ProcessId;
 
+pub mod dma;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RegisterWindow {
     pub offset: u64,

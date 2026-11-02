@@ -34,6 +34,7 @@ pub(super) fn run(
 ) {
     let before = pool.stats();
     let retained_before = kernel.borrow().retained_pages();
+    crate::boot::storage::check_buffers(pool, direct, kernel);
     let controller = kryo_hal::timer_physical_address().expect("No supported local APIC");
     let mmio = crate::boot::platform::apic_mapping();
     let flags = region.permissions(0).expect("Missing APIC mapping");

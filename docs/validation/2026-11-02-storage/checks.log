@@ -1,0 +1,17 @@
+COMMAND: cargo fmt --all --check
+EXIT: 0
+COMMAND: cargo clippy --offline -- -D warnings
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/storage-work/kryo/kernel/image)
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/storage-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.63s
+EXIT: 0
+COMMAND: cargo clippy --offline --all-features -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+EXIT: 0
+COMMAND: cargo clippy --offline --target x86_64-unknown-linux-gnu -p kryo-core --lib --test dma -- -D warnings
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/storage-work/kryo/kernel/core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.82s
+EXIT: 0
+COMMAND: cargo clippy --offline --target x86_64-unknown-linux-gnu -p kryo-hal --all-features --lib -- -D warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+EXIT: 0

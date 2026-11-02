@@ -17,6 +17,7 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
         unsafe { KernelMemory::new(pool, direct, physical_end, &region) }
             .expect("Cannot establish process alias policy"),
     );
+    crate::boot::storage::check_buffers(pool, direct, &memory);
     let mmio = crate::boot::platform::apic_mapping();
     super::clock::initialize(&mut region);
     smp::start(mmio);

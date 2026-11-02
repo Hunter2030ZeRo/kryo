@@ -100,6 +100,15 @@ The native ABI is independent of Linux and NT. ICE-Linux and ICE-NT each transla
 
 BetAFS is an independent storage project. `userspace/filesystems/betafs/` is reserved for its Kryo adapter; the storage engine is not duplicated here.
 
+The bootstrap now retains read-only conventional PCI snapshots. Core DMA storage
+owns constrained frame runs through explicit, retryable retirement. Neither path
+grants PCI or DMA authority to user space. There is no hardware DMA backend or
+block transport yet. [ADR 0017](decisions/0017-pci-discovery-and-dma-storage.md)
+defines this boundary and the required isolation gate before VirtIO submission.
+The [BetAFS adapter contract](../userspace/filesystems/betafs/README.md) preserves
+4096-byte blocks and durable flush; the independent engine currently requires
+`std` and needs a runtime port before native execution.
+
 ## Isolation and recovery
 
 Mappings retain their backing memory. Closing a handle or terminating a service does not reclaim memory still referenced by another mapping, request, or device.

@@ -74,7 +74,7 @@ impl<T, const INLINE: usize> Slots<T, INLINE> {
     /// retain their slot histories until the entire registry retires instead.
     pub fn release(&mut self) {
         if let Self::Growing { values, .. } = self {
-            *values = Vec::new();
+            drop(core::mem::take(values));
         }
     }
 

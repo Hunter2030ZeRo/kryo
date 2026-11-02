@@ -185,7 +185,7 @@ The first SMP boot faulted in Limine's HHDM trampoline after the BSP made HHDM R
 
 The prior device baseline had two processes, two threads per process, four scheduled threads, and 64 online CPU slots. Its [storage measurements](validation/2026-11-01-devices/cpu-storage.json) describe that earlier configuration. Current service registries grow independently of the 255-CPU hardware registry. CPU-local static storage and actual-CPU Limine stacks still consume memory even when fewer user threads are runnable.
 
-The [mediated device contract](decisions/0011-device-authority.md) keeps HPET registers mapped only in the kernel and uses process-bound READ/WRITE authority plus a thread-bound IRQ notification. There is no arbitrary physical map, user MMIO page, PCI configuration, or DMA API. The normal bootstrap probe is a validation service, not a general device manager.
+The [mediated device contract](decisions/0011-device-authority.md) keeps HPET registers mapped only in the kernel and uses process-bound READ/WRITE authority plus a thread-bound IRQ notification. There is no arbitrary physical map, user MMIO page, user PCI configuration or DMA API. The normal bootstrap probe is a validation service, not a general device manager.
 
 The first 64-CPU full regression exposed timing assumptions while prepared APs spun throughout BSP setup. [Initial log](validation/2026-11-01-devices/prior-spin.debug.log) and [controlled diagnostic](validation/2026-11-01-devices/prior-scalar.debug.log) are retained. The scalar fixture now permits legal timer preemption before requiring an actual #NM. Legacy IPC/time fixtures use real producer completion, blocked-state observations and notification handshakes to establish ordering; relative sleeps and yield counts no longer stand in for those states. Deadlines, expected results and execution budgets remain unchanged. Early platform setup gives APs an owned UC/NX APIC mapping and interruptible HLT before memory policy and BSP checks. Three aligned image-owned table pages retain the branch; they never enter or return to the frame pool. Kernel alias initialization explicitly validates this one MMIO-only branch. Final startup still reloads protection state and flushes translations before online publication.
 
@@ -200,6 +200,31 @@ An initial task run timed out after the capability checks while a count-1 period
 An initial HPET discovery run halted before clock initialization while the parser required a GAS width of 64. The final parser also accepts unspecified width 0, used by QEMU firmware. The [earlier log](validation/2026-11-01-time/prior-discovery.log) is retained; the final four runs passed after this adjustment.
 
 Historical records remain available for [native init](validation/2026-11-01-startup/evidence.json), [monotonic deadlines](validation/2026-11-01-time/evidence.json), [native execution](validation/2026-10-31-native/evidence.json), [shared memory](validation/2026-10-31-shared/evidence.json), [inline IPC](validation/2026-10-31-ipc/evidence.json), [task execution](validation/2026-10-31-tasks/evidence.json), [user entry](validation/2026-10-31-userspace/evidence.json), [memory bootstrap](validation/2026-10-31-memory/evidence.json), and the [layout migration](validation/2026-10-30-layout-notes.md). Host tests, QEMU execution, and hardware measurements are separate evidence. The runner stops QEMU from the host after the final marker; it does not verify guest shutdown.
+
+## PCI discovery and DMA storage
+
+The bootstrap retains a read-only PCI segment-zero inventory through conventional
+CF8/CFC access. Local IRQ exclusion and a HAL lock serialize selector/data pairs.
+All 256 bus numbers are scanned, including additional multifunction functions.
+Snapshots contain identity, class, command and raw BARs; they grant no mapping or
+configuration authority. Device command bits are unchanged, including any
+bus-master enable left by firmware. BAR sizing, ECAM, other segments, hotplug and
+general driver assignment remain pending.
+
+Core DMA buffers own constrained contiguous runs and distinct device-address
+descriptions. They initialize backing before publication and explicitly quiesce,
+unmap and release. Failure returns a retained owner for retry; abandonment does
+not recycle backing or tear down a live translation. Constructor rollback follows
+the same rule. The private boot check zeroes, dirties and retires real RAM below
+four GiB, with exact frame restoration except measured retained alias tables.
+There is no hardware DMA backend, user DMA API, pin accounting or IOMMU domain.
+
+[ADR 0017](decisions/0017-pci-discovery-and-dma-storage.md) records the safety gate
+before VirtIO submission. The selected filesystem remains BetAFS. Its independent
+engine currently requires `std`; the [adapter contract](../userspace/filesystems/betafs/README.md)
+preserves 4096-byte blocks, read-your-writes and durable flush. PCI discovery and
+unpublished-buffer checks do not implement block I/O or mounting. Current evidence
+is in [storage validation](validation/2026-11-02-storage/README.md).
 
 ## Limits
 
@@ -218,4 +243,15 @@ Historical records remain available for [native init](validation/2026-11-01-star
 
 ## Next work
 
-Connect native device discovery, IRQ authority and bounded DMA to the first storage path, then VFS/BetAFS. The current HPET grant is a bootstrap device path, not a general device manager. CPU-time accounting must measure individual CPU jobs; preemption counts and BSP batch wall time do not establish service fairness. SIMD remains user-state preservation for x87/SSE/optional AVX with kernel soft-float. Efficient heap backing, scalable event waits, dynamic configuration, private/kernel memory accounting and supervisor recovery remain follow-ups. x2APIC, memory hotplug and NUMA remain separate. General user runtimes, PTY and compatibility execution are required before ordinary applications. The [roadmap](roadmap.md) lists terminal, Velocity and KDE checkpoints.
+Connect the PCI inventory and owned DMA storage to a validated device submission
+path, IRQ authority and real block read/write/flush, then the BetAFS adapter and
+VFS. A mutable raw VirtIO queue without an IOMMU would let a driver address
+arbitrary RAM. The current HPET grant remains a bootstrap device path. CPU-time
+accounting must measure individual CPU jobs; preemption counts and BSP batch wall
+time do not establish service fairness. SIMD remains user-state preservation for
+x87/SSE/optional AVX with kernel soft-float. Efficient heap backing, scalable event
+waits, dynamic configuration, private/kernel memory accounting and supervisor
+recovery remain follow-ups. x2APIC, memory hotplug and NUMA remain separate.
+General user runtimes, PTY and compatibility execution are required before
+ordinary applications. The [roadmap](roadmap.md) lists terminal, Velocity and KDE
+checkpoints.

@@ -3,6 +3,7 @@ mod checks;
 mod framebuffer;
 pub(crate) mod memory;
 pub(crate) mod platform;
+pub(crate) mod storage;
 #[cfg(feature = "boot-tests")]
 mod task_checks;
 #[cfg(feature = "boot-tests")]
