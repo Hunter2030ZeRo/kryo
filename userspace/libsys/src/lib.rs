@@ -6,6 +6,7 @@ use core::arch::asm;
 pub use kryo_interfaces::startup::ObjectKind;
 use kryo_interfaces::syscall::Call;
 pub use kryo_interfaces::syscall::TaskStatus;
+pub use kryo_interfaces::virtio;
 
 pub const INSPECT: u64 = 1;
 pub const CONTROL: u64 = 2;
@@ -136,6 +137,55 @@ pub struct ProcessExit {
 
 pub fn clock() -> Result<u64, Error> {
     invoke(Call::ClockRead, 0, 0)
+}
+
+pub fn virtio_info(device: Handle, selector: u64) -> Result<u64, Error> {
+    invoke(Call::VirtioInfo, device.raw(), selector)
+}
+
+pub fn virtio_start(device: Handle, features: u64) -> Result<(), Error> {
+    invoke(Call::VirtioStart, device.raw(), features).map(|_| ())
+}
+
+pub fn virtio_submit(
+    device: Handle,
+    memory: Handle,
+    offset: u64,
+    count: usize,
+) -> Result<u64, Error> {
+    if !(1..=virtio::MAX_BUFFERS).contains(&count) {
+        return Err(Error::InvalidArgument);
+    }
+    let status;
+    let result;
+    unsafe {
+        asm!("int 0x80",
+            inlateout("rax") Call::VirtioSubmit as u64 => status,
+            in("rdi") device.raw(), in("rsi") memory.raw(),
+            inlateout("rdx") offset => result, inlateout("r8") count as u64 => _,
+            lateout("r9") _, lateout("r10") _, lateout("r11") _, options(nostack));
+    }
+    check(status)?;
+    Ok(result)
+}
+
+pub fn virtio_poll(device: Handle, ticket: u64) -> Result<Option<u32>, Error> {
+    let result = invoke(Call::VirtioPoll, device.raw(), ticket)?;
+    if result == 0 {
+        return Ok(None);
+    }
+    if result & !u64::from(u32::MAX) != virtio::COMPLETE {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(Some(result as u32))
+}
+
+pub fn virtio_reset(device: Handle) -> Result<bool, Error> {
+    match invoke(Call::VirtioReset, device.raw(), 0)? {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => Err(Error::InvalidResponse),
+    }
 }
 
 pub fn sleep_until(deadline: u64) -> Result<(), Error> {

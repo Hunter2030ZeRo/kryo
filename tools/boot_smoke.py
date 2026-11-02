@@ -79,6 +79,16 @@ def pci_checks(log, attached=False):
     return checks
 
 
+def block_checks(log, readonly, normal):
+    mode = str(readonly).lower()
+    checks = {"block_driver": "BLOCK: Ring3 commands and private DMA retirement OK cases=2" in log}
+    for instance in (0, 1):
+        checks[f"block_instance_{instance}"] = f"BLOCK: driver complete mode={instance} readonly={mode}" in log
+    if not normal:
+        checks["block_retirement_retry"] = "BLOCK: cleanup retry retains queue and memory" in log
+    return checks
+
+
 def parse_memory(value):
     match = re.fullmatch(r"([1-9][0-9]*)([MG])", value.upper())
     if not match:
@@ -162,7 +172,7 @@ def resident_memory(pid):
     return {key: int(value) * 1024 for key, value in values.items()}
 
 
-def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False):
+def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_probe=False, block_readonly=False):
     budget_stages = {int(value) for value in re.findall(r"(?m)^USERLOG: process=0x[0-9a-f]+ event=12 value=(\d+)$", log)}
     budget_clients = all((service << 32) | stage in budget_stages for service in (20, 21) for stage in (1, 2, 3))
     if normal:
@@ -185,7 +195,9 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False):
             "client_budget_exhaustion": budget_clients,
         }
         checks.update(memory_checks(log, normal))
-        checks.update(pci_checks(log, pci_probe))
+        checks.update(pci_checks(log, pci_probe or block_probe))
+        if block_probe:
+            checks.update(block_checks(log, block_readonly, normal))
         checks["dma_buffer_ownership"] = "DMA: unpublished buffer zeroing and retirement OK pages=3" in log
         return checks
 
@@ -207,7 +219,9 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False):
     if cpu == "max":
         checks["avx_context"] = bool(re.search(r"(?m)^ELF: native execution OK .*xsave=true avx=true$", log))
     checks.update(memory_checks(log, normal))
-    checks.update(pci_checks(log, pci_probe))
+    checks.update(pci_checks(log, pci_probe or block_probe))
+    if block_probe:
+        checks.update(block_checks(log, block_readonly, normal))
     checks["dma_buffer_ownership"] = "DMA: unpublished buffer zeroing and retirement OK pages=3" in log
     return checks
 
@@ -234,19 +248,21 @@ def stop_qemu(process):
             return "host_sigkill_timeout"
 
 
-def run_label(profile, cpu=None, normal=False, cpus=1, memory="512M", pci_probe=False):
+def run_label(profile, cpu=None, normal=False, cpus=1, memory="512M", pci_probe=False, block_probe=False, block_readonly=False):
     label = profile + ("-normal" if normal else "")
     label = label if cpu is None else f"{label}-{cpu}"
     label = label if cpus == 1 else f"{label}-smp{cpus}"
     label = label if memory == "512M" else f"{label}-ram{memory}"
-    return label + ("-pci" if pci_probe else "")
+    return label + ("-block-ro" if block_readonly else "-block-rw" if block_probe else "-pci" if pci_probe else "")
 
 
-def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limit_mib=2048, pci_probe=False):
+def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limit_mib=2048, pci_probe=False, block_probe=False, block_readonly=False):
     memory = parse_memory(memory)
     if rss_limit_mib <= 0:
         raise ValueError("Resident-memory limit must be positive")
-    label = run_label(profile, cpu, normal, cpus, memory, pci_probe)
+    if block_readonly and not block_probe:
+        raise ValueError("Read-only block mode requires the block probe")
+    label = run_label(profile, cpu, normal, cpus, memory, pci_probe, block_probe, block_readonly)
     output = ROOT / "build" / "smoke" / label
     output.mkdir(parents=True, exist_ok=True)
     logs = {
@@ -265,12 +281,14 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
         "cpus": cpus,
         "memory": memory,
         "pci_probe": pci_probe,
+        "block_probe": block_probe,
+        "block_readonly": block_readonly,
         "memory_bytes": memory_bytes(memory),
         "rss_limit_bytes": rss_limit_mib * (1 << 20),
         "peak_rss_bytes": 0,
         "status": "failed",
         "reason": "build not completed",
-        "checks": observed_checks("", cpu, normal, cpus, pci_probe),
+        "checks": observed_checks("", cpu, normal, cpus, pci_probe, block_probe, block_readonly),
         "mode": "normal" if normal else "boot-tests",
         "logs": {name: str(path) for name, path in logs.items()},
         "guest_exit_verified": False,
@@ -285,7 +303,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
         print(f"{profile}: building ISO", flush=True)
         with logs["build_stdout"].open("w") as stdout, logs["build_stderr"].open("w") as stderr:
             build = subprocess.run(
-                ["make", "iso", f"BUILD_DIR={output}", f"PROFILE={profile}", "FEATURES=" + ("" if normal else "boot-tests")],
+                ["make", "iso", f"BUILD_DIR={output}", f"PROFILE={profile}", "FEATURES=" + ("" if normal else "boot-tests"), f"BLOCK_PROBE={int(block_probe)}"],
                 cwd=ROOT, stdout=stdout, stderr=stderr, check=False,
             )
         evidence["build_exit_code"] = build.returncode
@@ -304,16 +322,23 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
         ]
         if cpu is not None:
             command += ["-cpu", cpu]
-        if pci_probe:
-            # A disposable, read-only raw device tests discovery only. It has no
-            # filesystem and is never a host block device or a BetAFS fixture.
-            disk = output / "pci-probe.raw"
+        if pci_probe or block_probe:
+            # Every attached disk is disposable and has no filesystem. Block
+            # tests opt in to writes; discovery-only fixtures stay read-only.
+            disk = output / ("block-probe.raw" if block_probe else "pci-probe.raw")
             with disk.open("wb") as image:
                 image.truncate(8 << 20)
+                if block_probe:
+                    image.write(b"CRYOLITE-BLOCK-PROBE-V1")
             evidence["probe_disk_sha256"] = hashlib.sha256(disk.read_bytes()).hexdigest()
+            expected = bytearray(disk.read_bytes())
+            if block_probe and not block_readonly:
+                expected[4096:8192] = bytes((offset * 37 + 11) & 255 for offset in range(4096))
+            evidence["expected_disk_sha256"] = hashlib.sha256(expected).hexdigest()
+            read_only = not block_probe or block_readonly
             command += [
                 "-device", "pcie-root-port,id=storage-port,bus=pcie.0,chassis=1,slot=5",
-                "-drive", f"file={disk},format=raw,if=none,id=probe-disk,readonly=on",
+                "-drive", f"file={disk},format=raw,if=none,id=probe-disk,readonly={'on' if read_only else 'off'},cache=writeback",
                 "-device", "virtio-blk-pci,drive=probe-disk,disable-legacy=on,bus=storage-port",
             ]
         evidence["qemu_command"] = command
@@ -324,7 +349,7 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
             boot_started = time.monotonic()
             while True:
                 log = logs["debug"].read_text(errors="replace")
-                evidence["checks"] = observed_checks(log, cpu, normal, cpus, pci_probe)
+                evidence["checks"] = observed_checks(log, cpu, normal, cpus, pci_probe, block_probe, block_readonly)
                 evidence["memory_observed"] = memory_details(log)
                 usage = resident_memory(process.pid)
                 if usage is not None:
@@ -369,15 +394,19 @@ def run_profile(profile, cpu=None, normal=False, cpus=1, memory="512M", rss_limi
                 evidence["status"] = "failed"
                 evidence["reason"] = "QEMU did not stop after SIGKILL"
         evidence["elapsed_seconds"] = round(time.monotonic() - started, 3)
-        if disk is not None and "probe_disk_sha256" in evidence:
+        if disk is not None and "expected_disk_sha256" in evidence:
             try:
-                unchanged = hashlib.sha256(disk.read_bytes()).hexdigest() == evidence["probe_disk_sha256"]
+                digest = hashlib.sha256(disk.read_bytes()).hexdigest()
+                unchanged = digest == evidence["probe_disk_sha256"]
+                verified = digest == evidence["expected_disk_sha256"]
             except OSError:
                 unchanged = False
+                verified = False
             evidence["probe_disk_unchanged"] = unchanged
-            if not unchanged:
+            evidence["probe_disk_verified"] = verified
+            if not verified:
                 evidence["status"] = "failed"
-                evidence["reason"] = "read-only PCI discovery fixture changed"
+                evidence["reason"] = "disposable block fixture could not be verified"
         (output / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
 
     return evidence
@@ -394,13 +423,19 @@ def main():
     parser.add_argument("--rss-limit-mib", type=int, default=2048, help="stop own emulator above this measured resident-memory limit")
     parser.add_argument("--normal", action="store_true", help="verify normal init and its user-space restart policy")
     parser.add_argument("--pci-probe", action="store_true", help="attach a disposable read-only VirtIO block device behind a PCI bridge; discovery only")
+    parser.add_argument("--block-probe", action="store_true", help="opt in to Ring 3 block read/write/flush on a disposable signed disk")
+    parser.add_argument("--block-readonly", action="store_true", help="test device-rejected writes; requires --block-probe")
     arguments = parser.parse_args()
+    if arguments.block_readonly and not arguments.block_probe:
+        parser.error("--block-readonly requires --block-probe")
+    if arguments.pci_probe and arguments.block_probe:
+        parser.error("choose discovery-only or block probe")
     profiles = ("debug", "release") if arguments.all else (arguments.profile,)
     passed = True
     for profile in profiles:
-        result = run_profile(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.rss_limit_mib, arguments.pci_probe)
+        result = run_profile(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.rss_limit_mib, arguments.pci_probe, arguments.block_probe, arguments.block_readonly)
         print(f"{profile}: {result['status']} — {result['reason']}")
-        label = run_label(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.pci_probe)
+        label = run_label(profile, arguments.cpu, arguments.normal, arguments.cpus, arguments.memory, arguments.pci_probe, arguments.block_probe, arguments.block_readonly)
         print(f"  evidence: {ROOT / 'build' / 'smoke' / label / 'evidence.json'}")
         if result["status"] == "interrupted":
             return 130

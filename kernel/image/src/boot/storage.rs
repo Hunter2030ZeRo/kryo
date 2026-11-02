@@ -11,6 +11,14 @@ use spin::Once;
 
 static INVENTORY: Once<Vec<PciFunction>> = Once::new();
 
+pub(crate) fn block_device() -> Option<PciFunction> {
+    INVENTORY
+        .get()?
+        .iter()
+        .find(|device| device.vendor_id == 0x1af4 && device.device_id == 0x1042)
+        .copied()
+}
+
 pub(crate) fn discover() {
     assert_eq!(kryo_hal::current_cpu().map(|cpu| cpu.index()), Some(0));
     assert!(!x86_64::instructions::interrupts::are_enabled());

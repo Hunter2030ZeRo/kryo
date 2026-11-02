@@ -4,3 +4,4 @@
 
 pub mod startup;
 pub mod syscall;
+pub mod virtio;

@@ -24,6 +24,13 @@ pub(crate) fn dispatch<'objects>(
     let result = Call::try_from(context.rax).and_then(|call| {
         let handle = Handle::from_raw(context.rdi);
         match call {
+            Call::VirtioInfo
+            | Call::VirtioStart
+            | Call::VirtioSubmit
+            | Call::VirtioPoll
+            | Call::VirtioReset => {
+                super::transport::dispatch(caller, call, context, tasks, ipc).map(Some)
+            }
             Call::ManifestBudget => {
                 let owner = tasks.process_for(caller).ok_or(Error::PeerClosed)?;
                 let resources = tasks.resources_mut(caller).unwrap();

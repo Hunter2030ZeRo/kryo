@@ -17,6 +17,7 @@ pub(crate) mod startup;
 pub(crate) mod supervision;
 mod tasks;
 pub(crate) mod threads;
+pub(crate) mod transport;
 
 use crate::boot::memory::BootFramePool;
 use crate::boot::vm_backend::{KernelMemory, UserSpace};
@@ -76,6 +77,7 @@ pub(crate) enum KernelObject {
     Image(&'static [u8]),
     DebugConsole,
     Device(RefCell<devices::DeviceBinding>),
+    Transport(ProcessId),
     LaunchManifest(RefCell<startup::LaunchManifest>),
     StartupRecord(alloc::vec::Vec<u64>),
 }

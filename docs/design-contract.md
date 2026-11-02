@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.6, 2026-11-02.
+Version 0.7, 2026-11-02.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -203,6 +203,15 @@ Orderly replacement stops new requests, resolves in-flight work, transfers requi
 | Service | Recover available state and report successful, failed, or uncertain operations |
 
 ### DMA reclamation
+
+Ring 3 may use its language's standard library through the native Cryolite
+runtime. Kernel and HAL remain no_std; the filesystem boundary does not require
+BetAFS to abandon std. Keep service records independent of Rust/C/C++ layouts.
+
+Until isolated DMA domains exist, untrusted drivers may submit only validated
+offset-based descriptions. Hardware queues and physical links stay private.
+Snapshot accepted plans and input before publication; retain completion targets
+until the device returns the chain or reset proves old access has ended.
 
 PCI inventory is descriptive. Reading an assigned BAR gives neither its size nor
 authority to map it, and discovery does not establish device quiescence. Keep

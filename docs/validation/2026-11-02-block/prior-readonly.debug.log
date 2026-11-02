@@ -1,0 +1,116 @@
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001e170000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007e000) bytes=512000
+MEM[1]: kind=0 [0x000000000007e000, 0x000000000009f000) bytes=135168
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001e08f000) bytes=502853632
+MEM[7]: kind=5 [0x000000001e08f000, 0x000000001e10f000) bytes=524288
+MEM[8]: kind=6 [0x000000001e10f000, 0x000000001e110000) bytes=4096
+MEM[9]: kind=0 [0x000000001e110000, 0x000000001e112000) bytes=8192
+MEM[10]: kind=6 [0x000000001e112000, 0x000000001e116000) bytes=16384
+MEM[11]: kind=0 [0x000000001e116000, 0x000000001e117000) bytes=4096
+MEM[12]: kind=5 [0x000000001e117000, 0x000000001e118000) bytes=4096
+MEM[13]: kind=6 [0x000000001e118000, 0x000000001e121000) bytes=36864
+MEM[14]: kind=5 [0x000000001e121000, 0x000000001e123000) bytes=8192
+MEM[15]: kind=6 [0x000000001e123000, 0x000000001e12a000) bytes=28672
+MEM[16]: kind=5 [0x000000001e12a000, 0x000000001e12c000) bytes=8192
+MEM[17]: kind=6 [0x000000001e12c000, 0x000000001e138000) bytes=49152
+MEM[18]: kind=5 [0x000000001e138000, 0x000000001e13a000) bytes=8192
+MEM[19]: kind=6 [0x000000001e13a000, 0x000000001e13f000) bytes=20480
+MEM[20]: kind=5 [0x000000001e13f000, 0x000000001e141000) bytes=8192
+MEM[21]: kind=6 [0x000000001e141000, 0x000000001e147000) bytes=24576
+MEM[22]: kind=5 [0x000000001e147000, 0x000000001e149000) bytes=8192
+MEM[23]: kind=6 [0x000000001e149000, 0x000000001e14e000) bytes=20480
+MEM[24]: kind=5 [0x000000001e14e000, 0x000000001e150000) bytes=8192
+MEM[25]: kind=6 [0x000000001e150000, 0x000000001e152000) bytes=8192
+MEM[26]: kind=5 [0x000000001e152000, 0x000000001e154000) bytes=8192
+MEM[27]: kind=6 [0x000000001e154000, 0x000000001e157000) bytes=12288
+MEM[28]: kind=5 [0x000000001e157000, 0x000000001e159000) bytes=8192
+MEM[29]: kind=6 [0x000000001e159000, 0x000000001e15b000) bytes=8192
+MEM[30]: kind=5 [0x000000001e15b000, 0x000000001e15d000) bytes=8192
+MEM[31]: kind=6 [0x000000001e15d000, 0x000000001e161000) bytes=16384
+MEM[32]: kind=5 [0x000000001e161000, 0x000000001e170000) bytes=61440
+MEM[33]: kind=6 [0x000000001e170000, 0x000000001ebb4000) bytes=10764288
+MEM[34]: kind=5 [0x000000001ebb4000, 0x000000001ff44000) bytes=20512768
+MEM[35]: kind=0 [0x000000001ff44000, 0x000000001ff65000) bytes=135168
+MEM[36]: kind=5 [0x000000001ff65000, 0x000000001ffdc000) bytes=487424
+MEM[37]: kind=1 [0x000000001ffdc000, 0x000000001ffe0000) bytes=16384
+MEM[38]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[39]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[40]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[41]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[42]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[43]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[44]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+FRAME metadata: start=0x7e000 end=0x82000 bytes=16384 bitmap_words=1920 summary_words=30 usable_frames=122836 managed_frames=122832
+MEM normalized: ranges=5 frames=122832
+AVAILABLE[0]: [0x0000000000082000, 0x000000000009f000) frames=29
+AVAILABLE[1]: [0x0000000000100000, 0x000000001e08f000) frames=122767
+AVAILABLE[2]: [0x000000001e110000, 0x000000001e112000) frames=2
+AVAILABLE[3]: [0x000000001e116000, 0x000000001e117000) frames=1
+AVAILABLE[4]: [0x000000001ff44000, 0x000000001ff65000) frames=33
+FRAME: metadata reservation excluded
+PCI: function bus=0 slot=0 function=0 vendor=0x8086 device=0x29c0 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=1 function=0 vendor=0x1234 device=0x1111 class=0x03 command=0x0103 bars=6
+PCI: function bus=0 slot=2 function=0 vendor=0x8086 device=0x10d3 class=0x02 command=0x0103 bars=6
+PCI: function bus=0 slot=3 function=0 vendor=0x1b36 device=0x000c class=0x06 command=0x0103 bars=2
+PCI: function bus=0 slot=31 function=0 vendor=0x8086 device=0x2918 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=2 vendor=0x8086 device=0x2922 class=0x01 command=0x0107 bars=6
+PCI: function bus=0 slot=31 function=3 vendor=0x8086 device=0x2930 class=0x0c command=0x0103 bars=6
+PCI: function bus=1 slot=0 function=0 vendor=0x1af4 device=0x1042 class=0x01 command=0x0107 bars=6
+PCI: inventory complete functions=8 virtio_block=1 command_unchanged=true
+HEAP: alignment/reuse/failure OK
+FRAME: ready total=122832 free=122831
+FRAME: alloc/release OK total=122832 free=122831
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=122831
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=6
+DMA: unpublished buffer zeroing and retirement OK pages=3
+CLOCK: HPET monotonic ready lapic_counts=622762 sample_ns=10181160
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+ELF: module validated bytes=13240 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=253 xsave=false avx=false
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=22
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+SMP: online=1 discovered=1 limit=255
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+
+PANIC
+file: kernel/image/src/runtime/transport/probe.rs
+line: 0x000000000000005f
+message: Cannot prepare foreign device caller

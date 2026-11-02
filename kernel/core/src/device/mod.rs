@@ -1,6 +1,7 @@
 use crate::process::ProcessId;
 
 pub mod dma;
+pub mod queue;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RegisterWindow {

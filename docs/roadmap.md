@@ -9,7 +9,7 @@ Develop one verifiable capability at a time. The [design contract](design-contra
 | P03: Virtual memory | Own address spaces and mappings; enforce permissions and alias policy; reclaim frames after TLB completion; test protection and guard pages | Growing VM metadata, shared backing, guarded entry stacks, and acknowledged SMP retirement implemented; general paging policy pending |
 | P04: User entry | CPU-local state, user/kernel stacks, validated IRETQ entry and return, native calls, and user fault isolation | Static native ELF, CPU-local SMP FP/SIMD contexts, FS setup, and fault isolation implemented; general runtime and stable ABI pending |
 | P05: Tasks and IPC | Timer, context switching, wait/wakeup, kernel objects, capabilities, endpoints, notifications, and shared memory | SMP execution, growing metadata, deadlines, delegation, native channels and shared resource accounts implemented; CPU-time budgets and scheduling scalability pending |
-| P06: Services and DMA | Boot image, init, supervisor, device authority, DMA lifetime, and service failure recovery | Native supervisor, versioned atomic startup grants, role allowlists, private discovery gateways, generations and service replacement implemented for a configured inventory; mediated HPET IRQ, read-only PCI discovery and owned DMA storage implemented; hardware DMA, general assignment and broader recovery pending |
+| P06: Services and DMA | Boot image, init, supervisor, device authority, DMA lifetime, and service failure recovery | Native supervisor, versioned atomic startup grants, role allowlists, private discovery gateways, generations and service replacement implemented for a configured inventory; mediated HPET IRQ, read-only PCI discovery and owned DMA storage implemented; private queued hardware DMA and Ring 3 block commands validated; general assignment and broader recovery pending |
 
 ## Next: service authority and runtime
 
@@ -17,7 +17,7 @@ CPU-local state, Limine AP startup, parallel user execution, remote wakeups, and
 
 Frame metadata now scales with the normalized Usable RAM inventory. The image reserves its backing before initializing the frame pool or heap. [ADR 0013](decisions/0013-runtime-frame-metadata.md) records bootstrap exclusion, physical-address selection, and the large-memory proof scope. Further memory work includes fragmented metadata backing, memory hotplug, NUMA policy, and physical-hardware validation.
 
-Normal boot starts a native supervisor with explicit root authority. Versioned manifests install role-labeled grants before child execution. Private instance registration and client discovery gateways bind service policy to capabilities; claimed IDs do not authenticate it. Shared resource accounts now bound handles, waits, live threads and shared payload pages, with additional per-process VM limits. Ordinary children inherit accounts and restart retains usage. [ADR 0015](decisions/0015-service-startup-and-authority.md) defines startup/discovery and [ADR 0016](decisions/0016-service-resource-budgets.md) defines resource lifetime. Read-only PCI inventory and DMA buffer ownership now precede the next validated submission/IRQ path, real block I/O and BetAFS/VFS integration. CPU elapsed-time accounting, scalable service events and dynamic configuration remain separate work. The current HPET grant validates restricted registers and IRQ notification; it is not a general device manager.
+Normal boot starts a native supervisor with explicit root authority. Versioned manifests install role-labeled grants before child execution. Private instance registration and client discovery gateways bind service policy to capabilities; claimed IDs do not authenticate it. Shared resource accounts now bound handles, waits, live threads and shared payload pages, with additional per-process VM limits. Ordinary children inherit accounts and restart retains usage. [ADR 0015](decisions/0015-service-startup-and-authority.md) defines startup/discovery and [ADR 0016](decisions/0016-service-resource-budgets.md) defines resource lifetime. Validated private DMA queues now carry Ring 3 block commands. The next path is a persistent block IPC service, storage IRQ completion, native runtime and BetAFS/VFS integration. CPU elapsed-time accounting, scalable service events and dynamic configuration remain separate work. The current HPET grant validates restricted registers and IRQ notification; it is not a general device manager.
 
 A general user target/runtime, ELF TLS templates, libc/std, dynamic linking, and libsys startup conventions remain necessary for ordinary applications. Shared pages and copied capabilities are implemented; buffer loans, bulk queues, object revocation, DMA pins, and IOMMU isolation remain pending.
 
@@ -32,15 +32,16 @@ Extend SMP scheduling after the corresponding ownership and failure-path checks 
 
 ## PCI and storage foundation
 
-Conventional read-only PCI discovery and bounded DMA buffer ownership are now
-implemented. Hardware DMA, general device assignment and block I/O are still
-pending. The next gate is validated descriptor submission or an IOMMU domain,
-with reset/IRQ/translation retirement before buffer reuse. See
-[ADR 0017](decisions/0017-pci-discovery-and-dma-storage.md).
+Conventional PCI discovery and owned DMA buffers now connect to actual Ring 3
+VirtIO block read/write/flush through private validated queues. The opt-in
+validation path uses polling and a disposable signed disk. Persistent block IPC,
+storage IRQ completion and general assignment remain pending. See
+[ADR 0018](decisions/0018-mediated-virtio-block-transport.md).
 
-BetAFS remains the filesystem target. Its adapter must preserve 4096-byte blocks
-and real durable flush. The current engine requires `std`; its runtime port is
-an integration dependency, not a reason to duplicate the engine inside Kryo.
+BetAFS keeps its normal Ring 3 std dependency. Its adapter must preserve 4096-byte
+blocks and actual durable flush. The Cryolite Rust target/std platform support
+will share native services with libc and the C++ runtime; their implementation
+order is defined in [ADR 0019](decisions/0019-native-runtime-and-standard-libraries.md).
 
 ## Integration
 

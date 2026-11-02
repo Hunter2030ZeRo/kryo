@@ -66,6 +66,11 @@ pub enum Call {
     ManifestBudget = 46,
     BudgetInfo = 47,
     BudgetSelf = 48,
+    VirtioInfo = 49,
+    VirtioStart = 50,
+    VirtioSubmit = 51,
+    VirtioPoll = 52,
+    VirtioReset = 53,
 }
 
 impl TryFrom<u64> for Call {
@@ -122,6 +127,11 @@ impl TryFrom<u64> for Call {
             46 => Ok(Self::ManifestBudget),
             47 => Ok(Self::BudgetInfo),
             48 => Ok(Self::BudgetSelf),
+            49 => Ok(Self::VirtioInfo),
+            50 => Ok(Self::VirtioStart),
+            51 => Ok(Self::VirtioSubmit),
+            52 => Ok(Self::VirtioPoll),
+            53 => Ok(Self::VirtioReset),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -165,7 +175,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=48 {
+        for number in 0..=53 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

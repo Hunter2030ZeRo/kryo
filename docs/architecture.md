@@ -100,14 +100,20 @@ The native ABI is independent of Linux and NT. ICE-Linux and ICE-NT each transla
 
 BetAFS is an independent storage project. `userspace/filesystems/betafs/` is reserved for its Kryo adapter; the storage engine is not duplicated here.
 
-The bootstrap now retains read-only conventional PCI snapshots. Core DMA storage
-owns constrained frame runs through explicit, retryable retirement. Neither path
-grants PCI or DMA authority to user space. There is no hardware DMA backend or
-block transport yet. [ADR 0017](decisions/0017-pci-discovery-and-dma-storage.md)
-defines this boundary and the required isolation gate before VirtIO submission.
+The bootstrap retains read-only conventional PCI snapshots and constrained DMA
+frame owners. An opt-in Ring 3 VirtIO block driver now submits actual read/write/
+flush commands through private kernel queues. Only validated memory-object
+offsets cross this boundary; raw PCI configuration, physical addresses and
+hardware descriptors remain privileged. [ADR 0018](decisions/0018-mediated-virtio-block-transport.md)
+defines the mediated transport and reset-before-release contract. Completion is
+currently polled, with no storage IRQ or persistent block IPC service yet.
+
 The [BetAFS adapter contract](../userspace/filesystems/betafs/README.md) preserves
-4096-byte blocks and durable flush; the independent engine currently requires
-`std` and needs a runtime port before native execution.
+4096-byte blocks and durable flush. BetAFS keeps its normal Ring 3 std dependency.
+Cryolite needs a native platform contract, libc, C++ runtime/library support and
+Rust target/std platform support as separate deliverables.
+[ADR 0019](decisions/0019-native-runtime-and-standard-libraries.md) defines their
+implementation order; none of those runtime ports is complete.
 
 ## Isolation and recovery
 

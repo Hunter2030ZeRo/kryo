@@ -118,22 +118,82 @@ struct PortConfig;
 
 impl PciConfigRead for PortConfig {
     fn read32(&mut self, address: PciAddress, offset: u16) -> Result<u32, PciError> {
-        let selector = address.configuration_address(offset)?;
-        Ok(interrupts::without_interrupts(|| {
-            let _guard = CONFIG_LOCK.lock();
-            let mut address_port = Port::<u32>::new(0xcf8);
-            let mut data_port = Port::<u32>::new(0xcfc);
-            // The private reader can only be reached through privileged unsafe
-            // entry points. IRQ exclusion prevents re-entry on this CPU; the
-            // lock serializes the selector/data pair against other CPUs.
-            unsafe {
-                let saved = address_port.read();
-                address_port.write(selector);
-                let value = data_port.read();
-                address_port.write(saved);
-                value
-            }
-        }))
+        // PortConfig is private and reached only through privileged entry points.
+        unsafe { with_pci_config(address, |config| config.read32(offset)) }
+    }
+}
+
+/// All accesses in the closure share one selector lock, including compound
+/// VirtIO PCI-window transactions. No callback may re-enter this module.
+///
+/// # Safety
+/// The platform/exclusion conditions of read_pci_config apply. The caller must
+/// own any device registers it writes, and exclude device removal and firmware.
+pub(super) unsafe fn with_pci_config<T>(
+    address: PciAddress,
+    operation: impl FnOnce(&mut ConfigAccess) -> T,
+) -> T {
+    interrupts::without_interrupts(|| {
+        let _guard = CONFIG_LOCK.lock();
+        let saved = unsafe { Port::<u32>::new(0xcf8).read() };
+        let _restore = RestoreSelector(saved);
+        operation(&mut ConfigAccess { address })
+    })
+}
+
+struct RestoreSelector(u32);
+
+impl Drop for RestoreSelector {
+    fn drop(&mut self) {
+        unsafe { Port::<u32>::new(0xcf8).write(self.0) };
+    }
+}
+
+pub(super) struct ConfigAccess {
+    address: PciAddress,
+}
+
+impl ConfigAccess {
+    fn port(&self, offset: u16, width: u16) -> Result<u16, PciError> {
+        if !offset.is_multiple_of(width) || offset.checked_add(width).is_none_or(|end| end > 256) {
+            return Err(PciError::InvalidOffset);
+        }
+        let selector = self.address.configuration_address(offset & !3)?;
+        unsafe { Port::<u32>::new(0xcf8).write(selector) };
+        Ok(0xcfc + (offset & 3))
+    }
+
+    pub(super) fn read8(&mut self, offset: u16) -> Result<u8, PciError> {
+        let port = self.port(offset, 1)?;
+        Ok(unsafe { Port::<u8>::new(port).read() })
+    }
+
+    pub(super) fn read16(&mut self, offset: u16) -> Result<u16, PciError> {
+        let port = self.port(offset, 2)?;
+        Ok(unsafe { Port::<u16>::new(port).read() })
+    }
+
+    pub(super) fn read32(&mut self, offset: u16) -> Result<u32, PciError> {
+        let port = self.port(offset, 4)?;
+        Ok(unsafe { Port::<u32>::new(port).read() })
+    }
+
+    pub(super) fn write8(&mut self, offset: u16, value: u8) -> Result<(), PciError> {
+        let port = self.port(offset, 1)?;
+        unsafe { Port::<u8>::new(port).write(value) };
+        Ok(())
+    }
+
+    pub(super) fn write16(&mut self, offset: u16, value: u16) -> Result<(), PciError> {
+        let port = self.port(offset, 2)?;
+        unsafe { Port::<u16>::new(port).write(value) };
+        Ok(())
+    }
+
+    pub(super) fn write32(&mut self, offset: u16, value: u32) -> Result<(), PciError> {
+        let port = self.port(offset, 4)?;
+        unsafe { Port::<u32>::new(port).write(value) };
+        Ok(())
     }
 }
 

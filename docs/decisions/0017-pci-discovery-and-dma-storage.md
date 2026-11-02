@@ -2,6 +2,9 @@
 
 Date: 2026-11-02. Status: implemented foundation; storage I/O pending.
 
+[ADR 0018](0018-mediated-virtio-block-transport.md) extends this foundation with
+validated private queues and actual Ring 3 block commands.
+
 ## Discovery
 
 The PC bootstrap scans conventional PCI segment zero through CF8/CFC. Each
@@ -58,10 +61,10 @@ entire block. A successful flush cannot be synthesized from submission or IRQ
 completion. Failed flush leaves commit state uncertain and requires reopening
 the BetAFS store.
 
-The existing BetAFS engine depends on `std`; it cannot currently link unchanged
-into the native `no_std` target. Porting its runtime dependencies or providing a
-native standard library is separate work. Do not duplicate its disk parser or
-substitute another filesystem for the storage demonstration.
+The existing BetAFS engine keeps its normal `std` dependency. Its native execution
+requires the Cryolite Rust target and standard-library platform support described
+in [ADR 0019](0019-native-runtime-and-standard-libraries.md). Do not duplicate its
+disk parser or substitute another filesystem for the storage demonstration.
 
 ## Next gate
 

@@ -138,6 +138,8 @@ pub(crate) fn retire_bindings(
     tasks: &Tasks<'_, '_>,
     ipc: &mut IpcRuntime<'_>,
 ) -> Result<(), kryo_hal::DeviceError> {
+    super::transport::retire_bindings(tasks, ipc)
+        .map_err(|_| kryo_hal::DeviceError::DrainPending)?;
     let Some(object) = &ipc.device else {
         return Ok(());
     };

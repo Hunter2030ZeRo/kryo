@@ -10,3 +10,4 @@ pub(crate) mod paging;
 pub(crate) mod pci;
 pub(crate) mod smp;
 mod tss;
+pub(crate) mod virtio;

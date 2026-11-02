@@ -427,3 +427,45 @@ fn panic_during_retirement_retains_backing_and_backend_owners() {
     assert_eq!(trace.backend_drops.get(), 0);
     assert_eq!(trace.mapping_drops.get(), 0);
 }
+
+#[test]
+fn temporary_initializer_borrow_ends_before_device_retention() {
+    let pool = pool(&[span(0x1000, 16)]);
+    let trace = Rc::new(Trace::default());
+    let mut initialized_bytes = 0;
+    let buffer = unsafe {
+        DmaBuffer::new_with_initializer(
+            &pool,
+            2,
+            limits(),
+            Backend::new(trace.clone()),
+            |_, bytes| {
+                initialized_bytes = bytes;
+                trace.initialized.set(true);
+                Ok(())
+            },
+        )
+    }
+    .unwrap();
+    assert_eq!(initialized_bytes, 2 * FRAME_SIZE);
+    assert_eq!(&*trace.events.borrow(), &["map"]);
+    drop(buffer.retire().unwrap());
+    assert_eq!(pool.stats().free, 16);
+}
+
+#[test]
+fn temporary_initializer_error_returns_unpublished_run_without_mapping() {
+    let pool = pool(&[span(0x1000, 16)]);
+    let trace = Rc::new(Trace::default());
+    let failure = unsafe {
+        DmaBuffer::new_with_initializer(&pool, 2, limits(), Backend::new(trace.clone()), |_, _| {
+            Err("VM")
+        })
+    }
+    .err()
+    .unwrap();
+    assert_eq!(failure.error, DmaError::Initialize("VM"));
+    assert!(failure.retained.is_none());
+    assert!(trace.events.borrow().is_empty());
+    assert_eq!(pool.stats().free, 16);
+}

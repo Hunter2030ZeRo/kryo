@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROGRAMS = (
     "native-smoke", "init", "bootstrap-worker", "device-probe", "scale-probe",
     "service-probe", "service-peer", "supervisor", "echo-service", "registry-client",
+    "virtio-block",
 )
 TARGET = "x86_64-unknown-none"
 TARGET_DIR = ROOT / "build" / "userspace"

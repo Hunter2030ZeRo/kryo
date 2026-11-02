@@ -10,6 +10,14 @@ Ordinary runs use a separate output directory and also require the PCI inventory
 and unpublished DMA-buffer checks. Run `python3 -m unittest discover -s tools`
 for the evidence parser tests. See [storage validation](../docs/validation/2026-11-02-storage/README.md).
 
+boot_smoke.py --block-probe opts in to real Ring 3 block commands on a fresh
+signed scratch disk. Add --block-readonly to require a device write error and
+unchanged bytes. The runner passes BLOCK_PROBE=1 to packaging, verifies the whole
+expected image after QEMU stops and uses separate -block-rw/-block-ro output
+directories. Ordinary images omit the enable marker. The guest verifies the disk
+signature before writing. No host block device is attached.
+See [block validation](../docs/validation/2026-11-02-block/README.md).
+
 `build_user.py` builds the separate `userspace/native-smoke` package with isolated small-code-model static user flags. It clears inherited Rust flags and writes a static ET_EXEC ELF; it does not link the kernel, Linux, NT, std, or dynamic libraries.
 
 ```sh

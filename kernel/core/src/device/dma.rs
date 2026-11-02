@@ -104,6 +104,39 @@ impl<'pool, B: DmaBackend, const R: usize, const W: usize, const S: usize>
         limits: DmaLimits,
         backend: B,
     ) -> Result<Self, DmaFailure<Self, B::Error>> {
+        Self::create(
+            pool,
+            pages,
+            limits,
+            backend,
+            |backend, physical, bytes| unsafe { backend.initialize(physical, bytes) },
+        )
+    }
+
+    /// A temporary initializer may borrow VM policy without retaining that
+    /// borrow throughout device ownership. Its safety contract is initialize's.
+    ///
+    /// # Safety
+    /// The initializer satisfies DmaBackend::initialize for the exclusive run.
+    pub unsafe fn new_with_initializer(
+        pool: &'pool FramePool<R, W, S>,
+        pages: usize,
+        limits: DmaLimits,
+        backend: B,
+        initialize: impl FnOnce(u64, u64) -> Result<(), B::Error>,
+    ) -> Result<Self, DmaFailure<Self, B::Error>> {
+        Self::create(pool, pages, limits, backend, |_, physical, bytes| {
+            initialize(physical, bytes)
+        })
+    }
+
+    fn create(
+        pool: &'pool FramePool<R, W, S>,
+        pages: usize,
+        limits: DmaLimits,
+        backend: B,
+        initialize: impl FnOnce(&mut B, u64, u64) -> Result<(), B::Error>,
+    ) -> Result<Self, DmaFailure<Self, B::Error>> {
         let bytes = u64::try_from(pages)
             .ok()
             .filter(|_| pages > 0 && pages <= limits.max_pages)
@@ -137,8 +170,7 @@ impl<'pool, B: DmaBackend, const R: usize, const W: usize, const S: usize>
         };
         let physical = buffer.physical_address();
         // The run is exclusive and has not been exposed to CPU or device peers.
-        if let Err(error) = unsafe { buffer.backend.as_mut().unwrap().initialize(physical, bytes) }
-        {
+        if let Err(error) = initialize(buffer.backend.as_mut().unwrap(), physical, bytes) {
             return Err(buffer.rollback(DmaError::Initialize(error)));
         }
         // Ownership stays here through mapping failure or later cleanup errors.

@@ -23,10 +23,15 @@ Pass bulk data through bounded shared memory, retain its ownership through actua
 device retirement, and reject stale service generations. Do not serialize Rust
 pointers or `std::io::Error` values as IPC records.
 
-The engine and its block/tree/codec layers currently require `std`. Before native
-integration, port those dependencies in the independent project or provide the
-required native runtime. Kryo must not duplicate the engine's format parser or
-claim mount support from PCI discovery or a block-transfer test.
+The engine and its block/tree/codec layers keep their normal `std` dependency.
+Provide the Cryolite Rust target, standard-library platform support and codec FFI
+runtime before native execution. A `no_std` engine rewrite is not the integration
+direction. Kryo must not duplicate its format parser or claim mount support from
+a block-transfer test. See [runtime direction](../../../docs/decisions/0019-native-runtime-and-standard-libraries.md).
+
+The opt-in Ring 3 VirtIO validation driver now exercises real block read/write/
+flush through bounded private DMA. It is not the persistent block IPC service or
+this filesystem adapter; see [the transport contract](../../../docs/decisions/0018-mediated-virtio-block-transport.md).
 
 See [storage ownership](../../../docs/decisions/0017-pci-discovery-and-dma-storage.md)
 for the current DMA and device-isolation gate.

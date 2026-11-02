@@ -1,6 +1,6 @@
 import unittest
 
-from boot_smoke import pci_checks, run_label
+from boot_smoke import block_checks, pci_checks, run_label
 
 
 class PciEvidenceTests(unittest.TestCase):
@@ -37,6 +37,27 @@ class PciEvidenceTests(unittest.TestCase):
     def test_probe_evidence_does_not_overwrite_ordinary_run(self):
         plain = run_label("debug", "max", True, 4, "129G")
         self.assertNotEqual(plain, run_label("debug", "max", True, 4, "129G", True))
+
+    def test_block_mode_requires_both_instances_and_correct_readonly_mode(self):
+        log = "BLOCK: Ring3 commands and private DMA retirement OK cases=2\n"
+        log += "BLOCK: driver complete mode=0 readonly=true\n"
+        self.assertFalse(all(block_checks(log, True, True).values()))
+        log += "BLOCK: driver complete mode=1 readonly=true\n"
+        self.assertTrue(all(block_checks(log, True, True).values()))
+        self.assertFalse(all(block_checks(log, False, True).values()))
+
+    def test_boot_tests_require_cleanup_retry_evidence(self):
+        log = "BLOCK: Ring3 commands and private DMA retirement OK cases=2\n"
+        log += "BLOCK: driver complete mode=0 readonly=false\nBLOCK: driver complete mode=1 readonly=false\n"
+        self.assertFalse(all(block_checks(log, False, False).values()))
+        log += "BLOCK: cleanup retry retains queue and memory\n"
+        self.assertTrue(all(block_checks(log, False, False).values()))
+
+    def test_block_modes_have_separate_evidence_directories(self):
+        rw = run_label("debug", block_probe=True)
+        ro = run_label("debug", block_probe=True, block_readonly=True)
+        self.assertNotEqual(rw, ro)
+        self.assertNotEqual(rw, run_label("debug", pci_probe=True))
 
 
 if __name__ == "__main__":

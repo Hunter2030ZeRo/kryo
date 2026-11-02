@@ -165,6 +165,29 @@ and the remaining kernel-memory/CPU accounting boundary.
 
 Use kernel IPC for small control requests and capability transfer. Use registered shared memory and bounded request/completion queues for bulk data. Measure registration, mapping, copying, and wakeup costs before selecting a path for a workload.
 
+## Mediated VirtIO calls
+
+Experimental calls 49..53 provide process-bound Device transport information,
+start, submit, poll and reset. CONTROL is required for start/reset; WRITE submits,
+and READ queries/polls. Submission also requires a READ+WRITE memory handle and
+at most three 16-byte little-endian records (offset u64, length u32, flags u32).
+Flag 1 denotes device-writable bytes. These are memory-object offsets, never
+pointers, physical addresses or hardware descriptor links.
+
+The transport snapshots a private bounded plan and queue. One opaque ticket owns
+the accepted chain and original memory reference. Poll returns zero pending or
+bit 63 plus a u32 used length once, then rejects the consumed ticket. The Ring 3
+driver interprets device status and full transfer length. Submit errors after
+publication can be uncertain; reset before recovery rather than assuming no work
+was accepted. Reset prepares a new negotiation phase after hardware stops, while
+ticket generations continue. Closing a handle alone does not retire process-bound
+hardware. The [transport contract](decisions/0018-mediated-virtio-block-transport.md)
+defines all registers, feature phases and owner-retention rules.
+
+No VFS/file ABI or native standard-library port is established by these calls.
+The [runtime direction](decisions/0019-native-runtime-and-standard-libraries.md)
+keeps the common native service representations independent of C/C++/Rust.
+
 ## ABI decisions
 
 | Area | Required definition |

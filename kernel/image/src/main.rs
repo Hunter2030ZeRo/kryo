@@ -62,7 +62,6 @@ pub extern "C" fn _start() -> ! {
     runtime::smp::prepare();
 
     boot::init_physical_memory();
-    boot::storage::discover();
 
     // This is the sole writer and the boot mapping remains valid until halt.
     let mut framebuffer = unsafe { boot::init_framebuffer() };

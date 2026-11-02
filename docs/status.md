@@ -217,14 +217,43 @@ unmap and release. Failure returns a retained owner for retry; abandonment does
 not recycle backing or tear down a live translation. Constructor rollback follows
 the same rule. The private boot check zeroes, dirties and retires real RAM below
 four GiB, with exact frame restoration except measured retained alias tables.
-There is no hardware DMA backend, user DMA API, pin accounting or IOMMU domain.
+The unpublished-buffer check remains separate from the private hardware transport
+below. There is no general user DMA API, pin accounting or IOMMU domain.
 
-[ADR 0017](decisions/0017-pci-discovery-and-dma-storage.md) records the safety gate
-before VirtIO submission. The selected filesystem remains BetAFS. Its independent
-engine currently requires `std`; the [adapter contract](../userspace/filesystems/betafs/README.md)
-preserves 4096-byte blocks, read-your-writes and durable flush. PCI discovery and
-unpublished-buffer checks do not implement block I/O or mounting. Current evidence
-is in [storage validation](validation/2026-11-02-storage/README.md).
+[ADR 0017](decisions/0017-pci-discovery-and-dma-storage.md) and
+[storage validation](validation/2026-11-02-storage/README.md) record the foundation.
+
+## Ring 3 block commands
+
+An explicitly enabled native driver now executes actual VirtIO block read,
+write, flush and readback. HAL uses modern PCI configuration-window access;
+core snapshots offset-only buffer plans into private split queues and bounce
+RAM. Process-bound Device authority and READ/WRITE memory rights are checked
+before access. Foreign processes with copied device capabilities are denied.
+Malformed ranges, unsupported flags, busy submits and stale tickets are rejected.
+User descriptor changes after submission do not change the accepted plan.
+
+Reset completion precedes DMA return and pending-memory release. A process may
+exit with an accepted read; cleanup retains every owner until reset succeeds.
+Boot tests inject one declined cleanup attempt and verify retained resources.
+The Ring 3 driver also resets, renegotiates, restarts and rejects an old ticket.
+Default images do not enable the block probe; explicit boot opt-in and a signed
+disposable disk precede any test write. Read-only mode requires an actual device
+write error and unchanged backing bytes.
+
+This is a validation driver using native transport calls, not a persistent block
+IPC service or a filesystem mount. Completion polling, one request, three
+descriptors and private 8-KiB payload bounds are the current bootstrap scope.
+No IOMMU or isolation against malicious hardware is claimed. See
+[ADR 0018](decisions/0018-mediated-virtio-block-transport.md) and
+[block validation](validation/2026-11-02-block/README.md).
+
+BetAFS remains the filesystem target and keeps its Ring 3 std dependency.
+The [adapter contract](../userspace/filesystems/betafs/README.md) preserves 4096-byte
+blocks, read-your-writes and durable flush. Cryolite Rust target/std support,
+libc, C++ runtime/libraries and their shared platform services are pending;
+[ADR 0019](decisions/0019-native-runtime-and-standard-libraries.md) records the
+order. A no_std BetAFS rewrite is not the integration direction.
 
 ## Limits
 
@@ -243,10 +272,10 @@ is in [storage validation](validation/2026-11-02-storage/README.md).
 
 ## Next work
 
-Connect the PCI inventory and owned DMA storage to a validated device submission
-path, IRQ authority and real block read/write/flush, then the BetAFS adapter and
-VFS. A mutable raw VirtIO queue without an IOMMU would let a driver address
-arbitrary RAM. The current HPET grant remains a bootstrap device path. CPU-time
+Turn the validated block path into a persistent service with an explicit block
+IPC contract, then connect VFS, the native runtime and BetAFS. Add storage IRQ
+completion and general device assignment while retaining the private queue
+boundary. The current HPET grant remains a bootstrap device path. CPU-time
 accounting must measure individual CPU jobs; preemption counts and BSP batch wall
 time do not establish service fairness. SIMD remains user-state preservation for
 x87/SSE/optional AVX with kernel soft-float. Efficient heap backing, scalable event

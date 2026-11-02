@@ -64,7 +64,7 @@ impl ObjectKind {
             Self::ProcessControl | Self::ThreadControl => INSPECT | CONTROL | WAIT | DUP | TRANSFER,
             Self::Image => EXECUTE | DUP | TRANSFER,
             Self::DebugConsole => WRITE | DUP | TRANSFER,
-            Self::Device => READ | WRITE | DUP | TRANSFER,
+            Self::Device => READ | WRITE | CONTROL | DUP | TRANSFER,
             Self::ChannelFactory => CREATE | DUP | TRANSFER,
             Self::LaunchManifest => READ | WRITE,
             Self::StartupRecord => READ,

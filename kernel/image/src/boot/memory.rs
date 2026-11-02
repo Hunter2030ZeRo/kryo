@@ -8,7 +8,7 @@ use limine::memmap as lm;
 
 const REGION_CAPACITY: usize = 256;
 const RESERVATION_CAPACITY: usize = 32;
-const OUTPUT_CAPACITY: usize = REGION_CAPACITY + RESERVATION_CAPACITY;
+pub(crate) const OUTPUT_CAPACITY: usize = REGION_CAPACITY + RESERVATION_CAPACITY;
 
 struct BootMemoryStorage {
     regions: [MemoryRegion; REGION_CAPACITY],
@@ -163,6 +163,7 @@ pub(crate) fn init_physical_memory() {
         kryo_hal::emergency_write_str("FRAME: metadata reservation excluded\n");
     }
     unsafe { crate::heap::init(&FRAMES, direct) };
+    super::storage::discover();
     #[cfg(feature = "boot-tests")]
     crate::heap::check();
     let stats = FRAMES.stats();

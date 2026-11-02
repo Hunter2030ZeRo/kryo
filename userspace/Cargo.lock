@@ -86,3 +86,10 @@ dependencies = [
  "kryo-libsys",
  "kryo-services",
 ]
+
+[[package]]
+name = "virtio-block"
+version = "0.1.0"
+dependencies = [
+ "kryo-libsys",
+]

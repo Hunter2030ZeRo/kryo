@@ -2,6 +2,7 @@ TARGET := x86_64-unknown-none
 PROFILE := debug
 CARGO_PROFILE := $(if $(filter debug,$(PROFILE)),dev,$(PROFILE))
 FEATURES ?=
+BLOCK_PROBE ?= 0
 FEATURE_FLAGS := $(if $(strip $(FEATURES)),--features "$(FEATURES)")
 
 BUILD_DIR := build
@@ -17,6 +18,7 @@ PEER_ELF := $(BUILD_DIR)/service-peer.elf
 SUPERVISOR_ELF := $(BUILD_DIR)/supervisor.elf
 ECHO_ELF := $(BUILD_DIR)/echo-service.elf
 CLIENT_ELF := $(BUILD_DIR)/registry-client.elf
+BLOCK_ELF := $(BUILD_DIR)/virtio-block.elf
 
 CARGO_TARGET_DIR ?= target
 KERNEL := $(CARGO_TARGET_DIR)/$(TARGET)/$(PROFILE)/kryo
@@ -45,6 +47,7 @@ user:
 	python3 tools/build_user.py --program supervisor --profile "$(PROFILE)" --output "$(SUPERVISOR_ELF)"
 	python3 tools/build_user.py --program echo-service --profile "$(PROFILE)" --output "$(ECHO_ELF)"
 	python3 tools/build_user.py --program registry-client --profile "$(PROFILE)" --output "$(CLIENT_ELF)"
+	python3 tools/build_user.py --program virtio-block --profile "$(PROFILE)" --output "$(BLOCK_ELF)"
 
 iso: kernel user
 	rm -rf "$(ISO_ROOT)"
@@ -62,7 +65,11 @@ iso: kernel user
 	cp "$(SUPERVISOR_ELF)" "$(ISO_ROOT)/boot/supervisor.elf"
 	cp "$(ECHO_ELF)" "$(ISO_ROOT)/boot/echo-service.elf"
 	cp "$(CLIENT_ELF)" "$(ISO_ROOT)/boot/registry-client.elf"
+	cp "$(BLOCK_ELF)" "$(ISO_ROOT)/boot/virtio-block.elf"
 	cp boot/limine.conf "$(ISO_ROOT)/boot/limine/"
+ifeq ($(BLOCK_PROBE),1)
+	python3 -c 'from pathlib import Path; p=Path("$(ISO_ROOT)/boot"); (p/"block-probe.enabled").write_bytes(b"KRYO-BLOCK-PROBE-V1\n"); c=p/"limine/limine.conf"; c.write_text(c.read_text()+"\tmodule_path: boot():/boot/block-probe.enabled\n\tmodule_cmdline: kryo-block-probe-enabled\n")'
+endif
 
 	cp "$(LIMINE)/limine-bios-cd.bin" "$(ISO_ROOT)/boot/limine/"
 	cp "$(LIMINE)/limine-uefi-cd.bin" "$(ISO_ROOT)/boot/limine/"
