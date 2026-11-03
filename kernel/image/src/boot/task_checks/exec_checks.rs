@@ -157,6 +157,7 @@ fn new_task<'kernel, 'objects>(
         }
     };
     Resources {
+        execution: None,
         process: crate::runtime::ProcessResources {
             private_vm: kryo_core::mm::vm::PrivateVm::new(),
             account: None,

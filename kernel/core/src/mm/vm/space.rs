@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use core::sync::atomic::{AtomicU64, Ordering};
 
 static NEXT_SPACE_ID: AtomicU64 = AtomicU64::new(1);
+const USER_END: u64 = 0x0000_8000_0000_0000;
 
 use super::{FrameAllocator, Permissions, VmBackend, VmError};
 use crate::mm::frame::{FRAME_SIZE, OwnedFrame};
@@ -49,6 +50,57 @@ impl PrivateWordKey {
     }
 }
 
+/// Keeps declared execution ranges mapped until explicitly released by their
+/// owner. Dropping the token deliberately leaves the protection in place.
+#[derive(Debug)]
+#[must_use = "Retain the execution lease until the thread has stopped"]
+pub struct ExecutionLease {
+    space: u64,
+    id: u64,
+}
+
+#[derive(Clone, Copy)]
+struct Span {
+    start: u64,
+    end: u64,
+}
+
+impl Span {
+    fn checked(start: u64, bytes: u64) -> Option<Self> {
+        let end = start.checked_add(bytes)?;
+        (bytes != 0 && end <= USER_END).then_some(Self { start, end })
+    }
+
+    fn overlaps(self, other: Self) -> bool {
+        self.start < other.end && other.start < self.end
+    }
+}
+
+struct ExecutionRange {
+    id: u64,
+    stack: Span,
+    tls: Span,
+    guard: Option<Span>,
+}
+
+impl ExecutionRange {
+    fn spans(&self) -> [Option<Span>; 3] {
+        [Some(self.stack), Some(self.tls), self.guard]
+    }
+
+    fn overlaps(&self, span: Span) -> bool {
+        self.spans()
+            .into_iter()
+            .flatten()
+            .any(|range| range.overlaps(span))
+    }
+
+    fn guard_obstacle(&self, start: u64, end: u64) -> Option<u64> {
+        let guard = self.guard?;
+        (start < guard.end && guard.start < end).then_some((guard.end - 1) & !(FRAME_SIZE - 1))
+    }
+}
+
 pub struct AddressSpace<
     'pool,
     F: FrameAllocator,
@@ -64,6 +116,8 @@ pub struct AddressSpace<
     mappings: Slots<Option<Mapping<'pool, S>>, MAPPINGS>,
     mapping_count: usize,
     next_mapping: Option<u64>,
+    executions: Vec<ExecutionRange>,
+    next_execution: Option<u64>,
     tables: Slots<Option<OwnedFrame<'pool>>, TABLES>,
     table_count: usize,
 }
@@ -142,6 +196,8 @@ impl<
             },
             mapping_count: 0,
             next_mapping: Some(1),
+            executions: Vec::new(),
+            next_execution: Some(1),
             tables: if let Some((_, tables)) = limits {
                 Slots::limited(tables)
             } else {
@@ -160,6 +216,138 @@ impl<
         Ok(self.root.as_ref().ok_or(VmError::Closed)?.address())
     }
 
+    /// Protects private stack/TLS storage and an optional unmapped lower guard.
+    /// Only range metadata is allocated; backing remains owned by this space.
+    pub fn lease_execution(
+        &mut self,
+        stack_base: u64,
+        stack_bytes: u64,
+        tls_base: u64,
+        tls_bytes: u64,
+        guard_bytes: u64,
+    ) -> Result<ExecutionLease, VmError<B::Error>> {
+        self.check_inactive()?;
+        let stack = Span::checked(stack_base, stack_bytes).ok_or(VmError::InvalidAddress)?;
+        let tls = Span::checked(tls_base, tls_bytes).ok_or(VmError::InvalidAddress)?;
+        if stack.start < FRAME_SIZE
+            || tls.start < FRAME_SIZE
+            || stack_bytes < 16
+            || !stack.start.is_multiple_of(16)
+            || !stack.end.is_multiple_of(16)
+            || stack.overlaps(tls)
+        {
+            return Err(VmError::InvalidAddress);
+        }
+        let guard = if guard_bytes == 0 {
+            None
+        } else {
+            if !guard_bytes.is_multiple_of(FRAME_SIZE) || !stack.start.is_multiple_of(FRAME_SIZE) {
+                return Err(VmError::InvalidAddress);
+            }
+            let start = stack
+                .start
+                .checked_sub(guard_bytes)
+                .ok_or(VmError::InvalidAddress)?;
+            let guard = Span::checked(start, guard_bytes).ok_or(VmError::InvalidAddress)?;
+            if guard.overlaps(tls) {
+                return Err(VmError::InvalidAddress);
+            }
+            Some(guard)
+        };
+        let mut range = ExecutionRange {
+            id: 0,
+            stack,
+            tls,
+            guard,
+        };
+        if range
+            .spans()
+            .into_iter()
+            .flatten()
+            .any(|span| self.executions.iter().any(|owner| owner.overlaps(span)))
+        {
+            return Err(VmError::InUse);
+        }
+        self.check_execution_data(stack)?;
+        self.check_execution_data(tls)?;
+        if let Some(guard) = guard
+            && self.last_occupied(guard.start, guard.end).is_some()
+        {
+            return Err(VmError::AlreadyMapped);
+        }
+        self.executions
+            .try_reserve(1)
+            .map_err(|_| VmError::MappingCapacity)?;
+        range.id = take_execution_id(&mut self.next_execution).ok_or(VmError::MappingCapacity)?;
+        let lease = ExecutionLease {
+            space: self.identity,
+            id: range.id,
+        };
+        self.executions.push(range);
+        Ok(lease)
+    }
+
+    /// The scheduler must end execution before releasing this token. This only
+    /// removes protection; the runtime still owns and may reuse the mappings.
+    pub fn release_execution(&mut self, lease: &ExecutionLease) -> Result<(), VmError<B::Error>> {
+        let index = self.execution_index(lease)?;
+        self.executions.remove(index);
+        Ok(())
+    }
+
+    /// A kernel-controlled TLS base must stay within the retained TLS storage.
+    pub fn execution_tls_contains(
+        &self,
+        lease: &ExecutionLease,
+        address: u64,
+    ) -> Result<bool, VmError<B::Error>> {
+        let range = self.executions[self.execution_index(lease)?].tls;
+        Ok(range.start <= address && address < range.end)
+    }
+
+    fn execution_index(&self, lease: &ExecutionLease) -> Result<usize, VmError<B::Error>> {
+        self.check_inactive()?;
+        if lease.space != self.identity {
+            return Err(VmError::InvalidAddress);
+        }
+        self.executions
+            .binary_search_by_key(&lease.id, |range| range.id)
+            .map_err(|_| VmError::InvalidAddress)
+    }
+
+    /// Reject retirement or replacement before any invalidation is published.
+    pub fn ensure_unleased(&self, start: u64, bytes: u64) -> Result<(), VmError<B::Error>> {
+        self.check_inactive()?;
+        let span = Span::checked(start, bytes).ok_or(VmError::InvalidAddress)?;
+        if self.executions.iter().any(|range| range.overlaps(span)) {
+            Err(VmError::InUse)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn check_execution_data(&self, span: Span) -> Result<(), VmError<B::Error>> {
+        let mut page = span.start & !(FRAME_SIZE - 1);
+        let mut index = self.lower_bound(page);
+        while page < span.end {
+            let mapping = self.mappings[..self.mapping_count]
+                .get(index)
+                .and_then(Option::as_ref)
+                .ok_or(VmError::NotMapped)?;
+            if mapping.address != page || !mapping.published {
+                return Err(VmError::NotMapped);
+            }
+            if mapping.permissions != Permissions::ReadWrite
+                || !matches!(mapping.backing, Backing::Private(_))
+            {
+                return Err(VmError::InvalidPermissions);
+            }
+            page += FRAME_SIZE;
+            index += 1;
+        }
+        Ok(())
+    }
+
     pub fn map_page(
         &mut self,
         address: u64,
@@ -168,6 +356,7 @@ impl<
     ) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
         validate_address(address).ok_or(VmError::InvalidAddress)?;
+        self.ensure_unleased(address, FRAME_SIZE)?;
         if contents.len() > FRAME_SIZE as usize {
             return Err(VmError::InvalidContents);
         }
@@ -189,6 +378,7 @@ impl<
     ) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
         let end = range_end(address, pages).ok_or(VmError::InvalidAddress)?;
+        self.ensure_unleased(address, end - address)?;
         if self.last_occupied(address, end).is_some() {
             return Err(VmError::AlreadyMapped);
         }
@@ -321,6 +511,7 @@ impl<
     ) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
         validate_address(address).ok_or(VmError::InvalidAddress)?;
+        self.ensure_unleased(address, FRAME_SIZE)?;
         if permissions.executable() {
             return Err(VmError::InvalidPermissions);
         }
@@ -386,6 +577,7 @@ impl<
         before: impl FnOnce(),
     ) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
+        self.ensure_unleased(address, FRAME_SIZE)?;
         let slot = self.find(address).ok_or(VmError::NotMapped)?;
         before();
         self.remove_mapping(slot)?;
@@ -400,13 +592,20 @@ impl<
         last - first
     }
 
+    /// Returns a page to advance past an overlapping obstacle. A guard may end
+    /// beyond the query, so reservation search can skip its entire interval.
     pub(crate) fn last_occupied(&self, start: u64, end: u64) -> Option<u64> {
         let last = self.lower_bound(end);
-        if last == 0 {
-            return None;
-        }
-        let address = self.mappings[last - 1].as_ref().unwrap().address;
-        (address >= start).then_some(address)
+        let mapped = last
+            .checked_sub(1)
+            .map(|index| self.mappings[index].as_ref().unwrap().address)
+            .filter(|address| *address >= start);
+        let guards = self
+            .executions
+            .iter()
+            .filter_map(|range| range.guard_obstacle(start, end))
+            .max();
+        mapped.into_iter().chain(guards).max()
     }
 
     /// Retires a range in one metadata pass, even if individual retirements fail.
@@ -416,6 +615,10 @@ impl<
         end: u64,
     ) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
+        self.ensure_unleased(
+            start,
+            end.checked_sub(start).ok_or(VmError::InvalidAddress)?,
+        )?;
         let first = self.lower_bound(start);
         let last = self.lower_bound(end);
         let mut failure = None;
@@ -541,6 +744,9 @@ impl<
     /// Dropping an unclosed space leaks ownership rather than reclaiming active memory.
     pub fn close(&mut self) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
+        if !self.executions.is_empty() {
+            return Err(VmError::InUse);
+        }
         for slot in 0..self.mappings.len() {
             if self.mappings[slot].is_some()
                 && let Err(error) = self.remove_mapping(slot)
@@ -560,6 +766,7 @@ impl<
         self.mapping_count = 0;
         self.mappings.release();
         self.tables.release();
+        self.executions = Vec::new();
         Ok(())
     }
 
@@ -717,9 +924,16 @@ fn take_mapping_ids(next: &mut Option<u64>, count: usize) -> Option<u64> {
     Some(first)
 }
 
+fn take_execution_id(next: &mut Option<u64>) -> Option<u64> {
+    let id = (*next)?;
+    *next = id.checked_add(1);
+    Some(id)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::take_mapping_ids;
+    use super::{ExecutionRange, Span, take_execution_id, take_mapping_ids};
+    use crate::mm::frame::FRAME_SIZE;
 
     #[test]
     fn mapping_identity_exhaustion_never_partially_reserves_or_wraps() {
@@ -731,5 +945,37 @@ mod tests {
         assert_eq!(take_mapping_ids(&mut next, 2), Some(u64::MAX - 1));
         assert_eq!(next, None);
         assert_eq!(take_mapping_ids(&mut next, 1), None);
+    }
+
+    #[test]
+    fn execution_identity_exhaustion_does_not_wrap_or_reuse() {
+        let mut next = Some(u64::MAX);
+        assert_eq!(take_execution_id(&mut next), Some(u64::MAX));
+        assert_eq!(next, None);
+        assert_eq!(take_execution_id(&mut next), None);
+    }
+
+    #[test]
+    fn guard_navigation_skips_the_full_interval_for_a_single_page_query() {
+        let start = 0x1_0000_0000;
+        let end = 0x400_0000_0000;
+        let range = ExecutionRange {
+            id: 1,
+            stack: Span {
+                start: end,
+                end: end + FRAME_SIZE,
+            },
+            tls: Span {
+                start: end + FRAME_SIZE,
+                end: end + 2 * FRAME_SIZE,
+            },
+            guard: Some(Span { start, end }),
+        };
+        assert_eq!(
+            range.guard_obstacle(start, start + FRAME_SIZE),
+            Some(end - FRAME_SIZE)
+        );
+        assert_eq!(range.guard_obstacle(start - FRAME_SIZE, start), None);
+        assert_eq!(range.guard_obstacle(end, end + FRAME_SIZE), None);
     }
 }

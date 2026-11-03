@@ -18,8 +18,12 @@
 //! Park/ParkUntil: RDI=private word VA, RSI=u32 expected; timed RDX=deadline.
 //! RDX returns 0 after wake or 1 on value mismatch. Wake: RDI=VA, RSI=maximum;
 //! RDX returns the number detached. Wake never changes or buffers the word value.
+//! ThreadCreateNative: RDI=version, RSI=entry, RDX=argument, R8/R9=stack base/bytes,
+//! R10/R11=TLS base/bytes, R12=FS base, R13=guard bytes, R14=flags (zero).
+//! Return RDX=thread-control handle. The runtime retains all supplied mappings.
 
 pub const ABI_VERSION: u32 = 0;
+pub const NATIVE_THREAD_VERSION: u64 = 1;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
@@ -85,6 +89,7 @@ pub enum Call {
     Park = 58,
     ParkUntil = 59,
     Wake = 60,
+    ThreadCreateNative = 61,
 }
 
 impl TryFrom<u64> for Call {
@@ -153,6 +158,7 @@ impl TryFrom<u64> for Call {
             58 => Ok(Self::Park),
             59 => Ok(Self::ParkUntil),
             60 => Ok(Self::Wake),
+            61 => Ok(Self::ThreadCreateNative),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -171,6 +177,7 @@ pub enum Error {
     Cancelled = 8,
     InvalidReply = 9,
     TimedOut = 10,
+    Busy = 11,
 }
 
 impl Error {
@@ -196,7 +203,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=60 {
+        for number in 0..=61 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

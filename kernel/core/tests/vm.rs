@@ -1771,3 +1771,362 @@ fn private_invalidation_hooks_reject_active_backends_before_metadata_mutation() 
     memory.release(&mut space, base).unwrap();
     space.close().unwrap();
 }
+
+#[test]
+fn execution_leases_reject_retirement_before_callbacks_and_keep_private_credit() {
+    let pool = pool(64);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| Ok(ModelBackend::new(root, model.clone())),
+        16,
+        32,
+    )
+    .unwrap();
+    let budget = private_budget(16, 16);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, FRAME_SIZE).unwrap();
+    memory
+        .commit(&mut space, base + 2 * FRAME_SIZE, 2 * FRAME_SIZE)
+        .unwrap();
+    memory
+        .commit(&mut space, base + 6 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    let tls = base + 6 * FRAME_SIZE + 32;
+    let key = space.private_word_key(tls).unwrap();
+    let lease = space
+        .lease_execution(base + 2 * FRAME_SIZE, 2 * FRAME_SIZE, tls, 128, FRAME_SIZE)
+        .unwrap();
+    let protected = pool.stats();
+    let calls = Cell::new(0);
+    assert_eq!(
+        space.unmap_page_with(tls & !4095, || calls.set(calls.get() + 1)),
+        Err(VmError::InUse)
+    );
+    assert_eq!(
+        space.unmap_page_with(base + FRAME_SIZE, || calls.set(calls.get() + 1)),
+        Err(VmError::InUse)
+    );
+    assert_eq!(
+        memory.decommit_with(&mut space, base, 8 * FRAME_SIZE, |_, _| calls
+            .set(calls.get() + 1)),
+        Err(PrivateError::Vm(VmError::InUse))
+    );
+    assert_eq!(
+        memory.release_with(&mut space, base, |_, _| calls.set(calls.get() + 1)),
+        Err(PrivateError::Vm(VmError::InUse))
+    );
+    assert_eq!(
+        memory.commit(&mut space, base + FRAME_SIZE, FRAME_SIZE),
+        Err(PrivateError::Vm(VmError::InUse))
+    );
+    assert_eq!(
+        space.map_page(base + FRAME_SIZE, Permissions::ReadWrite, &[]),
+        Err(VmError::InUse)
+    );
+    assert_eq!(space.close(), Err(VmError::InUse));
+    assert_eq!(calls.get(), 0);
+    assert_eq!(space.private_word_key(tls), Ok(key));
+    assert_eq!(space.mapped_pages(), 4);
+    assert_eq!(budget.count(Resource::PrivatePages), 4);
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
+    assert_eq!(pool.stats(), protected);
+    assert!(!memory.retirement_pending());
+    space.release_execution(&lease).unwrap();
+    assert_eq!(space.private_word_key(tls), Ok(key));
+    memory.release(&mut space, base).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+    space.close().unwrap();
+    assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn execution_leases_allow_packed_tls_and_do_not_reuse_released_identity() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    for address in [0x40_0000, 0x40_1000, 0x50_0000] {
+        space
+            .map_page(address, Permissions::ReadWrite, &[])
+            .unwrap();
+    }
+    let first = space
+        .lease_execution(0x40_0000, FRAME_SIZE, 0x50_0020, 64, 0)
+        .unwrap();
+    let second = space
+        .lease_execution(0x40_1000, FRAME_SIZE, 0x50_0060, 64, 0)
+        .unwrap();
+    for address in [0x50_0020, 0x50_005f] {
+        assert_eq!(space.execution_tls_contains(&first, address), Ok(true));
+        assert_eq!(space.execution_tls_contains(&second, address), Ok(false));
+    }
+    for address in [0, 0x50_001f, 0x50_0060] {
+        assert_eq!(space.execution_tls_contains(&first, address), Ok(false));
+    }
+    assert_eq!(space.execution_tls_contains(&second, 0x50_0060), Ok(true));
+    assert!(matches!(
+        space.lease_execution(0x40_2000, FRAME_SIZE, 0x50_0040, 64, 0),
+        Err(VmError::InUse)
+    ));
+    assert_eq!(space.unmap_page(0x50_0000), Err(VmError::InUse));
+    space.release_execution(&first).unwrap();
+    assert_eq!(
+        space.execution_tls_contains(&first, 0x50_0020),
+        Err(VmError::InvalidAddress)
+    );
+    assert_eq!(space.unmap_page(0x50_0000), Err(VmError::InUse));
+    space.unmap_page(0x40_0000).unwrap();
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    let replacement = space
+        .lease_execution(0x40_0000, FRAME_SIZE, 0x50_0020, 64, 0)
+        .unwrap();
+    assert_eq!(
+        space.release_execution(&first),
+        Err(VmError::InvalidAddress)
+    );
+    assert_eq!(space.unmap_page(0x40_0000), Err(VmError::InUse));
+    let mut other = Space::new(&pool, |root| Ok(ModelBackend::new(root, model.clone()))).unwrap();
+    assert_eq!(
+        other.release_execution(&replacement),
+        Err(VmError::InvalidAddress)
+    );
+    assert_eq!(
+        other.execution_tls_contains(&replacement, 0x50_0020),
+        Err(VmError::InvalidAddress)
+    );
+    other.close().unwrap();
+    space.release_execution(&second).unwrap();
+    space.release_execution(&replacement).unwrap();
+    space.close().unwrap();
+}
+
+#[test]
+fn execution_ranges_validate_geometry_coverage_and_inactive_state() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    space
+        .map_page(0x50_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    for (base, bytes, tls, tls_bytes, guard) in [
+        (0x40_0001, 16, 0x50_0000, 64, 0),
+        (0x40_0000, 15, 0x50_0000, 64, 0),
+        (0x40_0000, 17, 0x50_0000, 64, 0),
+        (0x40_0000, 16, 0x50_0000, 0, 0),
+        (0x40_0000, 16, 0x40_0000, 64, 0),
+        (0x40_0000, 16, u64::MAX - 7, 16, 0),
+        (0x40_0000, 16, 0x50_0000, 64, 1),
+        (0x40_0010, 16, 0x50_0000, 64, FRAME_SIZE),
+        (0x40_0000, 16, 0x3f_f000, 64, FRAME_SIZE),
+    ] {
+        assert!(matches!(
+            space.lease_execution(base, bytes, tls, tls_bytes, guard),
+            Err(VmError::InvalidAddress)
+        ));
+    }
+    assert!(matches!(
+        space.lease_execution(0x40_0000, 2 * FRAME_SIZE, 0x50_0000, 64, 0),
+        Err(VmError::NotMapped)
+    ));
+    model.active_root.set(space.root_frame().unwrap());
+    assert!(matches!(
+        space.lease_execution(0x40_0000, 16, 0x50_0000, 64, 0),
+        Err(VmError::Backend(ModelError::Active))
+    ));
+    model.active_root.set(0);
+    let lease = space
+        .lease_execution(0x40_0000, 16, 0x50_0000, 64, 0)
+        .unwrap();
+    model.active_root.set(space.root_frame().unwrap());
+    assert_eq!(
+        space.release_execution(&lease),
+        Err(VmError::Backend(ModelError::Active))
+    );
+    model.active_root.set(0);
+    assert_eq!(space.close(), Err(VmError::InUse));
+    space.release_execution(&lease).unwrap();
+    space.close().unwrap();
+}
+
+#[test]
+fn execution_ranges_reject_nonprivate_and_unpublished_backing() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let mut space = shared_space(&pool, &model);
+    let mut initializer = Initializer {
+        model: model.clone(),
+        fail_after: None,
+        calls: 0,
+    };
+    let memory = Memory::new(&pool, 1, &mut initializer).unwrap();
+    let object = objects.create(ObjectKind::Memory, memory).unwrap();
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    space
+        .map_page(0x50_0000, Permissions::ReadOnly, &[])
+        .unwrap();
+    space
+        .map_page(0x50_1000, Permissions::ReadExecute, &[])
+        .unwrap();
+    space
+        .map_shared_page(
+            0x50_2000,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 0),
+        )
+        .unwrap();
+    for tls in [0x50_0000, 0x50_1000, 0x50_2000] {
+        assert!(matches!(
+            space.lease_execution(0x40_0000, FRAME_SIZE, tls, 64, 0),
+            Err(VmError::InvalidPermissions)
+        ));
+    }
+    model.fail_map_address.set(Some(0x60_0000));
+    model.fail_restore.set(true);
+    assert_eq!(
+        space.map_page(0x60_0000, Permissions::ReadWrite, &[]),
+        Err(VmError::Backend(ModelError::Injected))
+    );
+    assert!(matches!(
+        space.lease_execution(0x40_0000, FRAME_SIZE, 0x60_0000, 64, 0),
+        Err(VmError::NotMapped)
+    ));
+    model.fail_restore.set(false);
+    space.close().unwrap();
+    drop(space);
+    drop(object);
+}
+
+#[test]
+fn execution_guard_holes_block_shared_mapping_and_reservations_skip_them() {
+    let pool = pool(64);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let mut space = shared_space(&pool, &model);
+    let base = 0x1_0000_0000;
+    space
+        .map_page(base + 2 * FRAME_SIZE, Permissions::ReadWrite, &[])
+        .unwrap();
+    space
+        .map_page(base + 4 * FRAME_SIZE, Permissions::ReadWrite, &[])
+        .unwrap();
+    let lease = space
+        .lease_execution(
+            base + 2 * FRAME_SIZE,
+            FRAME_SIZE,
+            base + 4 * FRAME_SIZE,
+            64,
+            FRAME_SIZE,
+        )
+        .unwrap();
+    let mut initializer = Initializer {
+        model: model.clone(),
+        fail_after: None,
+        calls: 0,
+    };
+    let object = objects
+        .create(
+            ObjectKind::Memory,
+            Memory::new(&pool, 1, &mut initializer).unwrap(),
+        )
+        .unwrap();
+    assert_eq!(
+        space.map_shared_page(
+            base + FRAME_SIZE,
+            Permissions::ReadWrite,
+            Page::new(object.try_clone().unwrap(), 0)
+        ),
+        Err(VmError::InUse)
+    );
+    let budget = private_budget(8, 8);
+    let mut memory = PrivateVm::new();
+    let first = memory
+        .reserve(&space, &budget, FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    let second = memory
+        .reserve(&space, &budget, FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    assert_eq!(first, base);
+    assert_eq!(second, base + 3 * FRAME_SIZE);
+    memory.release(&mut space, first).unwrap();
+    memory.release(&mut space, second).unwrap();
+    space.release_execution(&lease).unwrap();
+    let first = memory
+        .reserve(&space, &budget, FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    let reused_guard = memory
+        .reserve(&space, &budget, FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    assert_eq!(reused_guard, base + FRAME_SIZE);
+    memory.release(&mut space, first).unwrap();
+    memory.release(&mut space, reused_guard).unwrap();
+    space.close().unwrap();
+    drop(space);
+    drop(object);
+    assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn dropped_execution_token_keeps_backing_and_guard_protected() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    space
+        .map_page(0x50_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    {
+        let _lease = space
+            .lease_execution(0x40_0000, FRAME_SIZE, 0x50_0000, 64, FRAME_SIZE)
+            .unwrap();
+    }
+    let protected = pool.stats();
+    assert_eq!(space.unmap_page(0x40_0000), Err(VmError::InUse));
+    assert_eq!(
+        space.map_page(0x3f_f000, Permissions::ReadWrite, &[]),
+        Err(VmError::InUse)
+    );
+    assert_eq!(space.close(), Err(VmError::InUse));
+    assert_eq!(pool.stats(), protected);
+    drop(space);
+    assert_eq!(pool.stats(), protected);
+}
+
+#[test]
+fn reservations_skip_a_large_execution_guard_as_one_obstacle() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    let arena = 0x1_0000_0000;
+    let stack = 0x400_0000_0000;
+    let tls = stack + FRAME_SIZE;
+    space.map_page(stack, Permissions::ReadWrite, &[]).unwrap();
+    space.map_page(tls, Permissions::ReadWrite, &[]).unwrap();
+    let lease = space
+        .lease_execution(stack, FRAME_SIZE, tls, 64, stack - arena)
+        .unwrap();
+    let budget = private_budget(1, 1);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    assert_eq!(base, tls + FRAME_SIZE);
+    memory.release(&mut space, base).unwrap();
+    space.release_execution(&lease).unwrap();
+    space.close().unwrap();
+}

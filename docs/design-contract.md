@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.10, 2026-11-03.
+Version 0.11, 2026-11-03.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -98,6 +98,29 @@ Kernel mappings are supervisor-only. User executable memory must satisfy W^X acr
 
 Prepare executable images privately. Remove write access and finish device writes before publishing executable mappings. The initial design keeps the resulting execution state immutable. JIT and later permission transitions need a separate contract.
 
+### Runtime-owned thread memory
+
+Lease declared private RW stack/TLS spans and optional unmapped guards before
+publishing a native thread. Stack base/end follow the entry ABI's 16-byte
+alignment; byte-granular TLS spans may share a page when their ranges do not
+overlap. FS starts inside the leased TLS span, and SetTls cannot move that
+native thread outside it. The kernel does not interpret TCB contents.
+
+Core map, unmap, commit, decommit, release and space close must reject a
+conflicting lease with InUse before changing retirement state or invalidating
+waits. Admitted native lease conflicts return Busy. Legacy MemoryMap/Unmap keep
+their reserved private-VM arena exclusion as InvalidArgument before that check.
+Guard holes remain protected from commit and map throughout execution. Failed
+unpublished creation releases its user lease while retaining any kernel stack
+whose cleanup is pending; runtime memory is never implicitly freed.
+
+After actual CPU handoff, release the memory lease before publishing native
+thread completion. Join permits memory reuse before kernel-resource reaping;
+the thread charge still follows successful kernel cleanup. User backing remains
+mapped after exit and reaping. Dropping a lease token or closing its thread
+handle must not authorize early reclamation. See
+[ADR 0027](decisions/0027-runtime-owned-thread-memory.md).
+
 ## CPU and thread state
 
 The native platform requires x86-64-v3 hardware on every participating CPU.
@@ -110,12 +133,16 @@ GPU drivers and the graphics API remain in user space. See
 
 CPU-local state owns the CPU ID, current thread, GDT/TSS/IST, idle and emergency stacks, entry context, and preemption state.
 
-A thread owns its address-space reference, kernel stack, saved context, TLS, allowed FP/SIMD state, wait registrations, and termination state.
+A thread owns its address-space reference, kernel stack, saved context, allowed FP/SIMD state, execution-memory lease, wait registrations, and termination state. Its runtime owns native user stack/TLS allocation and destruction.
 
 Native static TLS uses SysV AMD64 Variant II. The user runtime owns TCB layout,
 template initialization, allocation and destruction; the kernel supplies ordinary
 mappings and preserves FS base without interpreting libc-private fields.
 Observe actual execution completion before reclaiming a thread's TLS or stack.
+Raw threads start with fresh CPU data state. A POSIX-facing runtime must supply
+its required environment inheritance and cleanup before entering or leaving
+application code; the rounding-control fixture does not establish full pthread
+semantics.
 The current compiler-TLS fixture and its limits are recorded in
 [ADR 0025](decisions/0025-static-tls-and-elf-metadata.md).
 
@@ -143,6 +170,8 @@ registration with wake. The kernel snapshots validated backing without user
 references while all execution leases are quiescent. Keys include space and
 mapping lifetimes plus the word address; they do not pin backing. Detach affected
 waits before unmap, decommit, managed stack/TLS cleanup or process retirement.
+Native thread exit alone leaves runtime storage mapped. Reusing an atomic or
+TCB in place requires runtime waiter-lifetime rules beyond mapping identity.
 Reserve word metadata before charging or publishing a wait. Completion and
 cancellation must not allocate, and Ready waits retain their charge until
 consumed. Sample due deadlines at native-call admission before request progress.

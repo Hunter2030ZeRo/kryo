@@ -74,6 +74,7 @@ pub(crate) fn dispatch(
 
 fn map_error<E>(error: PrivateError<E>) -> Error {
     match error {
+        PrivateError::Vm(VmError::InUse) => Error::Busy,
         PrivateError::InvalidRange | PrivateError::Conflict => Error::InvalidArgument,
         PrivateError::OutOfResources | PrivateError::RetirementPending => Error::OutOfResources,
         PrivateError::Vm(

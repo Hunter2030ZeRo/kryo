@@ -98,6 +98,7 @@ pub(crate) fn check(
         let mut tls_checked = false;
         let mut private_vm_checked = false;
         let mut words_checked = false;
+        let mut native_threads_checked = false;
         let mut words_halted = false;
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
@@ -124,6 +125,11 @@ pub(crate) fn check(
             }
             if calls.last_debug == Some((task, 94, 2)) {
                 tls_checked = true;
+            }
+            if calls.last_debug == Some((task, 97, 1)) && !native_threads_checked {
+                assert_eq!(account.count(Resource::PrivatePages), 0);
+                assert_eq!(account.count(Resource::ReservedPages), 0);
+                native_threads_checked = true;
             }
             if calls.last_debug == Some((task, 95, 1)) && !private_vm_checked {
                 assert_eq!(account.count(Resource::PrivatePages), 4);
@@ -156,6 +162,7 @@ pub(crate) fn check(
         assert!(tls_checked, "Missing static TLS thread isolation proof");
         assert!(private_vm_checked, "Missing private VM ownership proof");
         assert!(words_checked, "Missing atomic private wait proof");
+        assert!(native_threads_checked, "Missing runtime-owned thread proof");
         assert!(
             words_halted,
             "Private wait deadline did not halt the idle CPU"
@@ -207,4 +214,5 @@ pub(crate) fn check(
     kryo_hal::emergency_write_str(
         "WAIT: private atomic park wake retirement OK threads=11 halt=true\n",
     );
+    kryo_hal::emergency_write_str("THREAD: runtime-owned stack TLS and rounding OK threads=2\n");
 }

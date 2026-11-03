@@ -146,6 +146,9 @@ impl PrivateVm {
         let (index, end, pages) = self
             .range(address, bytes)
             .ok_or(PrivateError::InvalidRange)?;
+        space
+            .ensure_unleased(address, bytes)
+            .map_err(PrivateError::Vm)?;
         let region = &mut self.regions[index];
         if region.closing
             || region
@@ -236,6 +239,9 @@ impl PrivateVm {
         let (index, end, _) = self
             .range(address, bytes)
             .ok_or(PrivateError::InvalidRange)?;
+        space
+            .ensure_unleased(address, bytes)
+            .map_err(PrivateError::Vm)?;
         let region = &mut self.regions[index];
         if region.closing {
             return Err(PrivateError::Conflict);
@@ -296,6 +302,9 @@ impl PrivateVm {
             .binary_search_by_key(&base, |region| region.start)
             .map_err(|_| PrivateError::InvalidRange)?;
         let region = &mut self.regions[index];
+        space
+            .ensure_unleased(region.start, region.end - region.start)
+            .map_err(PrivateError::Vm)?;
         region.closing = true;
         for part in &mut region.commits {
             part.state = State::Retiring;

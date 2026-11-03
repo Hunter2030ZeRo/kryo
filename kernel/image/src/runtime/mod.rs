@@ -21,6 +21,8 @@ pub(crate) mod startup;
 pub(crate) mod supervision;
 mod tasks;
 pub(crate) mod threads;
+#[cfg(feature = "boot-tests")]
+pub(crate) use threads::native_checks::run as check_native_threads;
 pub(crate) mod transport;
 
 use crate::boot::memory::BootFramePool;
@@ -156,6 +158,7 @@ pub(crate) struct ProcessResources<'kernel, 'objects> {
 }
 
 pub(crate) struct ThreadResources<'kernel, 'objects> {
+    pub(crate) execution: Option<kryo_core::mm::vm::ExecutionLease>,
     pub(crate) context: UserContext,
     pub(crate) stack: KernelStack,
     pub(crate) ticks: usize,
@@ -176,6 +179,7 @@ pub(crate) struct ThreadResources<'kernel, 'objects> {
 }
 
 pub(crate) struct Resources<'kernel, 'objects> {
+    pub(crate) execution: Option<kryo_core::mm::vm::ExecutionLease>,
     pub(crate) process: ProcessResources<'kernel, 'objects>,
     pub(crate) context: UserContext,
     pub(crate) stack: KernelStack,
@@ -253,6 +257,9 @@ impl ThreadResources<'_, '_> {
         region: &mut KernelRegion,
         space: &mut UserSpace<'_, SharedLease<'_>>,
     ) -> Result<(), &'static str> {
+        if self.execution.is_some() {
+            return Err("Thread execution memory has not retired");
+        }
         unsafe { self.stack.close(pool, region) }.map_err(|_| "Cannot close thread entry stack")?;
         if self.user_stack_owned {
             for page in user_pages(self.user_slot) {
@@ -277,6 +284,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         (
             self.process,
             ThreadResources {
+                execution: self.execution,
                 context: self.context,
                 stack: self.stack,
                 ticks: self.ticks,
@@ -304,6 +312,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
     ) -> Self {
         Self {
             process,
+            execution: thread.execution,
             context: thread.context,
             stack: thread.stack,
             ticks: thread.ticks,
@@ -330,6 +339,13 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         pool: &BootFramePool,
         region: &mut KernelRegion,
     ) -> Result<(), &'static str> {
+        if let Some(lease) = self.execution.as_ref() {
+            self.process
+                .space
+                .release_execution(lease)
+                .map_err(|_| "Cannot release unpublished execution memory")?;
+            self.execution = None;
+        }
         unsafe { self.stack.close(pool, region) }
             .map_err(|_| "Cannot close unpublished entry stack")?;
         self.process.close(pool, region)

@@ -56,6 +56,12 @@ files/streams are still required. The managed scratch TLS page and eight-page
 shared-object API remain separate mechanisms. See
 [interfaces](../interfaces.md) and [the private-VM decision](0026-private-vm-and-atomic-waits.md).
 
+[ThreadCreateNative](0027-runtime-owned-thread-memory.md) now borrows runtime
+stack/TLS spans and protects unmapped guards until actual execution completion.
+The runtime prepares its TCB before publication and can reclaim backing after
+native join. POSIX attributes, complete environment/signal inheritance,
+joinable/detached policy and cleanup remain libc/runtime responsibilities.
+
 ## Bring-up order
 
 1. Define the native user ABI and toolchain sysroot separately from the kernel
@@ -69,7 +75,8 @@ shared-object API remain separate mechanisms. See
    the runtime's `crt0`, full TCB, user allocator and shared platform client.
    Preserve argument, thread-local, allocation-failure and retirement checks in
    actual user execution. Connect the implemented private compare-before-park
-   protocol; it is not supplied by notifications alone.
+   protocol and runtime-owned thread creation; notifications alone do not supply
+   atomic private waiting.
 3. Port one libc through a small native OS interface. Connect standard streams,
    filesystem descriptors, timing and thread synchronization to real services.
    Add the POSIX-facing surface required by applications incrementally; no

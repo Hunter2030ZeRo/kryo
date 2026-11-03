@@ -11,6 +11,9 @@ use kryo_core::resource::{Charge, Resource};
 use kryo_core::task::TaskId;
 use kryo_interfaces::syscall::Error;
 
+#[cfg(feature = "boot-tests")]
+pub(crate) mod native_checks;
+
 /// Resources of an unpublished thread remain owned until cleanup finishes.
 pub(crate) struct PendingThread {
     stack: Option<KernelStack>,
@@ -45,11 +48,13 @@ impl PendingThread {
             }
             self.stack = None;
         }
-        for (index, page) in user_pages(self.user_slot).into_iter().enumerate() {
-            if self.attempted[index] {
-                match space.unmap_page_with(page, || before(page, page + 4096)) {
-                    Ok(()) | Err(VmError::NotMapped) => self.attempted[index] = false,
-                    Err(_) => return false,
+        if self.attempted.iter().any(|attempted| *attempted) {
+            for (index, page) in user_pages(self.user_slot).into_iter().enumerate() {
+                if self.attempted[index] {
+                    match space.unmap_page_with(page, || before(page, page + 4096)) {
+                        Ok(()) | Err(VmError::NotMapped) => self.attempted[index] = false,
+                        Err(_) => return false,
+                    }
                 }
             }
         }
@@ -71,6 +76,144 @@ pub(crate) fn reserved_address(address: u64) -> bool {
 pub(super) fn create<'kernel, 'objects>(
     caller: TaskId,
     context: UserContext,
+    tasks: &mut Tasks<'kernel, 'objects>,
+    ipc: &mut IpcRuntime<'objects>,
+    stats: &mut CallStats,
+    region: &mut KernelRegion,
+) -> Result<u64, Error> {
+    create_thread(
+        caller,
+        Start::Managed {
+            entry: context.rdi,
+            argument: context.rsi,
+        },
+        tasks,
+        ipc,
+        stats,
+        region,
+    )
+}
+
+pub(super) fn create_native<'kernel, 'objects>(
+    caller: TaskId,
+    context: UserContext,
+    tasks: &mut Tasks<'kernel, 'objects>,
+    ipc: &mut IpcRuntime<'objects>,
+    stats: &mut CallStats,
+    region: &mut KernelRegion,
+) -> Result<u64, Error> {
+    create_thread(
+        caller,
+        Start::Native(NativeStart::new(context)?),
+        tasks,
+        ipc,
+        stats,
+        region,
+    )
+}
+
+enum Start {
+    Managed { entry: u64, argument: u64 },
+    Native(NativeStart),
+}
+
+impl Start {
+    fn entry(&self) -> u64 {
+        match self {
+            Self::Managed { entry, .. } => *entry,
+            Self::Native(start) => start.entry,
+        }
+    }
+}
+
+struct NativeStart {
+    entry: u64,
+    argument: u64,
+    stack_base: u64,
+    stack_bytes: u64,
+    stack_end: u64,
+    tls_base: u64,
+    tls_bytes: u64,
+    fs_base: u64,
+    guard_bytes: u64,
+}
+
+impl NativeStart {
+    fn new(context: UserContext) -> Result<Self, Error> {
+        if context.rdi != 1 || context.r14 != 0 {
+            return Err(Error::InvalidArgument);
+        }
+        let stack_end = user_end(context.r8, context.r9)?;
+        let tls_end = user_end(context.r10, context.r11)?;
+        if context.r9 < 16
+            || stack_end >= 1 << 47
+            || !context.r8.is_multiple_of(16)
+            || !stack_end.is_multiple_of(16)
+            || !(context.r10..tls_end).contains(&context.r12)
+            || !context.r13.is_multiple_of(4096)
+            || (context.r13 != 0 && !context.r8.is_multiple_of(4096))
+            || reserved_range(context.r8, stack_end)
+            || reserved_range(context.r10, tls_end)
+        {
+            return Err(Error::InvalidArgument);
+        }
+        if context.r13 != 0 {
+            let guard = context
+                .r8
+                .checked_sub(context.r13)
+                .ok_or(Error::InvalidArgument)?;
+            user_end(guard, context.r13)?;
+            if reserved_range(guard, context.r8) {
+                return Err(Error::InvalidArgument);
+            }
+        }
+        Ok(Self {
+            entry: context.rsi,
+            argument: context.rdx,
+            stack_base: context.r8,
+            stack_bytes: context.r9,
+            stack_end,
+            tls_base: context.r10,
+            tls_bytes: context.r11,
+            fs_base: context.r12,
+            guard_bytes: context.r13,
+        })
+    }
+}
+
+fn user_end(base: u64, bytes: u64) -> Result<u64, Error> {
+    let end = base.checked_add(bytes).ok_or(Error::InvalidArgument)?;
+    if base == 0 || bytes == 0 || end > 1 << 47 {
+        return Err(Error::InvalidArgument);
+    }
+    Ok(end)
+}
+
+fn reserved_range(start: u64, end: u64) -> bool {
+    end > super::THREAD_ARENA
+        || super::USER_STACKS
+            .into_iter()
+            .any(|stack| start < stack + 16_384 && stack - 4096 < end)
+        || super::USER_TLS
+            .into_iter()
+            .any(|tls| start < tls + 4096 && tls < end)
+}
+
+fn map_execution_error<E>(error: VmError<E>) -> Error {
+    match error {
+        VmError::InvalidAddress
+        | VmError::InvalidContents
+        | VmError::InvalidPermissions
+        | VmError::AlreadyMapped
+        | VmError::NotMapped => Error::InvalidArgument,
+        VmError::InUse => Error::Busy,
+        _ => Error::OutOfResources,
+    }
+}
+
+fn create_thread<'kernel, 'objects>(
+    caller: TaskId,
+    start: Start,
     tasks: &mut Tasks<'kernel, 'objects>,
     ipc: &mut IpcRuntime<'objects>,
     stats: &mut CallStats,
@@ -103,9 +246,10 @@ pub(super) fn create<'kernel, 'objects>(
         }
         owner.pending = None;
     }
-    if context.rdi == 0
-        || context.rdi >= 1 << 47
-        || owner.space.permissions(context.rdi & !4095) != Some(Permissions::ReadExecute)
+    let entry = start.entry();
+    if entry == 0
+        || entry >= 1 << 47
+        || owner.space.permissions(entry & !4095) != Some(Permissions::ReadExecute)
     {
         return Err(Error::InvalidArgument);
     }
@@ -115,19 +259,24 @@ pub(super) fn create<'kernel, 'objects>(
         .map(|account| account.try_charge(Resource::Threads, 1))
         .transpose()
         .map_err(|_| Error::OutOfResources)?;
-    let user_slot = (0..)
-        .find(|slot| {
-            !tasks
-                .process_threads(process)
-                .unwrap()
-                .any(|task| tasks.thread(task).unwrap().user_slot == *slot)
-        })
-        .ok_or(Error::OutOfResources)?;
-    let (user_stack, user_tls) = thread_addresses(user_slot).ok_or(Error::OutOfResources)?;
+    let managed = matches!(start, Start::Managed { .. });
+    let user_slot = if managed {
+        (0..)
+            .find(|slot| {
+                !tasks
+                    .process_threads(process)
+                    .unwrap()
+                    .any(|task| tasks.thread(task).unwrap().user_slot == *slot)
+            })
+            .ok_or(Error::OutOfResources)?
+    } else {
+        usize::MAX
+    };
     let owner = tasks.process_mut(process).unwrap();
-    if user_pages(user_slot)
-        .into_iter()
-        .any(|page| owner.space.permissions(page).is_some())
+    if managed
+        && user_pages(user_slot)
+            .into_iter()
+            .any(|page| owner.space.permissions(page).is_some())
     {
         return Err(Error::OutOfResources);
     }
@@ -141,18 +290,44 @@ pub(super) fn create<'kernel, 'objects>(
         user_slot,
         thread_charge: charge,
     };
+    let mut execution = None;
     let result = (|| {
         let extended = ExtendedState::new().map_err(|_| Error::InvalidArgument)?;
         let owner = tasks.process_mut(process).unwrap();
-        for (index, page) in user_pages(user_slot).into_iter().enumerate() {
-            // A failed map may retain an unpublished frame. No prior mapping
-            // can occupy this reserved arena, so cleanup owns this attempt.
-            pending.attempted[index] = true;
-            owner
-                .space
-                .map_page(page, Permissions::ReadWrite, &[])
-                .map_err(|_| Error::OutOfResources)?;
-        }
+        let (argument, stack_end, tls_base, fs_base) = match &start {
+            Start::Managed { argument, .. } => {
+                let (stack, tls) = thread_addresses(user_slot).ok_or(Error::OutOfResources)?;
+                for (index, page) in user_pages(user_slot).into_iter().enumerate() {
+                    // Failed publication can still retain an alias owner.
+                    pending.attempted[index] = true;
+                    owner
+                        .space
+                        .map_page(page, Permissions::ReadWrite, &[])
+                        .map_err(|_| Error::OutOfResources)?;
+                }
+                (*argument, stack + 16_384, tls, tls)
+            }
+            Start::Native(start) => {
+                execution = Some(
+                    owner
+                        .space
+                        .lease_execution(
+                            start.stack_base,
+                            start.stack_bytes,
+                            start.tls_base,
+                            start.tls_bytes,
+                            start.guard_bytes,
+                        )
+                        .map_err(map_execution_error)?,
+                );
+                (
+                    start.argument,
+                    start.stack_end,
+                    start.tls_base,
+                    start.fs_base,
+                )
+            }
+        };
         match KernelStack::try_new(pool, direct, region, first_slot) {
             Ok(stack) => pending.stack = Some(stack),
             Err(failure) => {
@@ -160,13 +335,12 @@ pub(super) fn create<'kernel, 'objects>(
                 return Err(Error::OutOfResources);
             }
         }
-        let mut initial = UserContext::new(context.rdi, user_stack + 16_384)
-            .map_err(|_| Error::InvalidArgument)?;
-        initial.rdi = context.rsi;
-        initial.rsi = user_tls;
+        let mut initial = UserContext::new(entry, stack_end).map_err(|_| Error::InvalidArgument)?;
+        initial.rdi = argument;
+        initial.rsi = tls_base;
         initial.rdx = u64::from(extended.avx_enabled());
         initial
-            .set_fs_base(user_tls)
+            .set_fs_base(fs_base)
             .map_err(|_| Error::InvalidArgument)?;
         let control = arena
             .create(
@@ -188,9 +362,10 @@ pub(super) fn create<'kernel, 'objects>(
             pool,
             memory,
             extended: Some(extended),
+            execution: execution.take(),
             direct,
             user_slot,
-            user_stack_owned: true,
+            user_stack_owned: managed,
             thread_control: Some(thread_owner),
             thread_charge: pending.thread_charge.take(),
         };
@@ -199,6 +374,7 @@ pub(super) fn create<'kernel, 'objects>(
             Err(mut failure) => {
                 pending.thread_charge = failure.resources.thread_charge.take();
                 pending.stack = Some(failure.resources.stack);
+                execution = failure.resources.execution.take();
                 return Err(Error::OutOfResources);
             }
         };
@@ -228,6 +404,12 @@ pub(super) fn create<'kernel, 'objects>(
     })();
     if result.is_err() {
         let owner = tasks.process_mut(process).unwrap();
+        if let Some(lease) = execution.take() {
+            owner
+                .space
+                .release_execution(&lease)
+                .expect("Unpublished thread execution lease invariant");
+        }
         let space = owner.space.identity();
         if !pending.close_with(pool, region, &mut owner.space, |start, end| {
             ipc.invalidate_words(space, start, end);

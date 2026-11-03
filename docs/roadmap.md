@@ -7,7 +7,7 @@ Develop one verifiable capability at a time. The [design contract](design-contra
 | P01: Boot memory | Discover boot resources, distinguish address types, and preserve reserved memory | Complete |
 | P02: Physical frames | Normalize usable ranges, reserve runtime-sized frame metadata, establish ownership, and test allocation, return, exhaustion, and failed initialization | Runtime metadata and high-address allocation implemented; current large-memory evidence is recorded in status |
 | P03: Virtual memory | Own address spaces and mappings; enforce permissions and alias policy; reclaim frames after TLB completion; test protection and guard pages | Growing VM metadata, explicit private reserve/commit/decommit/release, shared backing, guarded entry stacks and acknowledged SMP retirement implemented; demand paging and table pruning pending |
-| P04: User entry | CPU-local state, user/kernel stacks, validated IRETQ entry and return, native calls, and user fault isolation | Static native ELF, CPU-local SMP FP/SIMD contexts, FS setup, and fault isolation implemented; general runtime and stable ABI pending |
+| P04: User entry | CPU-local state, user/kernel stacks, validated IRETQ entry and return, native calls, and user fault isolation | Static native ELF, CPU-local SMP FP/SIMD contexts, runtime-owned stack/TLS leases, FS setup, and fault isolation implemented; general runtime and stable ABI pending |
 | P05: Tasks and IPC | Timer, context switching, wait/wakeup, kernel objects, capabilities, endpoints, notifications, and shared memory | SMP execution, growing metadata, deadlines, delegation, native channels, atomic private word waits and shared resource accounts implemented; shared waits, CPU-time budgets and scheduling scalability pending |
 | P06: Services and DMA | Boot image, init, supervisor, device authority, DMA lifetime, and service failure recovery | Native supervisor, versioned atomic startup grants, role allowlists, private discovery gateways, generations and service replacement implemented for a configured inventory; mediated HPET IRQ, read-only PCI discovery and owned DMA storage implemented; private queued hardware DMA and Ring 3 block commands validated; general assignment and broader recovery pending |
 
@@ -20,8 +20,11 @@ and owned initial stack. The
 ELF metadata and runtime-owned compiler TLS. Explicit private VM now supplies
 page backing with separate virtual/RAM charges and retirement. Atomic private
 32-bit waits add compare-before-park, deadlines, bounded wake and invalidation
-before mapping retirement. Full mlibc startup, a user allocator and runtime-owned
-native thread resources remain pending. Use the
+before mapping retirement. Native thread creation now borrows runtime-prepared
+stack/TLS ranges, protects guards and releases their execution lease before
+join publication. Full mlibc startup, a user allocator and pthread cleanup
+remain pending. Use the [thread-memory contract](decisions/0027-runtime-owned-thread-memory.md)
+and the
 [memory/wait contracts](decisions/0026-private-vm-and-atomic-waits.md)
 when connecting mlibc synchronization. Review
 libc selection, parallel kernel ownership and the GPU-service interface before

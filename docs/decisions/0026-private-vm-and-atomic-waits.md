@@ -72,10 +72,15 @@ Fragmented-heap insertion and reservation scans are not yet optimized. These
 mechanisms establish ownership and failure behavior, not measured hardware
 performance or allocator efficiency.
 
-Native thread creation must eventually accept runtime-owned stack/TLS resources
-through a checked unpublished transaction. Preserve compatibility with earlier
-boot conventions while removing redundant scratch allocations from the general
-runtime. A logical exit flag cannot authorize premature stack/TLS reclamation.
+Native thread creation borrows runtime-owned stack/TLS resources through the
+checked transaction in [ADR 0027](0027-runtime-owned-thread-memory.md). Active
+execution leases also protect optional unmapped guards. Admitted private-VM
+commit, decommit and release conflicts return Busy before invalidation or
+retiring state; they do not quarantine the process. Legacy MemoryMap/Unmap keep
+their InvalidArgument exclusion for reserved private-VM arenas before reaching
+the core lease check. Actual completion releases the lease
+before native join, while user mappings and their quota remain owned by the
+runtime. A logical exit flag cannot authorize premature reclamation.
 
 ## Atomic private waits
 
@@ -118,6 +123,11 @@ pages can be observed by their process; cleanup retries invalidate them too.
 Cancellation completes detached
 waits with Cancelled. Failed validation or VM metadata preparation leaves the
 registration intact. Cancellation does not itself promise memory retirement.
+
+Native thread exit releases its execution lease but leaves runtime-owned
+storage mapped, so it does not by itself cancel waits on that storage. Reusing
+an atomic or TCB in place requires a runtime protocol to drain old waiters;
+mapping identity changes only when the backing mapping is replaced.
 
 Only actual word waits reserve word-queue capacity, after comparison/deadline
 checks and before charging or publishing a wait. The persistent wait table

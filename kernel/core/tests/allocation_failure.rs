@@ -442,3 +442,78 @@ fn word_queue_oom_preserves_admitted_waits_and_prepared_paths_do_not_allocate() 
     assert_eq!(waits.take(second), Ok(9));
     assert_eq!(budget.count(Resource::Waits), 0);
 }
+
+#[test]
+fn execution_lease_metadata_oom_preserves_mappings_and_admitted_ranges() {
+    let pool = FramePool::<1, 4, 1>::new();
+    let mut regions = [MemoryRegion {
+        range: PhysRange::from_base_len(0x1000, 128 * FRAME_SIZE).unwrap(),
+        kind: RegionKind::Usable,
+    }];
+    let mut output = [PhysRange::EMPTY; 1];
+    let plan = normalize_memory(&mut regions, &mut [], &mut output).unwrap();
+    unsafe { pool.initialize(plan) }.unwrap();
+    let before = pool.stats();
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| {
+            Ok(FixedVm {
+                root,
+                mappings: [None; 32],
+            })
+        },
+        32,
+        16,
+    )
+    .unwrap();
+    for index in 0..16 {
+        space
+            .map_page(0x40_0000 + index * FRAME_SIZE, Permissions::ReadWrite, &[])
+            .unwrap();
+    }
+    space
+        .map_page(0x50_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    let mapped = pool.stats();
+    let key = space.private_word_key(0x50_0000).unwrap();
+    assert!(matches!(
+        fail_allocations(|| space.lease_execution(0x40_0000, FRAME_SIZE, 0x50_0000, 64, 0)),
+        Err(VmError::MappingCapacity)
+    ));
+    assert_eq!(space.ensure_unleased(0x40_0000, FRAME_SIZE), Ok(()));
+    assert_eq!(space.private_word_key(0x50_0000), Ok(key));
+    assert_eq!(pool.stats(), mapped);
+
+    let mut leases = Vec::with_capacity(16);
+    leases.push(
+        space
+            .lease_execution(0x40_0000, FRAME_SIZE, 0x50_0000, 64, 0)
+            .unwrap(),
+    );
+    let mut failed = None;
+    for index in 1..16 {
+        let stack = 0x40_0000 + index * FRAME_SIZE;
+        let tls = 0x50_0000 + index * 64;
+        match fail_allocations(|| space.lease_execution(stack, FRAME_SIZE, tls, 64, 0)) {
+            Ok(lease) => leases.push(lease),
+            Err(VmError::MappingCapacity) => {
+                failed = Some(stack);
+                break;
+            }
+            Err(error) => panic!("Unexpected lease failure: {error:?}"),
+        }
+    }
+    let failed = failed.expect("Growing execution metadata did not reach allocation");
+    assert_eq!(space.ensure_unleased(failed, FRAME_SIZE), Ok(()));
+    assert_eq!(space.unmap_page(0x40_0000), Err(VmError::InUse));
+    assert_eq!(space.private_word_key(0x50_0000), Ok(key));
+    assert_eq!(pool.stats(), mapped);
+    for lease in &leases {
+        fail_allocations(|| space.release_execution(lease)).unwrap();
+    }
+    let lease = fail_allocations(|| space.lease_execution(0x40_0000, FRAME_SIZE, 0x50_0000, 64, 0))
+        .unwrap();
+    space.release_execution(&lease).unwrap();
+    space.close().unwrap();
+    assert_eq!(pool.stats(), before);
+}

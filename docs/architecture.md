@@ -45,7 +45,17 @@ User programs call the native ABI through their runtime or `libsys`. They do not
 
 Core now validates a bounded static ELF image into a borrowed page plan; image code copies those pages into owned RO/RW/RX mappings. Limine supplies the initial executable bytes as a retained module. The separate native test package has no dependency on privileged kernel packages. Extended user contexts own private FP/SIMD save areas; the kernel remains compiled without FP/SIMD use.
 
-A growing process registry owns each ProcessResources address space and handle table. A separate growing scheduler owns ThreadResources CPU state, FP/SIMD storage, guarded stacks, TLS, and waits. Process and thread IDs have independent generations. Process-control and thread-control objects retain terminal results independently of execution storage. Process resources remain retained until the final member's cleanup succeeds. [ADR 0009](decisions/0009-bsp-user-threads.md) defines the lifecycle; [ADR 0012](decisions/0012-growing-registries.md) defines metadata growth and failure.
+A growing process registry owns each ProcessResources address space and handle table. A separate growing scheduler owns ThreadResources CPU state, FP/SIMD storage, guarded kernel stacks, execution-memory leases and waits. Process and thread IDs have independent generations. Process-control and thread-control objects retain terminal results independently of execution storage. Process resources remain retained until the final member's cleanup succeeds. [ADR 0009](decisions/0009-bsp-user-threads.md) defines the lifecycle; [ADR 0012](decisions/0012-growing-registries.md) defines metadata growth and failure.
+
+ThreadCreateNative borrows runtime-provided private RW stack/TLS spans and an
+optional unmapped guard. The kernel validates and leases those ranges before
+publication, installs FS before user entry and creates only the kernel entry
+stack and CPU state. Core lease checks block conflicting mapping changes before
+invalidation. Admitted conflicts return Busy; legacy reserved-range exclusions
+retain InvalidArgument. Actual execution handoff releases the lease before terminal join
+publication; user mappings remain until their runtime removes them. Legacy
+ThreadCreate still supplies managed user storage. This ownership boundary is
+defined in [ADR 0027](decisions/0027-runtime-owned-thread-memory.md).
 
 The SMP runtime supports up to 255 xAPIC logical processors. Directed APIC IDs are 0..254; 255 is the broadcast destination. CPU sets span multiple 64-bit words, so a machine-word boundary does not limit ownership or retirement masks. Each owns its GDT/TSS, entry state, local timer, and kernel FP area. The BSP dispatches owned context payloads to AP mailboxes and may execute a job itself. Threads can run concurrently in one process root. Before native calls, VM changes, or cleanup, all workers save state and acknowledge their boot-CR3 reload. Core policy remains serialized on the BSP. Kernel mapping changes additionally require acknowledged global TLB invalidation. [ADR 0010](decisions/0010-smp-execution.md) defines these ownership and retirement rules.
 
@@ -68,7 +78,7 @@ defines charge ownership and the scheduler/SIMD boundary.
 
 An image-owned page allocator obtains physically contiguous runs from the frame pool and uses their retained HHDM aliases. Each allocation stores its run token in a private prefix and returns the entire run on deallocation. It allocates whole pages and can fail from physical fragmentation even when enough total RAM remains free. Slab allocation, CPU-local caches, and virtually contiguous heap backing are later work.
 
-Kernel entry stacks use guarded cells in a shared supervisor branch. Additional leaf tables extend the branch up to one GiB without replacing the parent links already cloned into user roots. Table owners remain retained through global TLB retirement. Private user stacks and TLS occupy a reserved user VA arena. These address budgets, physical memory, and retained resources still bound execution capacity. Frame metadata has no fixed four-GiB or 128-GiB size limit; raw boot-map and normalized-range counts remain bounded.
+Kernel entry stacks use guarded cells in a shared supervisor branch. Additional leaf tables extend the branch up to one GiB without replacing the parent links already cloned into user roots. Table owners remain retained through global TLB retirement. Legacy private user stacks and TLS occupy a reserved user VA arena; native runtime-owned threads do not consume those slots. These address budgets, physical memory, and retained resources still bound execution capacity. Frame metadata has no fixed four-GiB or 128-GiB size limit; raw boot-map and normalized-range counts remain bounded.
 
 HHDM split-table ownership grows as finer alias permissions are needed. Published split tables and their owner-vector heap backing remain kernel-owned. Guest reclamation checks account for both retained resources separately from process allocations; table coalescing is not implemented.
 
@@ -178,4 +188,8 @@ mapped ELF metadata and runtime-owned compiler static TLS. The full mlibc TCB
 and user allocator remain pending. Explicit private VM and atomic private waits
 provide page-backing and synchronization boundaries through
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
+[ADR 0027](decisions/0027-runtime-owned-thread-memory.md) adds runtime-owned
+thread memory and completion ordering. Full POSIX attributes, floating-point
+environment and signal inheritance, cleanup handlers and destructors remain
+runtime work; the raw kernel mechanism does not implement pthreads.
 Kernel hot replacement is a separate research topic from user-space service replacement.

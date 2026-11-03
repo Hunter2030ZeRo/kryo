@@ -281,6 +281,19 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
             return Err(TaskError::NotDying);
         }
         let process = self.process_for(task).ok_or(TaskError::InvalidId)?;
+        {
+            let resources = self.resources_mut(task)?;
+            if let Some(lease) = resources.thread.execution.as_ref() {
+                // User execution has handed off before terminal observation.
+                // Runtime-owned stacks/TLS may be reused after native join.
+                resources
+                    .process
+                    .space
+                    .release_execution(lease)
+                    .expect("Quiescent thread execution lease invariant");
+                resources.thread.execution = None;
+            }
+        }
         let thread = self.threads.resources_mut(task)?;
         let status = ExitStatus {
             reason: thread.exit_reason,

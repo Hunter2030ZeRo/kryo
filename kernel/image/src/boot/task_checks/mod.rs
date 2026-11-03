@@ -51,6 +51,7 @@ pub(super) fn run(
     launch_checks::run(pool, direct, kernel, region);
     spawn_checks::run(pool, direct, kernel, region);
     thread_checks::run(pool, direct, kernel, region);
+    crate::runtime::check_native_threads(pool, direct, kernel, region);
     crate::runtime::atomic_wait::checks::run(pool, direct, kernel, region);
     let cpus = crate::runtime::smp::start(mmio);
     crate::runtime::abi::check(pool, direct, kernel, region);
@@ -117,6 +118,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         context.r12 = SEED_A;
         context.r13 = SEED_B;
         Self {
+            execution: None,
             process: ProcessResources {
                 private_vm: kryo_core::mm::vm::PrivateVm::new(),
                 account: None,

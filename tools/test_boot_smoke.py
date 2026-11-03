@@ -10,9 +10,14 @@ class PciEvidenceTests(unittest.TestCase):
         tls = "TLS: ELF template and thread isolation OK threads=3\n"
         vm = "VM: private reserve commit retirement OK\n"
         words = "WAIT: private atomic park wake retirement OK threads=11 halt=true\n"
-        self.assertTrue(all(abi_checks(ready + retired + tls + vm + words, True).values()))
-        for log in (ready + tls + vm + words, retired + tls + vm + words, ready.replace("=1", "=0") + retired + tls + vm + words, ready + retired + vm + words, ready + retired + tls + words, ready + retired + tls + vm):
-            self.assertFalse(all(abi_checks(log, True).values()))
+        threads = "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
+        markers = [ready, retired, tls, vm, words, threads]
+        log = "".join(markers)
+        self.assertTrue(all(abi_checks(log, True).values()))
+        self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))
+        for index in range(len(markers)):
+            missing = "".join(markers[:index] + markers[index + 1:])
+            self.assertFalse(all(abi_checks(missing, True).values()))
         self.assertEqual(abi_checks("", False), {})
 
     def test_private_vm_requires_retirement_not_only_user_event(self):
@@ -26,6 +31,13 @@ class PciEvidenceTests(unittest.TestCase):
         self.assertFalse(abi_checks(log, True)["native_atomic_wait"])
         log += "WAIT: private atomic park wake retirement OK threads=11 halt=true\n"
         self.assertTrue(abi_checks(log, True)["native_atomic_wait"])
+
+    def test_runtime_threads_require_kernel_retirement_proof(self):
+        log = "USERLOG: process=0x100 event=97 value=1\n"
+        self.assertFalse(abi_checks(log, True)["native_runtime_threads"])
+        log += "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
+        self.assertTrue(abi_checks(log, True)["native_runtime_threads"])
+        self.assertFalse(abi_checks(log.replace("threads=2", "threads=1"), True)["native_runtime_threads"])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

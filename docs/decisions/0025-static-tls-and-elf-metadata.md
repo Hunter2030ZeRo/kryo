@@ -47,10 +47,11 @@ program headers and payload under the new comparison.
 
 ## Runtime fixture
 
-The opt-in probe uses native compiler local-exec TLS in C, C++ and Rust. Main and
-two native child threads copy initialized data, zero their own TLS BSS, check
-alignment and mutate independent values across yield/sleep/join. Runtime-owned
-private BSS slots provide storage; minimal TCBs contain a self pointer only.
+The opt-in probe uses native compiler local-exec TLS in C, C++ and Rust. The
+parent prepares initialized data, zero-filled BSS and TCBs before publishing its
+two native children. All three threads check alignment and mutate independent
+values across yield/sleep/join. Runtime-owned private BSS slots provide storage;
+minimal TCBs contain a self pointer only.
 Those TCBs are not mlibc TCBs and implement no DTV or destructor runtime.
 
 The fixture accepts TLS templates with p_vaddr modulo p_align equal to zero and
@@ -66,10 +67,13 @@ phases complete. Later private-wait checks add threads independently. Fixture
 thread budgets are not global scheduler limits. The fixture uses growing
 production registries instead of the old two-thread constructor.
 
-The existing ThreadCreate convention still provides a legacy stack/TLS scratch
-mapping. The new fixture supplies its own TLS separately. Removing that unused
-scratch allocation requires the reviewed general thread/VM contract; this probe
-does not establish production allocator efficiency.
+The two compiler-TLS children now use
+[ThreadCreateNative](0027-runtime-owned-thread-memory.md) with runtime-owned
+stacks and prepared TLS, without legacy scratch allocations. Eight later
+private-word children retain legacy ThreadCreate to test its managed TLS
+retirement. The probe checks runtime trampoline rounding inheritance while the
+kernel supplies fresh CPU data state; this is not complete POSIX fenv or
+production allocator support.
 
 ## Next contracts
 

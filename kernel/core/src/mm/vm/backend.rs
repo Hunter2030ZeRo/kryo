@@ -37,6 +37,7 @@ pub enum VmError<E> {
     TableCapacity,
     AlreadyMapped,
     NotMapped,
+    InUse,
     Closed,
 }
 

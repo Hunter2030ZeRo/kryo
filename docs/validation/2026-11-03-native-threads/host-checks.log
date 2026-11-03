@@ -1,0 +1,51 @@
+    Checking scopeguard v1.2.0
+   Compiling rustversion v1.0.23
+   Compiling const_fn v0.4.12
+    Checking bit_field v0.10.3
+    Checking volatile v0.4.6
+    Checking bitflags v2.13.2
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/kernel/image)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/interfaces)
+    Checking limine v0.6.5
+    Checking lock_api v0.4.14
+    Checking spin v0.12.3
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/kernel/core)
+    Checking x86_64 v0.15.5
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.06s
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/kernel/core)
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.82s
+    Checking scopeguard v1.2.0
+    Checking lock_api v0.4.14
+    Checking spin v0.12.3
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/kernel/core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.62s
+    Checking volatile v0.4.6
+    Checking bit_field v0.10.3
+    Checking bitflags v2.13.2
+    Checking x86_64 v0.15.5
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.13s
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/interfaces)
+   Compiling service-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/service-probe)
+   Compiling device-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/device-probe)
+   Compiling service-peer v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/service-peer)
+   Compiling supervisor v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/supervisor)
+   Compiling block-service v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/block-service)
+   Compiling registry-client v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/registry-client)
+   Compiling block-client v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/block-client)
+   Compiling bootstrap-worker v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/bootstrap-worker)
+   Compiling virtio-block v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/virtio-block)
+   Compiling echo-service v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/echo-service)
+   Compiling scale-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/scale-probe)
+   Compiling init v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/init)
+    Checking kryo-libsys v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/libsys)
+    Checking kryo-services v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/services)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.50s
+   Compiling compiler_builtins v0.1.160 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins)
+   Compiling core v0.0.0 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core)
+   Compiling abi-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/abi-probe)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/interfaces)
+    Checking kryo-libsys v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/native-thread-work/kryo/userspace/libsys)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 16.71s

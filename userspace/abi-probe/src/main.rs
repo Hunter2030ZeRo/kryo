@@ -35,6 +35,8 @@ static C_TLS_ADDRESSES: [AtomicU64; TLS_THREADS] = [const { AtomicU64::new(0) };
 static CPP_TLS_ADDRESSES: [AtomicU64; TLS_THREADS] = [const { AtomicU64::new(0) }; TLS_THREADS];
 static RUST_TLS_ADDRESSES: [AtomicU64; TLS_THREADS] = [const { AtomicU64::new(0) }; TLS_THREADS];
 static CHILD_READY: AtomicUsize = AtomicUsize::new(0);
+static CHILD_RELEASE: AtomicUsize = AtomicUsize::new(0);
+static RUNTIME_FP: AtomicU64 = AtomicU64::new(0);
 static WAIT_WORD: AtomicU32 = AtomicU32::new(0);
 static WORD_RESULTS: [AtomicUsize; 2] = [const { AtomicUsize::new(0) }; 2];
 static MANAGED_TLS: AtomicU64 = AtomicU64::new(0);
@@ -80,6 +82,8 @@ _start:
 tls_thread_start:
     cld
     xor ebp, ebp
+    fldcw word ptr [rip + {runtime_fp}]
+    ldmxcsr dword ptr [rip + {runtime_fp} + 4]
     call {thread}
     ud2
     .size tls_thread_start, .-tls_thread_start
@@ -95,6 +99,7 @@ word_thread_start:
 "#,
     main = sym probe_main,
     thread = sym tls_thread,
+    runtime_fp = sym RUNTIME_FP,
     word_thread = sym word_thread,
 );
 
@@ -703,35 +708,47 @@ fn slot(index: usize) -> *mut u8 {
         .wrapping_add(index * TLS_SLOT_BYTES)
 }
 
-fn initialize_tls(index: usize, template: TlsTemplate) {
-    let length = template
+fn tls_length(template: TlsTemplate) -> usize {
+    template
         .memory_bytes
         .checked_add(template.alignment - 1)
         .map(|size| size & !(template.alignment - 1))
         .filter(|size| *size <= TLS_SLOT_BYTES - 8)
-        .unwrap_or_else(|| exit(222));
+        .unwrap_or_else(|| exit(222))
+}
+
+fn prepare_tls(index: usize, template: TlsTemplate) -> u64 {
     let storage = slot(index);
-    let pointer = storage.wrapping_add(length);
+    let pointer = storage.wrapping_add(tls_length(template));
     // The fixture uses aligned PT_TLS and minimal FS:0 self-pointer TCBs.
     // These fixed private slots do not implement mlibc's complete TCB layout.
     unsafe {
         storage.write_bytes(0, TLS_SLOT_BYTES);
         core::ptr::copy_nonoverlapping(template.address as *const u8, storage, template.file_bytes);
         pointer.cast::<u64>().write(pointer as u64);
-        sys::set_tls(pointer as u64).unwrap_or_else(|_| exit(222));
     }
+    pointer as u64
+}
+
+fn initialize_tls(index: usize, template: TlsTemplate) {
+    let pointer = prepare_tls(index, template);
+    unsafe { sys::set_tls(pointer) }.unwrap_or_else(|_| exit(222));
+    verify_active_tls(index, pointer);
+}
+
+fn verify_active_tls(index: usize, pointer: u64) {
     let self_pointer: u64;
     unsafe {
         asm!("mov {}, qword ptr fs:[0]", out(reg) self_pointer, options(nostack, readonly, preserves_flags))
     };
-    if self_pointer != pointer as u64 {
+    if self_pointer != pointer {
         exit(222);
     }
     let c_address = unsafe { c_tls_address() };
     let cpp_address = unsafe { cpp_tls_address() };
     let rust_address = rust_tls_address();
-    let start = storage as u64;
-    let end = pointer as u64;
+    let start = slot(index) as u64;
+    let end = pointer;
     if !(start..end).contains(&c_address)
         || !(start..end).contains(&cpp_address)
         || !(start..end).contains(&rust_address)
@@ -829,15 +846,23 @@ extern "C" fn tls_thread(index: u64) -> ! {
     if !(1..TLS_THREADS as u64).contains(&index) {
         exit(225);
     }
-    initialize_tls(index as usize, template());
+    verify_active_tls(
+        index as usize,
+        slot(index as usize) as u64 + tls_length(template()) as u64,
+    );
+    check_inherited_rounding();
     check_initial_tls();
     let value = MAIN_TLS_VALUE + index;
     store_tls(value);
     CHILD_READY.fetch_add(1, Ordering::Release);
+    while CHILD_RELEASE.load(Ordering::Acquire) == 0 {
+        sys::yield_now().unwrap_or_else(|_| exit(225));
+    }
     for _ in 0..8 {
         sys::yield_now().unwrap_or_else(|_| exit(225));
         sys::sleep_for(100_000).unwrap_or_else(|_| exit(225));
         check_tls(value);
+        check_inherited_rounding();
     }
     // The POD TLS fixture owns no destructors. The joiner clears this slot only
     // after exit has ended every execution use of its FS base.
@@ -845,12 +870,48 @@ extern "C" fn tls_thread(index: u64) -> ! {
 }
 
 fn check_thread_tls(debug: Handle) {
-    let first = unsafe { sys::thread_create(tls_thread_start, 1) }.unwrap_or_else(|_| exit(225));
-    let second = unsafe { sys::thread_create(tls_thread_start, 2) }.unwrap_or_else(|_| exit(225));
+    let arena = reserve_private(10);
+    let first_memory = native_memory(arena + PAGE_BYTES, 1);
+    let second_memory = native_memory(arena + 6 * PAGE_BYTES, 2);
+    vm_result(sys::vm_commit(
+        first_memory.stack_base,
+        first_memory.stack_bytes,
+    ));
+    vm_result(sys::vm_commit(
+        second_memory.stack_base,
+        second_memory.stack_bytes,
+    ));
+    check_native_rejections(first_memory);
+    let original_fp = fp_controls();
+    let inherited_fp = (original_fp & !rounding_mask()) | (1 << 10) | (1 << 45);
+    unsafe { set_fp_controls(inherited_fp) };
+    RUNTIME_FP.store(fp_controls(), Ordering::Release);
+    let first = unsafe { sys::thread_create_native(tls_thread_start, 1, first_memory) }
+        .unwrap_or_else(|_| exit(225));
+    let second = unsafe { sys::thread_create_native(tls_thread_start, 2, second_memory) }
+        .unwrap_or_else(|_| exit(225));
+    unsafe { set_fp_controls(original_fp) };
     while CHILD_READY.load(Ordering::Acquire) != 2 {
         sys::yield_now().unwrap_or_else(|_| exit(225));
         check_tls(MAIN_TLS_VALUE);
     }
+    for memory in [first_memory, second_memory] {
+        expect_vm_error(
+            sys::vm_commit(memory.stack_base - PAGE_BYTES, PAGE_BYTES),
+            CallError::Busy,
+        );
+        expect_vm_error(
+            unsafe { sys::vm_decommit(memory.stack_base, memory.stack_bytes) },
+            CallError::Busy,
+        );
+        expect_vm_error(
+            unsafe { sys::memory_unmap(memory.tls_base) },
+            CallError::Busy,
+        );
+    }
+    expect_vm_error(unsafe { sys::vm_release(arena) }, CallError::Busy);
+    check_vm_usage(8, 10);
+    CHILD_RELEASE.store(1, Ordering::Release);
     for (index, thread) in [(1, first), (2, second)] {
         let status = sys::thread_join(thread).unwrap_or_else(|_| exit(225));
         if status.reason != sys::ExitReason::Exited || status.code != 0 {
@@ -866,6 +927,8 @@ fn check_thread_tls(debug: Handle) {
             }
         }
     }
+    vm_result(unsafe { sys::vm_release(arena) });
+    check_vm_usage(0, 0);
     for addresses in [&C_TLS_ADDRESSES, &CPP_TLS_ADDRESSES, &RUST_TLS_ADDRESSES] {
         for index in 0..TLS_THREADS {
             let address = addresses[index].load(Ordering::Acquire);
@@ -879,7 +942,101 @@ fn check_thread_tls(debug: Handle) {
         }
     }
     check_tls(MAIN_TLS_VALUE);
+    if fp_controls() & rounding_mask() != original_fp & rounding_mask() {
+        exit(226);
+    }
     sys::debug_log(debug, 94, 2).unwrap_or_else(|_| exit(207));
+    sys::debug_log(debug, 97, 1).unwrap_or_else(|_| exit(207));
+}
+
+fn native_memory(stack_base: u64, index: usize) -> sys::ThreadMemory {
+    sys::ThreadMemory {
+        stack_base,
+        stack_bytes: 4 * PAGE_BYTES,
+        tls_base: slot(index) as u64,
+        tls_bytes: TLS_SLOT_BYTES as u64,
+        fs_base: prepare_tls(index, template()),
+        guard_bytes: PAGE_BYTES,
+    }
+}
+
+fn check_native_rejections(memory: sys::ThreadMemory) {
+    let entry = tls_thread_start as *const () as u64;
+    for (version, flags, entry) in [(2, 0, entry), (1, 1, entry), (1, 0, 0)] {
+        expect_vm_error(
+            unsafe { raw_native_thread(version, flags, entry, memory) },
+            CallError::InvalidArgument,
+        );
+    }
+    let mut invalid = memory;
+    invalid.fs_base = memory.tls_base + memory.tls_bytes;
+    expect_vm_error(
+        unsafe { raw_native_thread(1, 0, entry, invalid) },
+        CallError::InvalidArgument,
+    );
+}
+
+unsafe fn raw_native_thread(
+    version: u64,
+    flags: u64,
+    entry: u64,
+    memory: sys::ThreadMemory,
+) -> Result<u64, sys::Error> {
+    let status: u64;
+    let result;
+    unsafe {
+        asm!("int 0x80",
+            inlateout("rax") Call::ThreadCreateNative as u64 => status,
+            in("rdi") version, in("rsi") entry, inlateout("rdx") 0u64 => result,
+            inlateout("r8") memory.stack_base => _, inlateout("r9") memory.stack_bytes => _,
+            inlateout("r10") memory.tls_base => _, inlateout("r11") memory.tls_bytes => _,
+            inlateout("r12") memory.fs_base => _, inlateout("r13") memory.guard_bytes => _,
+            inlateout("r14") flags => _, options(nostack));
+    }
+    if status == 0 {
+        Ok(result)
+    } else {
+        Err(sys::Error::Kernel(status as i64))
+    }
+}
+
+const fn rounding_mask() -> u64 {
+    (3 << 10) | (3 << 45)
+}
+
+fn fp_controls() -> u64 {
+    let mut control = 0u16;
+    let mut mxcsr = 0u32;
+    unsafe {
+        asm!("fnstcw [{control}]", "stmxcsr [{mxcsr}]",
+            control = in(reg) &mut control, mxcsr = in(reg) &mut mxcsr,
+            options(nostack, preserves_flags));
+    }
+    u64::from(control) | (u64::from(mxcsr) << 32)
+}
+
+unsafe fn set_fp_controls(value: u64) {
+    let control = value as u16;
+    let mxcsr = (value >> 32) as u32;
+    unsafe {
+        asm!("fldcw [{control}]", "ldmxcsr [{mxcsr}]",
+            control = in(reg) &control, mxcsr = in(reg) &mxcsr,
+            options(nostack, preserves_flags));
+    }
+}
+
+fn check_inherited_rounding() {
+    if fp_controls() & rounding_mask() != RUNTIME_FP.load(Ordering::Acquire) & rounding_mask() {
+        exit(226);
+    }
+    let rounded: i64;
+    unsafe {
+        asm!("cvtsd2si {result}, {value}", result = out(reg) rounded,
+            value = in(xmm_reg) 1.75f64, options(nostack, preserves_flags));
+    }
+    if rounded != 1 {
+        exit(226);
+    }
 }
 
 fn startup_debug(raw: u64) -> Handle {

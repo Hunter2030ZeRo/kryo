@@ -33,10 +33,11 @@ C `__thread`, C++ POD `thread_local` and Rust `#[thread_local]` objects. These
 objects use local-exec TLS with initialized data, zero-filled storage and
 64-byte alignment.
 
-The runtime fixture allocates three fixed private BSS slots: one for the main
-thread and one for each of two native child threads. It copies PT_TLS initialized
-bytes, clears the remaining storage and puts a minimal self-pointer TCB after
-the aligned Variant II block before setting FS. Only zero-residue aligned TLS
+The runtime fixture owns three fixed private BSS slots: one for the main
+thread and one for each of two native child threads. Before publishing either
+child, the parent copies PT_TLS initialized bytes, clears the remaining storage
+and puts a minimal self-pointer TCB after the aligned Variant II block. The
+native thread call installs FS before the child's first instruction. Only zero-residue aligned TLS
 templates are supported by this fixture. The TCB is sufficient for these
 local-exec accesses; it is not mlibc's complete TCB, DTV, canary or cancellation
 layout. This is not a general allocation interface.
@@ -48,6 +49,28 @@ main TLS initialization, and value 2 marks completed joins, slot retirement and
 isolation checks. The call-free AVX2 preemption interval runs afterward with no
 child runnable. POD TLS needs no destructor callbacks; dynamic TLS and TLS
 destructors remain unimplemented.
+
+The two compiler-TLS children use ThreadCreateNative with runtime-provided
+stacks, TLS ranges and FS bases. One ten-page reservation contains two four-page
+stacks separated by unmapped lower guard pages. The runtime prepares TLS before
+creation; the kernel retains execution leases, not the allocation policy. Raw
+unknown version/flags, a null entry and an FS base outside TLS are rejected.
+
+A release barrier keeps both children alive while the parent checks Busy for
+committing a guard, decommitting stack backing, unmapping TLS and releasing the
+reservation. These failures must not revoke mappings or quarantine the process.
+Successful native joins permit the parent to clear TLS and release both stacks;
+the next private-memory phase starts with zero private/reserved usage.
+
+The parent captures x87/MXCSR controls with downward rounding, creates the
+children, then restores its own controls. The assembly startup trampoline
+installs the captured controls before calling Rust. Children check their
+rounding modes and an actual rounded conversion across yield/sleep while the
+parent retains its original mode. This demonstrates runtime-owned rounding
+inheritance; it is not a complete POSIX floating-point environment, signal-mask,
+cleanup-handler or pthread implementation. The kernel still starts raw threads
+with fresh FP/SIMD data state. Event 97/value 1 follows native resource-lifetime,
+rounding and TLS checks, alongside the existing event 94/value 2.
 
 After the child joins, the same process exercises explicit private memory with
 native reserve, commit, decommit and release calls. Its account allows 65,536
@@ -92,7 +115,7 @@ hold no Rust references into the affected mappings. Raw entry trampolines and
 native joins retain child argument/code/data lifetimes.
 
 Event 96/value 1 marks completed word checks and zero remaining wait charges.
-The phase creates eight children in groups of at most two; the kernel reaps
+The phase retains legacy ThreadCreate and creates eight children in groups of at most two; the kernel reaps
 ended children between execution batches, retaining the three-thread account
 limit. It leaves the earlier four/eight private/reserved pages for process
 cleanup. These checks exercise the experimental private park/wake contract,

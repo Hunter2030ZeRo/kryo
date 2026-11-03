@@ -27,6 +27,10 @@ pub(crate) fn dispatch<'objects>(
     let result = Call::try_from(context.rax).and_then(|call| {
         let handle = Handle::from_raw(context.rdi);
         match call {
+            Call::ThreadCreateNative => {
+                let region = region.ok_or(Error::InvalidCall)?;
+                super::threads::create_native(caller, context, tasks, ipc, stats, region).map(Some)
+            }
             Call::VmReserve | Call::VmCommit | Call::VmDecommit | Call::VmRelease => {
                 super::private_vm::dispatch(caller, call, context, tasks, ipc).map(Some)
             }
@@ -235,9 +239,17 @@ pub(crate) fn dispatch<'objects>(
                 Ok(None)
             }
             Call::SetTls => {
-                tasks
-                    .resources_mut(caller)
-                    .unwrap()
+                let mut resources = tasks.resources_mut(caller).unwrap();
+                if let Some(lease) = resources.execution.as_ref()
+                    && !resources
+                        .process
+                        .space
+                        .execution_tls_contains(lease, context.rdi)
+                        .map_err(map_vm_error)?
+                {
+                    return Err(Error::InvalidArgument);
+                }
+                resources
                     .context
                     .set_fs_base(context.rdi)
                     .map_err(|_| Error::InvalidArgument)?;
@@ -758,6 +770,7 @@ fn now() -> u64 {
 
 fn map_vm_error<E>(error: VmError<E>) -> Error {
     match error {
+        VmError::InUse => Error::Busy,
         VmError::Allocation(_) | VmError::MappingCapacity | VmError::TableCapacity => {
             Error::OutOfResources
         }

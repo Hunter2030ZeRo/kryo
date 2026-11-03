@@ -2,6 +2,12 @@
 
 Snapshot: 2026-11-03. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [runtime-owned thread milestone](validation/2026-11-03-native-threads/README.md)
+adds native call 61 with caller-prepared stack/TLS and optional guard ranges.
+Execution loans preserve mappings until actual user termination, then release
+before native join observation. User memory remains owned by the runtime after
+exit and kernel reaping. The legacy managed call remains available.
+
 The [atomic wait milestone](validation/2026-11-03-atomic-waits/README.md) adds
 32-bit process-private Park/ParkUntil/Wake with bounded FIFO wake, absolute
 deadlines and mapping-lifetime cancellation. It uses the existing wait table,
@@ -112,6 +118,14 @@ Before the initial supervisor, the earlier native bootstrap service receives a s
 The original native-smoke ELF remains a boot-test CPU-state fixture. [ADR 0002](decisions/0002-user-address-spaces.md) describes memory ownership, [ADR 0003](decisions/0003-preemption-and-capabilities.md) task execution, [ADR 0004](decisions/0004-waits-ipc-and-idle.md) waits/IPC, [ADR 0005](decisions/0005-shared-memory-and-delegation.md) shared backing, and [ADR 0006](decisions/0006-native-elf-and-extended-state.md) native execution and CPU state.
 
 ## Verification
+
+The [native thread matrix](validation/2026-11-03-native-threads/evidence.json)
+passes six QEMU configurations, 453 Rust tests and 20 Python tests. Two native
+TLS children exercise prepared FS, runtime rounding setup, live-range protection
+and join/reclaim; eight managed word children preserve the eleven-thread suite.
+Trusted fixtures and core models cover admission, rollback, guard holes, packed
+TLS, reuse before kernel reaping and metadata failure. These are model/emulator
+results, not complete pthread or standard-library integration.
 
 The [atomic wait matrix](validation/2026-11-03-atomic-waits/evidence.json) passes
 six QEMU configurations, 443 Rust tests and 19 Python tests. Four real native
@@ -360,8 +374,9 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 
 ## Next work
 
-Implement runtime-owned native thread resources, then evaluate mlibc sysdeps
-against those contracts. Mapped ELF
+Evaluate mlibc sysdeps against the native thread, memory and wait contracts.
+Complete the user allocator and TCB lifecycle before pthread integration.
+Mapped ELF
 metadata, static TLS and explicit private VM are available; a complete TCB/DTV,
 allocator and standard libraries remain separate work. Connect the initial
 block service to VFS, the native runtime and BetAFS. Add storage IRQ

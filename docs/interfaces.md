@@ -64,6 +64,7 @@ The public service ABI is not stable. Experimental task calls are defined below;
 | 58 | Park | Private word VA | u32 expected | 1 on mismatch, 0 after wake |
 | 59 | ParkUntil | Private word VA | u32 expected | As Park; input RDX=absolute deadline |
 | 60 | Wake | Private word VA | Maximum waiters | Number detached |
+| 61 | ThreadCreateNative | Version, 1 | RX entry | New thread-control handle; input RDX=argument |
 
 TaskStatus requires INSPECT; TaskStop and CancelWait require CONTROL. They also accept process-control handles; a retained terminal result continues to report Exited after reaping, and stop/cancel cannot target a replacement generation. Duplicate requires DUP and a subset of the original rights. Rights bits are INSPECT=1, CONTROL=2, DUP=4, SEND=8, RECEIVE=16, WAIT=32, SIGNAL=64, READ=128, WRITE=256, MAP=512, TRANSFER=1024, EXECUTE=2048, CREATE=4096, ASSIGN=8192. Send/Call and their Caps variants require SEND, Receive/Reply require RECEIVE, and EndpointClose requires CONTROL. Wait and Signal require their matching rights. Handles are process-local and opaque; zero is invalid. Close removes one reference, not all authority to an object. A task-control object can outlive its task and report Exited without keeping its VM or stack alive.
 
@@ -73,13 +74,16 @@ The caller becomes the endpoint receiver/replier or notification waiter. Endpoin
 
 Closing the last external reference also closes the channel and resolves pending waits. The serialized runtime removes closed channel registry roots after committing accepted transfers and publishing completions. A closed channel remains charged while any external or staged reference retains its payload. Only final payload destruction returns budget credit. Device notification roots remain until explicit hardware retirement. This channel count does not budget memory, handles, waiting threads, or queued bytes; general quotas remain pending. [ADR 0014](decisions/0014-native-channel-creation.md) defines the lifetime rules.
 
-Errors are InvalidCall, InvalidHandle, PermissionDenied, WrongType, OutOfResources, InvalidArgument, PeerClosed, Cancelled, InvalidReply, and TimedOut. Unknown call numbers and rights bits are rejected. MemoryMap validates a VA in the caller's space; private word calls snapshot only validated owned RAM. General arbitrary user-copy recovery remains pending.
+Errors are InvalidCall, InvalidHandle, PermissionDenied, WrongType, OutOfResources, InvalidArgument, PeerClosed, Cancelled, InvalidReply, TimedOut, and Busy. Unknown call numbers and rights bits are rejected. MemoryMap validates a VA in the caller's space; private word calls snapshot only validated owned RAM. General arbitrary user-copy recovery remains pending.
 
 SendCaps/CallCaps supply source handles in R12/R13 and requested rights in R14/R15. Every source requires TRANSFER and the requested rights must be a subset. Delegation copies authority; source handles remain valid. RECEIVE and notification WAIT ownership cannot migrate. Receive reserves its requested capacity before publication; insufficient capacity rejects a capability-bearing request before acceptance. Received capabilities install before runnable publication. Reply currently carries inline data only.
 
 MemoryCreate returns READ|WRITE|MAP|DUP|TRANSFER authority to zeroed, non-executable RAM. MemoryMap requires READ|MAP and also WRITE for RW. Page index, VA, permission flag, and capacities are checked. Each mapping retains the whole memory object. Closing every handle does not remove live mappings; MemoryUnmap retires caller access before releasing that mapping's reference. RO is a view permission and does not promise immutable contents while another holder can write.
 
 SetTls updates only the caller's saved FS base. Zero clears it; other accepted values must remain below 2^47. Invalid values leave the old base unchanged. This does not allocate TLS or process an ELF TLS template. The caller must retain a suitable mapping for its data. User FSGSBASE instructions are disabled; the next validated user resume installs the base.
+
+For a ThreadCreateNative thread, SetTls is further restricted to its leased TLS
+span; zero cannot clear that lease. Legacy SetTls behavior remains unchanged.
 
 Spawn requires EXECUTE on an immutable boot-image capability. Input R12/R13 contains up to two source handles and R14/R15 their reduced rights; each source requires TRANSFER. It inherits no other handle. The parent retains its sources and receives INSPECT|CONTROL|WAIT|DUP|TRANSFER authority to a new process-control object. The current transfer policy still rejects requested WAIT or RECEIVE rights across all object kinds; process-observation WAIT delegation is deferred, though reduced control/inspection rights may be copied. Capacity, image, mapping, and stack failures return ordinary errors. Unfinished cleanup remains retained and blocks further creation until retirement succeeds. A child is published only after private preparation and reserved result-handle capacity.
 
@@ -92,6 +96,50 @@ ThreadCreate creates a thread in the caller's process and shares its address spa
 Raw thread entry uses RDI=argument, RSI=TLS address, RDX bit0=AVX enabled, RSP aligned to 16, and FS=TLS page. Use an assembly trampoline which CALLs the Rust/C entry. ThreadCreate's libsys wrapper is unsafe because this entry contract and shared-data lifetimes remain the caller's responsibility. Managed stack, guard, and TLS regions cannot be mapped or unmapped through ordinary memory calls. ThreadExit skips stack unwinding and ends only its caller. When the final thread leaves voluntarily, its status becomes the process result.
 
 ThreadJoin and ThreadJoinUntil require WAIT, deny self-join, and retain the first terminal result through task-slot reuse. Timeout or cancellation ends the join without stopping the target. TaskStatus/TaskStop/CancelWait accept thread-control handles to select one thread. Process-control CancelWait rejects an ambiguous request when several members wait. Closing or using a handle in one thread affects the common process table; lookup still holds a strong object reference until the operation ends. WAIT delegation remains deferred.
+
+ThreadCreateNative (61) retains the same handle rights and process sharing,
+while borrowing runtime-owned stack/TLS memory. It accepts this version-1 scalar
+record in registers, without reading a user descriptor:
+
+| Register | Input |
+| --- | --- |
+| RDI | Version, 1 |
+| RSI | Entry in an existing RX mapping |
+| RDX | Argument |
+| R8 / R9 | Stack base / bytes |
+| R10 / R11 | TLS base / bytes |
+| R12 | FS base inside the TLS span |
+| R13 | Unmapped lower guard bytes; zero or a multiple of 4096 |
+| R14 | Flags, zero |
+
+Stack base/end are 16-byte aligned with at least 16 bytes; the language runtime
+must choose an adequate stack size. TLS is byte-granular and supports disjoint
+packed blocks on private RW pages. Every covered data page must be published
+private RW backing. Stack/TLS/guard ranges must not overlap other execution
+leases or legacy managed arenas. A guard requires a page-aligned stack base.
+Unknown version/flags, invalid ranges, missing/shared/RO/RX backing and invalid
+entry/FS return InvalidArgument. Leased conflicts that reach VM admission return
+Busy (-11), before invalidation or any retiring state. Legacy MemoryMap/Unmap
+retain their earlier InvalidArgument exclusion for reserved private-VM arenas;
+leased private pages outside those arenas can reach the Busy check.
+OutOfResources publishes no thread.
+
+The child enters with RDI=argument, RSI=TLS base, RDX=CPU flags, FS installed and
+RSP at the stack end without a return address. Use an assembly CALL trampoline.
+The kernel creates only the entry stack and fresh FP/SIMD data state. Runtime
+code owns TCB construction, environment inheritance, language return and cleanup.
+The unsafe libsys wrapper accepts a `ThreadMemory` value describing its spans.
+
+Execution leases prevent conflicting map, unmap, commit, decommit, release and
+space close while the thread can run. Actual user execution ends and the lease
+is released before ThreadJoin publishes completion. User mappings stay present
+after exit/reaping, so the runtime can reuse or retire them after join without
+waiting for kernel-stack reclamation. Thread quota follows actual kernel
+cleanup. Failed unpublished creation releases the user lease even if kernel
+stack cleanup must retry. Closing a control handle does not end execution.
+Native TLS/stack word waits remain until explicit cancellation or mapping
+retirement; in-place object reuse requires runtime synchronization. See
+[ADR 0027](decisions/0027-runtime-owned-thread-memory.md).
 
 Normal execution grows process, thread, handle, object, wait, and VM metadata with available memory. The previous two-process, two-thread-per-process, four-thread and four-wait fixture capacities are not normal runtime limits. Allocation, metadata exhaustion, and address-budget failures return OutOfResources and publish no partial owner. Resource discovery and per-service quotas remain pending. CPU registration currently supports 255 directed xAPIC processors, independently of thread count. The BSP serializes native calls between execution batches. Legacy endpoint RECEIVE and notification WAIT remain bound to the original owner thread; sibling handle access does not transfer ownership. [ADR 0009](decisions/0009-bsp-user-threads.md) defines cleanup, [ADR 0010](decisions/0010-smp-execution.md) defines SMP ownership, and [ADR 0012](decisions/0012-growing-registries.md) defines growth and failure.
 

@@ -14,6 +14,12 @@ wake, with deadlines, cancellation and mapping-lifetime isolation.
 leaves user allocators, shared waits, demand paging and standard-library ports
 as separate work.
 
+Native thread creation can borrow runtime-owned stacks, TLS and unmapped guards.
+Execution leases protect those mappings until the thread actually stops;
+native join then permits reuse while mappings remain owned by
+the runtime. The kernel still owns each entry stack and CPU state. See
+[the thread-memory contract](docs/decisions/0027-runtime-owned-thread-memory.md).
+
 BetAFS is the filesystem target. An opt-in Ring 3 driver now validates real
 VirtIO block read/write/flush through private DMA queues. A configured initial block IPC service now remains active after its clients exit.
 The BetAFS adapter and native standard-library ports remain pending. See

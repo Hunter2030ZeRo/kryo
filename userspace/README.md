@@ -17,6 +17,15 @@ an Acquire load; wake has no buffered event. User allocation and shared waits
 remain separate work. mlibc is the primary port candidate, not an
 installed native sysroot; libc, libc++ and Rust std ports are incomplete.
 
+ThreadCreateNative borrows runtime-prepared stack/TLS ranges and installs FS
+before the first child instruction. `libsys::ThreadMemory` describes those
+ranges and an optional unmapped lower guard. Admitted VM retirement conflicts
+return Busy until actual completion; native join permits reuse without kernel reaping
+or automatic unmapping. The runtime supplies its TCB, startup and cleanup;
+the kernel preserves fresh private CPU state. The probe demonstrates runtime
+rounding-control inheritance, not a complete pthread implementation. See
+[the ownership contract](../docs/decisions/0027-runtime-owned-thread-memory.md).
+
 `filesystems/betafs/` is reserved for the independent BetAFS engine's Kryo adapter. Keep the engine in its own project.
 
 See the [layout](../docs/layout.md) for component responsibilities and the [architecture](../docs/architecture.md) for service boundaries.

@@ -58,6 +58,7 @@ MARKERS = {
     "private_pending_cleanup": "WAIT: pending thread retirement cancels word",
     "private_expiry_admission": "WAIT: expired word precedes wake admission",
     "private_untimed_idle": "WAIT: unbounded word idle preserves registration",
+    "native_thread_rollback": "THREAD: runtime-owned admission rollback and lifetime OK",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
 
@@ -76,6 +77,7 @@ def abi_checks(log, enabled):
         "native_tls": "TLS: ELF template and thread isolation OK threads=3" in log,
         "native_private_vm": "VM: private reserve commit retirement OK" in log,
         "native_atomic_wait": bool(re.search(r"(?m)^WAIT: private atomic park wake retirement OK threads=11 halt=true$", log)),
+        "native_runtime_threads": bool(re.search(r"(?m)^THREAD: runtime-owned stack TLS and rounding OK threads=2$", log)),
     }
 
 

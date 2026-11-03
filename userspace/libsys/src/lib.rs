@@ -634,6 +634,54 @@ pub unsafe fn thread_create(
     Handle::from_raw(result).ok_or(Error::InvalidResponse)
 }
 
+/// Runtime-owned backing borrowed while the new thread can execute.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ThreadMemory {
+    pub stack_base: u64,
+    pub stack_bytes: u64,
+    pub tls_base: u64,
+    pub tls_bytes: u64,
+    pub fs_base: u64,
+    pub guard_bytes: u64,
+}
+
+/// # Safety
+/// Prepare the runtime's TCB/TLS before creation and retain code, arguments and
+/// shared Rust values through actual thread completion. The entry receives RDI
+/// as its argument, RSI as the TLS base and RDX as CPU feature flags, with FS
+/// installed and RSP at the 16-byte-aligned stack end without a return address.
+/// It must CALL the language entry through an assembly trampoline and never
+/// return. Finish language cleanup before ThreadExit; reclaim backing after
+/// successful join or another native completion observation, not a user flag.
+/// The kernel borrows these mappings and does not interpret the TCB layout.
+pub unsafe fn thread_create_native(
+    entry: unsafe extern "C" fn() -> !,
+    argument: u64,
+    memory: ThreadMemory,
+) -> Result<Handle, Error> {
+    let status;
+    let result;
+    unsafe {
+        asm!(
+            "int 0x80",
+            inlateout("rax") Call::ThreadCreateNative as u64 => status,
+            in("rdi") kryo_interfaces::syscall::NATIVE_THREAD_VERSION,
+            in("rsi") entry as *const () as u64,
+            inlateout("rdx") argument => result,
+            inlateout("r8") memory.stack_base => _,
+            inlateout("r9") memory.stack_bytes => _,
+            inlateout("r10") memory.tls_base => _,
+            inlateout("r11") memory.tls_bytes => _,
+            inlateout("r12") memory.fs_base => _,
+            inlateout("r13") memory.guard_bytes => _,
+            inlateout("r14") 0u64 => _,
+            options(nostack),
+        );
+    }
+    check(status)?;
+    Handle::from_raw(result).ok_or(Error::InvalidResponse)
+}
+
 /// # Safety
 /// All resources requiring destructors must be released before calling. This
 /// exits the current thread directly and does not unwind its Rust stack.
