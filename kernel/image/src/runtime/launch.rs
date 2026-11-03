@@ -175,6 +175,16 @@ fn prepare_image<'kernel, 'objects>(
                 return Err(Error::InvalidArgument);
             }
         }
+        let native_headers = if request.arguments.is_some() {
+            let header = image.elf_header_address().ok_or(Error::InvalidArgument)?;
+            let headers = image.program_headers().ok_or(Error::InvalidArgument)?;
+            if header.checked_add(headers.file_offset) != Some(headers.address) {
+                return Err(Error::InvalidArgument);
+            }
+            Some(headers)
+        } else {
+            None
+        };
         let extended = ExtendedState::new().map_err(|_| Error::InvalidArgument)?;
         let (mappings, tables) = account.as_ref().map_or((usize::MAX, usize::MAX), |budget| {
             (budget.limits().mappings, budget.limits().tables)
@@ -193,6 +203,7 @@ fn prepare_image<'kernel, 'objects>(
         }
         let native = request.arguments.is_some();
         let stack_pointer = if let Some(arguments) = request.arguments {
+            let headers = native_headers.expect("Native ELF metadata validation invariant");
             let mut stack = [0u8; STACK_PAGES as usize * 4096];
             let pointer = build_initial_stack(
                 &mut stack,
@@ -200,6 +211,18 @@ fn prepare_image<'kernel, 'objects>(
                 arguments.argv,
                 arguments.envp,
                 &[
+                    AuxEntry {
+                        kind: 3,
+                        value: headers.address,
+                    },
+                    AuxEntry {
+                        kind: 4,
+                        value: headers.entry_size,
+                    },
+                    AuxEntry {
+                        kind: 5,
+                        value: headers.count,
+                    },
                     AuxEntry {
                         kind: 6,
                         value: 4096,

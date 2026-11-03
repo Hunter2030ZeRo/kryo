@@ -149,4 +149,7 @@ first Vulkan hardware target, with the native GPU-service
 interface still open. [ADR 0022](decisions/0022-platform-baseline-and-performance.md)
 records the requirements, performance work and decisions requiring review.
 [ADR 0024](decisions/0024-native-bootstrap-stack.md) defines the bootstrap gate.
+[ADR 0025](decisions/0025-static-tls-and-elf-metadata.md) extends it with truthful
+mapped ELF metadata and runtime-owned compiler static TLS. The full mlibc TCB,
+private VM and atomic waits remain pending.
 Kernel hot replacement is a separate research topic from user-space service replacement.

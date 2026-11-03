@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.8, 2026-11-02.
+Version 0.9, 2026-11-03.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -83,6 +83,13 @@ GPU drivers and the graphics API remain in user space. See
 CPU-local state owns the CPU ID, current thread, GDT/TSS/IST, idle and emergency stacks, entry context, and preemption state.
 
 A thread owns its address-space reference, kernel stack, saved context, TLS, allowed FP/SIMD state, wait registrations, and termination state.
+
+Native static TLS uses SysV AMD64 Variant II. The user runtime owns TCB layout,
+template initialization, allocation and destruction; the kernel supplies ordinary
+mappings and preserves FS base without interpreting libc-private fields.
+Observe actual execution completion before reclaiming a thread's TLS or stack.
+The current compiler-TLS fixture and its limits are recorded in
+[ADR 0025](decisions/0025-static-tls-and-elf-metadata.md).
 
 GDT/TSS storage must remain at stable addresses while in use. CPUs may share an immutable IDT, but each CPU must load its own required registers. A global initialization guard must not skip an AP's register setup.
 

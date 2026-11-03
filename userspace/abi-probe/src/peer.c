@@ -1,6 +1,38 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+__thread __attribute__((aligned(64))) volatile uint64_t c_tls_initialized = UINT64_C(0x13579bdf2468ace0);
+__thread volatile uint64_t c_tls_zero[4];
+
+uint64_t c_tls_initial(void) {
+    if (c_tls_initialized != UINT64_C(0x13579bdf2468ace0)
+        || (uintptr_t)&c_tls_initialized % 64 != 0)
+        return 1;
+    for (unsigned index = 0; index < 4; ++index)
+        if (c_tls_zero[index] != 0)
+            return 2;
+    return 0;
+}
+
+void c_tls_store(uint64_t value) {
+    c_tls_initialized = value;
+    for (unsigned index = 0; index < 4; ++index)
+        c_tls_zero[index] = value + index + 1;
+}
+
+uint64_t c_tls_check(uint64_t value) {
+    if (c_tls_initialized != value)
+        return 1;
+    for (unsigned index = 0; index < 4; ++index)
+        if (c_tls_zero[index] != value + index + 1)
+            return 2;
+    return 0;
+}
+
+uintptr_t c_tls_address(void) {
+    return (uintptr_t)&c_tls_initialized;
+}
+
 extern double rust_mix(uint64_t first, double second, uint64_t third, double fourth);
 extern double rust_register_pressure(double a, double b, double c, double d,
                                      double e, double f, double g, double h,

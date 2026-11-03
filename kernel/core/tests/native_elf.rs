@@ -337,8 +337,8 @@ fn entry_must_be_inside_file_backed_executable_bytes() {
 }
 
 #[test]
-fn dynamic_tls_and_unknown_program_headers_are_rejected() {
-    for kind in [2, 3, 5, 7, 0x6474_e552, 0x6474_e553, u32::MAX] {
+fn dynamic_and_unknown_program_headers_are_rejected() {
+    for kind in [2, 3, 5, 0x6474_e552, 0x6474_e553, u32::MAX] {
         let extra = Segment {
             kind,
             offset: 0,
@@ -351,9 +351,9 @@ fn dynamic_tls_and_unknown_program_headers_are_rejected() {
 }
 
 #[test]
-fn null_note_and_phdr_headers_do_not_add_mappings() {
-    let mut extras = [text(); 4];
-    for (index, kind) in [0, 4, 6].into_iter().enumerate() {
+fn null_and_note_headers_do_not_add_mappings() {
+    let mut extras = [text(); 3];
+    for (index, kind) in [0, 4].into_iter().enumerate() {
         extras[index + 1] = Segment {
             kind,
             offset: 0,
@@ -367,6 +367,299 @@ fn null_note_and_phdr_headers_do_not_add_mappings() {
     put64(&mut bad_note, PH + 2 * PH_SIZE + 8, u64::MAX);
     put64(&mut bad_note, PH + 2 * PH_SIZE + 32, 1);
     assert_eq!(parse(&bad_note).unwrap_err(), ElfError::InvalidSegment);
+}
+
+const HEADERS: u64 = 0x30_0000;
+
+fn metadata_elf(extra: &[Segment<'_>]) -> Vec<u8> {
+    let mut segments = vec![
+        Segment {
+            kind: 6,
+            flags: 4,
+            offset: PH as u64,
+            address: HEADERS + PH as u64,
+            contents: &[],
+            memory_len: 0,
+            alignment: 8,
+        },
+        Segment {
+            kind: 1,
+            flags: 4,
+            offset: 0,
+            address: HEADERS,
+            contents: &[],
+            memory_len: 4096,
+            alignment: 4096,
+        },
+        text(),
+    ];
+    segments.extend_from_slice(extra);
+    let mut file = elf(&segments, TEXT);
+    let table_len = (segments.len() * PH_SIZE) as u64;
+    put64(&mut file, PH + 32, table_len);
+    put64(&mut file, PH + 40, table_len);
+    put64(&mut file, PH + PH_SIZE + 32, PH as u64 + table_len);
+    file
+}
+
+fn tls_segments() -> [Segment<'static>; 2] {
+    let template = Segment {
+        offset: 0x2000,
+        address: DATA,
+        flags: 6,
+        contents: &[7, 8, 9, 10],
+        memory_len: 4,
+        alignment: 4096,
+        ..text()
+    };
+    [
+        template,
+        Segment {
+            kind: 7,
+            flags: 4,
+            memory_len: 128,
+            alignment: 64,
+            ..template
+        },
+    ]
+}
+
+#[test]
+fn mapped_metadata_reports_real_read_only_addresses() {
+    let file = metadata_elf(&[]);
+    let image = parse(&file).unwrap();
+    assert_eq!(image.elf_header_address(), Some(HEADERS));
+    let headers = image.program_headers().unwrap();
+    assert_eq!(headers.address, HEADERS + PH as u64);
+    assert_eq!(headers.file_offset, PH as u64);
+    assert_eq!(headers.entry_size, PH_SIZE as u64);
+    assert_eq!(headers.count, 3);
+    assert_eq!(image.page_count(), 2);
+    assert_eq!(image.segments().next().unwrap().file_offset(), 0);
+    let mut page = [0; 4096];
+    image.pages().next().unwrap().initialize(&mut page);
+    assert_eq!(&page[..PH + PH_SIZE * 3], &file[..PH + PH_SIZE * 3]);
+}
+
+#[test]
+fn separately_mapped_metadata_retains_its_actual_file_offset_and_address() {
+    let table_len = (PH_SIZE * 4) as u64;
+    let table = Segment {
+        offset: PH as u64,
+        address: DATA + PH as u64,
+        flags: 4,
+        contents: &[],
+        memory_len: table_len,
+        alignment: 8,
+        ..text()
+    };
+    let mut file = metadata_elf(&[table]);
+    put64(&mut file, PH + 16, table.address);
+    put64(&mut file, PH + PH_SIZE + 32, PH as u64);
+    put64(&mut file, PH + PH_SIZE * 3 + 32, table_len);
+    let image = parse(&file).unwrap();
+    let header = image.elf_header_address().unwrap();
+    let headers = image.program_headers().unwrap();
+    assert_eq!(header, HEADERS);
+    assert_eq!(headers.file_offset, PH as u64);
+    assert_eq!(headers.address, table.address);
+    assert_eq!(headers.entry_size, PH_SIZE as u64);
+    assert_eq!(headers.count, 4);
+    assert_ne!(
+        header.checked_add(headers.file_offset),
+        Some(headers.address)
+    );
+}
+
+#[test]
+fn legacy_images_do_not_invent_mapped_metadata() {
+    let file = elf(&[text()], TEXT);
+    let image = parse(&file).unwrap();
+    assert_eq!(image.elf_header_address(), None);
+    assert_eq!(image.program_headers(), None);
+    assert!(image.tls().is_none());
+
+    let mut file = metadata_elf(&[]);
+    put32(&mut file, PH, 0);
+    put64(&mut file, PH + PH_SIZE + 32, PH as u64);
+    let image = parse(&file).unwrap();
+    assert_eq!(image.elf_header_address(), Some(HEADERS));
+    assert_eq!(image.program_headers(), None);
+}
+
+#[test]
+fn mutable_or_ambiguous_metadata_is_not_exposed() {
+    let mut writable = metadata_elf(&[]);
+    put32(&mut writable, PH, 0);
+    put32(&mut writable, PH + PH_SIZE + 4, 6);
+    let image = parse(&writable).unwrap();
+    assert_eq!(image.elf_header_address(), None);
+    assert_eq!(image.program_headers(), None);
+
+    let alias = Segment {
+        offset: 0,
+        address: HEADERS + 0x10_000,
+        flags: 4,
+        contents: &[],
+        memory_len: 4096,
+        ..text()
+    };
+    let mut file = metadata_elf(&[alias]);
+    put32(&mut file, PH, 0);
+    put64(&mut file, PH + PH_SIZE * 3 + 32, (PH + PH_SIZE * 4) as u64);
+    let image = parse(&file).unwrap();
+    assert_eq!(image.elf_header_address(), None);
+    assert_eq!(image.program_headers(), None);
+}
+
+#[test]
+fn phdr_description_must_match_the_actual_mapped_table() {
+    let original = metadata_elf(&[]);
+    for (offset, value) in [
+        (8, 0),
+        (16, HEADERS + PH as u64 + 8),
+        (32, (PH_SIZE * 3 - 1) as u64),
+        (40, (PH_SIZE * 3 + 1) as u64),
+        (48, 3),
+    ] {
+        let mut file = original.clone();
+        put64(&mut file, PH + offset, value);
+        assert_eq!(parse(&file).unwrap_err(), ElfError::ProgramHeaders);
+    }
+    let mut file = original.clone();
+    put32(&mut file, PH + PH_SIZE + 4, 6);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::ProgramHeaders);
+    let mut file = original.clone();
+    put64(&mut file, PH + PH_SIZE + 32, PH as u64);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::ProgramHeaders);
+    let mut file = original;
+    file[PH..PH + PH_SIZE * 3].rotate_left(PH_SIZE);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::ProgramHeaders);
+}
+
+#[test]
+fn duplicate_phdr_descriptions_are_rejected() {
+    let mut file = metadata_elf(&[text()]);
+    file.copy_within(PH..PH + PH_SIZE, PH + PH_SIZE * 3);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::ProgramHeaders);
+}
+
+#[test]
+fn static_tls_borrows_initialization_and_keeps_bss_separate() {
+    let file = metadata_elf(&tls_segments());
+    let image = parse(&file).unwrap();
+    let tls = image.tls().unwrap();
+    assert_eq!(tls.address(), DATA);
+    assert_eq!(tls.contents(), [7, 8, 9, 10]);
+    assert_eq!(tls.memory_len(), 128);
+    assert_eq!(tls.alignment(), 64);
+    assert_eq!(image.page_count(), 3);
+    // The initialized template is mapped; the per-thread zero tail does not
+    // consume more image pages or need to fit in PT_LOAD.p_memsz.
+    assert_eq!(image.segments().last().unwrap().memory_len(), 4);
+}
+
+#[test]
+fn static_tls_can_be_zero_only_or_empty() {
+    for (address, memory_len) in [(DATA, 128), (0, 0)] {
+        let tls = Segment {
+            kind: 7,
+            flags: 4,
+            offset: 0,
+            address,
+            contents: &[],
+            memory_len,
+            alignment: 0,
+        };
+        let file = metadata_elf(&[tls]);
+        let image = parse(&file).unwrap();
+        let tls = image.tls().unwrap();
+        assert!(tls.contents().is_empty());
+        assert_eq!(tls.memory_len(), memory_len);
+        assert_eq!(tls.alignment(), 1);
+        assert_eq!(image.page_count(), 2);
+    }
+}
+
+#[test]
+fn tls_requires_one_exact_file_backing_translation() {
+    let original = metadata_elf(&tls_segments());
+    let tls_header = PH + PH_SIZE * 4;
+    let mut mismatch = original.clone();
+    put64(&mut mismatch, tls_header + 16, DATA + 64);
+    assert_eq!(parse(&mismatch).unwrap_err(), ElfError::InvalidTls);
+    let mut mismatch = original;
+    put64(&mut mismatch, tls_header + 8, 0x2001);
+    put64(&mut mismatch, tls_header + 32, 3);
+    put64(&mut mismatch, tls_header + 48, 1);
+    assert_eq!(parse(&mismatch).unwrap_err(), ElfError::InvalidTls);
+
+    let mut segments = tls_segments().to_vec();
+    segments.push(Segment {
+        address: DATA + 4096,
+        ..segments[0]
+    });
+    let file = metadata_elf(&segments);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidTls);
+
+    let file = metadata_elf(&[tls_segments()[1]]);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidTls);
+}
+
+#[test]
+fn malformed_tls_descriptions_are_rejected() {
+    let original = metadata_elf(&tls_segments());
+    let tls_header = PH + PH_SIZE * 4;
+    for flags in [0, 5, 6, 7, 0x1000_0004] {
+        let mut file = original.clone();
+        put32(&mut file, tls_header + 4, flags);
+        assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidPermissions);
+    }
+    let mut file = original.clone();
+    put64(&mut file, tls_header + 40, 3);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidTls);
+    for (address, size) in [(0, 128), (USER_END, 128), (u64::MAX - 63, 128)] {
+        let mut file = original.clone();
+        put64(&mut file, tls_header + 16, address);
+        put64(&mut file, tls_header + 40, size);
+        put64(&mut file, tls_header + 48, 1);
+        assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidAddress);
+    }
+    for (address, alignment) in [(DATA, 3), (DATA + 1, 64)] {
+        let mut file = original.clone();
+        put64(&mut file, tls_header + 16, address);
+        put64(&mut file, tls_header + 48, alignment);
+        assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidAlignment);
+    }
+    let mut file = original;
+    put64(&mut file, tls_header + 8, u64::MAX - 1);
+    put64(&mut file, tls_header + 48, 1);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidSegment);
+
+    let mut duplicate = tls_segments().to_vec();
+    duplicate.push(duplicate[1]);
+    let file = metadata_elf(&duplicate);
+    assert_eq!(parse(&file).unwrap_err(), ElfError::InvalidTls);
+}
+
+#[test]
+fn hostile_tls_fields_do_not_panic_or_add_image_pages() {
+    let original = metadata_elf(&tls_segments());
+    let tls_header = PH + PH_SIZE * 4;
+    let mut random = 0x0123_4567_89ab_cdefu64;
+    for _ in 0..1024 {
+        random ^= random << 13;
+        random ^= random >> 7;
+        random ^= random << 17;
+        for field in [8, 16, 32, 40, 48] {
+            let mut file = original.clone();
+            put64(&mut file, tls_header + field, random);
+            if let Ok(image) = parse(&file) {
+                assert_eq!(image.page_count(), 3);
+                assert!(image.tls().is_some());
+            }
+        }
+    }
 }
 
 #[test]

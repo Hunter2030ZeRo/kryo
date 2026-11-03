@@ -1,6 +1,6 @@
 # Native ELF and user ABI
 
-Date: 2026-11-02. Status: format supported; general user ABI pending.
+Date: 2026-11-03. Status: static format and TLS metadata supported; general runtime pending.
 
 ## Executable format
 
@@ -8,8 +8,9 @@ Native Kryo/Cryolite images use little-endian ELF64 for AMD64. The current loade
 accepts static ET_EXEC, EM_X86_64, EI_OSABI=0, ABI version zero and e_flags=0.
 It loads PT_LOAD bytes, zeroes BSS and enforces RO/RW/RX permissions and W^X.
 NULL, NOTE, PHDR and non-executable GNU_STACK descriptions are accepted within
-their supported bounds. Unknown extensions, PT_INTERP, PT_DYNAMIC and PT_TLS
-are rejected. PIE, shared objects, dynamic linking and ELF TLS are not implemented.
+their supported bounds. PT_TLS now describes a validated static template and
+per-thread zero-fill extent. Unknown extensions, PT_INTERP and PT_DYNAMIC remain
+rejected. PIE, shared objects, dynamic linking and dynamic TLS are not implemented.
 
 The bootstrap wiring bounds images to 64 program headers, eight load segments,
 16 load pages and one MiB of module bytes. These are current loader policy limits,
@@ -50,9 +51,12 @@ constructor invocation, dynamic linker or exception/unwind runtime yet.
 
 The dedicated x86-64-v3 hard-float probe tests mixed calls across C, C++ and Rust,
 owned argument/environment storage, auxiliary values and live AVX2 state.
-General crt0, mapped ELF metadata and TLS remain pending. Do not fabricate AT_PHDR unless program
+The current opt-in probe additionally maps real ELF/PHDR metadata and initializes
+compiler local-exec TLS in user space. General crt0 and a complete libc runtime
+remain pending. Do not fabricate AT_PHDR unless program
 headers are actually mapped, or AT_RANDOM without real supplied entropy. The
-current loader's executable mappings do not include its ELF header by default.
+earlier boot images do not include their ELF header in LOAD mappings; the
+dedicated native linker now provides a read-only header mapping.
 
 The platform minimum is x86-64-v3, including OS-enabled AVX/YMM state; SSE2-only
 compilation is not the native target. Early hardware admission is

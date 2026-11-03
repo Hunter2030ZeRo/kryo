@@ -1,6 +1,13 @@
 # Implementation status
 
-Snapshot: 2026-11-02. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+Snapshot: 2026-11-03. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+
+The [static TLS milestone](validation/2026-11-03-static-tls/README.md) extends
+native startup with mapped ELF/PHDR metadata and C/C++/Rust local-exec TLS.
+Its runtime-owned fixture verifies main/two-child isolation and full kernel
+resource retirement. It does not implement a complete mlibc TCB/DTV, dynamic
+TLS, destructors or the general private allocator. The proposed VM/wait contracts
+are in [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
 
 The [native ABI milestone](validation/2026-11-02-native-abi/README.md) adds a
 dedicated v3 hard-float target, an allocation-free initial-stack builder and an

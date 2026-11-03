@@ -15,7 +15,10 @@ Develop one verifiable capability at a time. The [design contract](design-contra
 
 The native platform minimum is x86-64-v3; Intel is the first Vulkan hardware
 target. An opt-in mixed-language probe now tests the v3 hard-float convention
-and owned initial stack; general startup/TLS and mlibc support remain pending. Review
+and owned initial stack. The
+[static TLS extension](decisions/0025-static-tls-and-elf-metadata.md) adds mapped
+ELF metadata and runtime-owned compiler TLS. Full mlibc startup and allocation
+remain pending. Review
 libc selection, parallel kernel ownership and the GPU-service interface before
 freezing their ABI. Measure IPC, scheduler, heap and I/O costs alongside runtime
 porting rather than postponing them until desktop integration. See

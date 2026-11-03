@@ -1,0 +1,146 @@
+{
+  "test_counts": {
+    "host-tests.log": 398,
+    "user-tests.log": 15
+  },
+  "total_tests": 413,
+  "checks": [
+    {
+      "name": "core_stack_elf_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "kryo-core",
+        "--lib",
+        "--test",
+        "native_elf",
+        "--test",
+        "initial_stack",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "../host-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 1.39
+    },
+    {
+      "name": "hal_host_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "kryo-hal",
+        "--all-targets",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "../host-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 1.92
+    },
+    {
+      "name": "native_tls_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "--manifest-path",
+        "userspace/abi-probe/Cargo.toml",
+        "--target",
+        "targets/x86_64-unknown-cryolite.json",
+        "--target-dir",
+        "../probe-clippy-target",
+        "-Zjson-target-spec",
+        "-Zbuild-std=core,compiler_builtins",
+        "-Zbuild-std-features=compiler-builtins-mem",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 16.25,
+      "encoded_rustflags": "-C\u001fcode-model=small\u001f-C\u001frelocation-model=static\u001f-C\u001fno-redzone=yes\u001f-Z\u001ftls-model=local-exec"
+    }
+  ],
+  "source_sha256": {
+    "kernel/core/src/exec/elf.rs": "85f50816351099899ca344032cc94367fef0de04314f1a3eca513ef2f31967dd",
+    "kernel/core/src/exec/mod.rs": "e5de609f46fc5119607ac49e6142db122281a81882bf48f25a8ca93023ed3ca5",
+    "kernel/core/tests/native_elf.rs": "144d8d4bde524dd3aa836541b0bdebad751413bb4b19e5274d0eeb4686d2daa8",
+    "kernel/core/src/exec/stack.rs": "cd871b5b6105c706e79f392e977dc0840fd33aac0a60c114fbd359c5ee6ea7f7",
+    "kernel/core/tests/initial_stack.rs": "be2bb0e403c673b1782ab2236ce22201b8c343e2fc60004a572a60b7b9e1ed6e",
+    "targets/x86_64-unknown-cryolite.json": "70316f70ee874d5ec3ea9c244e2ab15cf66a3c4cde4f3e9ba8cd3543af62c109",
+    "targets/cryolite-toolchain.json": "1f28bcbd9dfc16b39b99ebd4a1c5ca19a13509a8241a42b3c2704065495c2e86",
+    "userspace/abi-probe/src/main.rs": "00c7ca93c2febc581e33cfcdfe2b7a328fa5b92a2355b4d826a10521b1f3c353",
+    "userspace/abi-probe/src/peer.c": "2f6f630b9ce4e2166ab35d0dd134a95ec5c21779674c2e9b1087bc5ee3b88010",
+    "userspace/abi-probe/src/peer.cpp": "881e86e09a39b45c3853a68b4e809576b776c4ae2e89776c283d8a5254bb0e5f",
+    "userspace/abi-probe/build.rs": "1648a7cf57f7114bcb73c6bcd4077e8ec656fbcb03b8666b4053f667dbb4c758",
+    "tools/build_abi.py": "f69f222a2c1207a4a18e874706680f18b1831016d5c79b3a5a6141ccdb77f4a3"
+  },
+  "all_passed": true,
+  "packages": {
+    "kryo-core": 314,
+    "kryo-hal": 77,
+    "kryo-interfaces": 7,
+    "kryo-libsys": 4,
+    "kryo-services": 11
+  },
+  "source_unchanged_during_checks": true,
+  "test_commands": {
+    "host": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "kryo-core",
+      "-p",
+      "kryo-hal",
+      "-p",
+      "kryo-interfaces",
+      "--target",
+      "x86_64-unknown-linux-gnu",
+      "--target-dir",
+      "../host-target",
+      "--locked",
+      "--offline"
+    ],
+    "user": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "--manifest-path",
+      "userspace/Cargo.toml",
+      "-p",
+      "kryo-libsys",
+      "-p",
+      "kryo-services",
+      "--target",
+      "x86_64-unknown-linux-gnu",
+      "--target-dir",
+      "../user-host-target",
+      "--locked",
+      "--offline"
+    ]
+  }
+}

@@ -2,6 +2,9 @@
 
 Date: 2026-11-02. Status: initial stack direction accepted; freestanding probe implemented.
 
+The later [static TLS gate](0025-static-tls-and-elf-metadata.md) extends this
+initial implementation with mapped ELF metadata and compiler TLS.
+
 ## Entry
 
 General native startup uses the SysV AMD64 stack layout: argc, argv pointers,
@@ -19,7 +22,7 @@ inventing an auxiliary-vector number. RDX is zero because no runtime finalizer
 is supplied. Earlier boot programs keep their legacy argument registers and
 zeroed initial stack; the new entry path is selected explicitly by image wiring.
 
-The current probe supplies only truthful AT_PAGESZ and AT_ENTRY values. It does
+The initial probe supplied only truthful AT_PAGESZ and AT_ENTRY values. It did
 not supply AT_RANDOM, mapped PHDR metadata, a general crt0, ELF TLS, constructors,
 exceptions or dynamic linking. This finite freestanding gate is not a complete
 hosted SysV process ABI or a libc/std sysroot.

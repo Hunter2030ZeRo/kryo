@@ -53,6 +53,19 @@ Ordinary runs omit the module and skip the probe before allocating resources.
 This is not libc, libc++ or Rust std support. See
 [the bootstrap contract](../docs/decisions/0024-native-bootstrap-stack.md).
 
+The probe now also requires truthful AT_PHDR/PHENT/PHNUM and native local-exec
+TLS in C, C++ and Rust. Runtime-owned private slots are initialized from the
+read-only ELF TLS template; main and two native children verify independent
+initialized/BSS values across yield/sleep/join. The final kernel check retires
+all three execution owners. See
+[static TLS](../docs/decisions/0025-static-tls-and-elf-metadata.md) for the aligned
+fixture, minimal TCB and legacy scratch-mapping limits.
+
+Mapped ELF headers change the packaging comparison: only ELF64 section-table
+bookkeeping is normalized when checking this probe. Entry, program headers and
+all other LOAD bytes remain exact. The thirteen earlier boot images retain the
+strict comparison.
+
 Each smoke label uses a private kernel target directory so parallel normal and
 boot-test recipes cannot replace each other's kernel before ISO copying.
 

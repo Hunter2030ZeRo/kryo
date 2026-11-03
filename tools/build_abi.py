@@ -43,6 +43,7 @@ def main():
     environment.pop("RUSTFLAGS", None)
     environment["CARGO_ENCODED_RUSTFLAGS"] = "\x1f".join([
         "-C", "code-model=small", "-C", "relocation-model=static", "-C", "no-redzone=yes",
+        "-Z", "tls-model=local-exec",
     ])
     command = [
         "cargo", "build", "--manifest-path", str(ROOT / "userspace/abi-probe/Cargo.toml"),
@@ -60,9 +61,10 @@ def main():
         raise SystemExit(result.returncode)
     artifact = TARGET_DIR / TARGET.stem / arguments.profile / "abi-probe"
     output = arguments.output or ROOT / "build/abi-probe.elf"
-    package_image(artifact, output)
+    package_image(artifact, output, mapped_headers=True)
     metadata = {
         "scope": "freestanding C/C++/Rust ABI probe; no libc, libc++ or Rust std",
+        "packaging": "runtime load bytes exact except ELF64 section-table bookkeeping fields",
         "profile": arguments.profile,
         **versions,
         "toolchain_sha256": hashlib.sha256(TOOLCHAIN.read_bytes()).hexdigest(),

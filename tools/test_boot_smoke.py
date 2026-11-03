@@ -7,10 +7,18 @@ class PciEvidenceTests(unittest.TestCase):
     def test_abi_requires_preemption_and_actual_retirement(self):
         ready = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=1\n"
         retired = "ABI: startup and execution resources retired\n"
-        self.assertTrue(all(abi_checks(ready + retired, True).values()))
-        for log in (ready, retired, ready.replace("=1", "=0") + retired):
+        tls = "TLS: ELF template and thread isolation OK threads=3\n"
+        self.assertTrue(all(abi_checks(ready + retired + tls, True).values()))
+        for log in (ready + tls, retired + tls, ready.replace("=1", "=0") + retired + tls, ready + retired):
             self.assertFalse(all(abi_checks(log, True).values()))
         self.assertEqual(abi_checks("", False), {})
+
+    def test_abi_requires_three_thread_tls_proof(self):
+        log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"
+        log += "ABI: startup and execution resources retired\n"
+        log += "TLS: ELF template and thread isolation OK threads=2\n"
+        self.assertFalse(abi_checks(log, True)["native_tls"])
+        self.assertTrue(abi_checks(log.replace("threads=2", "threads=3"), True)["native_tls"])
 
     def test_abi_evidence_does_not_replace_normal_boot(self):
         self.assertNotEqual(run_label("debug"), run_label("debug", abi_probe=True))

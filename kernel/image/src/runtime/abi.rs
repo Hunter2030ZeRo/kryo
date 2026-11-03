@@ -24,14 +24,14 @@ pub(crate) fn check(
     let before = pool.stats();
     let retained = memory.borrow().retained_pages();
     {
-        let objects = Objects::new();
-        let mut tasks = Tasks::new();
-        let mut ipc = IpcRuntime::with_objects(&objects);
+        let objects = Objects::growing();
+        let mut tasks = Tasks::growing();
+        let mut ipc = IpcRuntime::growing(&objects);
         let account = Budget::new(Limits {
             shared_pages: 0,
             handles: 8,
-            waits: 2,
-            threads: 1,
+            waits: 4,
+            threads: 3,
             mappings: 64,
             tables: 32,
         });
@@ -93,6 +93,7 @@ pub(crate) fn check(
         let mut calls = CallStats::default();
         let mut start_ticks = None;
         let mut avx_preemptions = None;
+        let mut tls_checked = false;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
         while tasks.terminal(owner).is_none() {
             assert!(
@@ -114,19 +115,28 @@ pub(crate) fn check(
                 assert!(ticks > before, "AVX2 interval was not preempted");
                 avx_preemptions = Some(ticks - before);
             }
+            if calls.last_debug == Some((task, 94, 2)) {
+                tls_checked = true;
+            }
         }
         let status = tasks.terminal(owner).unwrap();
         assert_eq!(status.reason, ExitReason::Exited);
         assert_eq!(status.code, 0, "C/C++/Rust native ABI failed");
         assert_eq!(calls.last_debug, Some((task, 90, 2)));
         let preemptions = avx_preemptions.expect("Missing AVX2 preemption proof");
+        assert!(tls_checked, "Missing static TLS thread isolation proof");
         ipc.settle(&mut tasks);
         assert_eq!(tasks.state(task), Ok(TaskState::Dying));
-        drop(
-            tasks
-                .reap(task, |resources| resources.close(pool, region))
-                .unwrap(),
-        );
+        let mut retired = 0;
+        while let Some(id) = tasks.next_dying(None) {
+            drop(
+                tasks
+                    .reap(id, |resources| resources.close(pool, region))
+                    .unwrap(),
+            );
+            retired += 1;
+        }
+        assert_eq!(retired, 3, "Native TLS threads did not retire");
         drop(ipc);
         assert_eq!(objects.live_count(), 0);
         for resource in [
@@ -137,6 +147,7 @@ pub(crate) fn check(
         ] {
             assert_eq!(account.count(resource), 0);
         }
+        kryo_hal::emergency_write_str("TLS: ELF template and thread isolation OK threads=3\n");
         let _ = kryo_hal::print(format_args!(
             "ABI: v3 SysV C C++ Rust stack and state OK preemptions={}\n",
             preemptions

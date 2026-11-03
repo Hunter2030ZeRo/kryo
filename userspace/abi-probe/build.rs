@@ -18,6 +18,7 @@ fn compile(directory: &Path, compiler: &str, source: &str, standard: &str) -> Pa
         "-fno-pic",
         "-fno-pie",
         "-mno-red-zone",
+        "-ftls-model=local-exec",
         "-fno-unwind-tables",
         "-fno-asynchronous-unwind-tables",
         "-Wall",
@@ -42,7 +43,7 @@ fn compile(directory: &Path, compiler: &str, source: &str, standard: &str) -> Pa
 
 fn main() {
     let directory = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    let linker = directory.join("../linker.ld");
+    let linker = directory.join("linker.ld");
     for object in [
         compile(&directory, "clang", "src/peer.c", "-std=c11"),
         compile(&directory, "clang++", "src/peer.cpp", "-std=c++23"),

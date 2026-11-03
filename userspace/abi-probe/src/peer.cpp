@@ -1,5 +1,37 @@
 #include <stdint.h>
 
+alignas(64) thread_local volatile uint64_t cpp_tls_initialized = UINT64_C(0xfedcba9876543210);
+thread_local volatile uint64_t cpp_tls_zero[4];
+
+extern "C" uint64_t cpp_tls_initial() {
+    if (cpp_tls_initialized != UINT64_C(0xfedcba9876543210)
+        || reinterpret_cast<uintptr_t>(&cpp_tls_initialized) % 64 != 0)
+        return 1;
+    for (unsigned index = 0; index < 4; ++index)
+        if (cpp_tls_zero[index] != 0)
+            return 2;
+    return 0;
+}
+
+extern "C" void cpp_tls_store(uint64_t value) {
+    cpp_tls_initialized = value;
+    for (unsigned index = 0; index < 4; ++index)
+        cpp_tls_zero[index] = value + index + 1;
+}
+
+extern "C" uint64_t cpp_tls_check(uint64_t value) {
+    if (cpp_tls_initialized != value)
+        return 1;
+    for (unsigned index = 0; index < 4; ++index)
+        if (cpp_tls_zero[index] != value + index + 1)
+            return 2;
+    return 0;
+}
+
+extern "C" uintptr_t cpp_tls_address() {
+    return reinterpret_cast<uintptr_t>(&cpp_tls_initialized);
+}
+
 extern "C" double rust_mix(uint64_t, double, uint64_t, double);
 extern "C" double rust_register_pressure(double, double, double, double, double,
                                         double, double, double, double, uint64_t);

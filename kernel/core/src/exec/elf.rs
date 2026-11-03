@@ -27,6 +27,15 @@ pub enum ElfError {
     PageLimit,
     NoSegments,
     InvalidEntry,
+    InvalidTls,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ProgramHeaders {
+    pub address: u64,
+    pub file_offset: u64,
+    pub entry_size: u64,
+    pub count: u64,
 }
 
 /// A borrowed plan for a static ELF64 AMD64 executable. It does not allocate,
@@ -37,6 +46,9 @@ pub struct ElfImage<'file, const SEGMENTS: usize> {
     segments: [Option<LoadSegment<'file>>; SEGMENTS],
     segment_count: usize,
     page_count: usize,
+    elf_header_address: Option<u64>,
+    program_headers: Option<ProgramHeaders>,
+    tls: Option<TlsSegment<'file>>,
 }
 
 impl<'file, const SEGMENTS: usize> ElfImage<'file, SEGMENTS> {
@@ -76,31 +88,74 @@ impl<'file, const SEGMENTS: usize> ElfImage<'file, SEGMENTS> {
             segments: [None; SEGMENTS],
             segment_count: 0,
             page_count: 0,
+            elf_header_address: None,
+            program_headers: None,
+            tls: None,
         };
+        let mut phdr_address = None;
+        let mut seen_load = false;
         for header in headers.as_chunks::<PROGRAM_HEADER_SIZE>().0 {
             match word(header, 0) {
                 0 => {}
                 1 => {
+                    seen_load = true;
                     if let Some(segment) = LoadSegment::parse(header, bytes)? {
                         image.add_segment(segment, limits)?;
                     }
                 }
-                4 | 6 => {
-                    // Notes and the PHDR description do not add mappings.
+                4 => {
                     file_range(bytes, double(header, 8), double(header, 32))?;
+                }
+                6 => {
+                    if phdr_address.is_some()
+                        || seen_load
+                        || word(header, 4) != 4
+                        || double(header, 8) != offset as u64
+                        || double(header, 32) != size as u64
+                        || double(header, 40) != size as u64
+                    {
+                        return Err(ElfError::ProgramHeaders);
+                    }
+                    let address = double(header, 16);
+                    check_alignment(address, offset as u64, double(header, 48))
+                        .map_err(|_| ElfError::ProgramHeaders)?;
+                    phdr_address = Some(address);
+                }
+                7 => {
+                    if image.tls.is_some() {
+                        return Err(ElfError::InvalidTls);
+                    }
+                    image.tls = Some(TlsSegment::parse(header, bytes)?);
                 }
                 PT_GNU_STACK => {
                     if word(header, 4) & !6 != 0 {
                         return Err(ElfError::InvalidPermissions);
                     }
                 }
-                // Dynamic linking, TLS templates, and other extensions need
+                // Dynamic linking and other extensions need
                 // explicit loader support before their headers can be accepted.
                 _ => return Err(ElfError::UnsupportedSegment),
             }
         }
         if image.segment_count == 0 {
             return Err(ElfError::NoSegments);
+        }
+        image.elf_header_address = image.read_only_file_address(0, HEADER_SIZE as u64);
+        image.program_headers = image
+            .read_only_file_address(offset as u64, size as u64)
+            .map(|address| ProgramHeaders {
+                address,
+                file_offset: offset as u64,
+                entry_size: PROGRAM_HEADER_SIZE as u64,
+                count: count as u64,
+            });
+        if let Some(address) = phdr_address
+            && image.program_headers.map(|headers| headers.address) != Some(address)
+        {
+            return Err(ElfError::ProgramHeaders);
+        }
+        if let Some(tls) = image.tls {
+            image.validate_tls(tls)?;
         }
         if !image.segments().any(|segment| {
             segment.permissions.executable()
@@ -118,6 +173,18 @@ impl<'file, const SEGMENTS: usize> ElfImage<'file, SEGMENTS> {
 
     pub const fn page_count(&self) -> usize {
         self.page_count
+    }
+
+    pub const fn elf_header_address(&self) -> Option<u64> {
+        self.elf_header_address
+    }
+
+    pub const fn program_headers(&self) -> Option<ProgramHeaders> {
+        self.program_headers
+    }
+
+    pub const fn tls(&self) -> Option<TlsSegment<'file>> {
+        self.tls
     }
 
     pub fn segments(&self) -> impl ExactSizeIterator<Item = &LoadSegment<'file>> {
@@ -161,10 +228,46 @@ impl<'file, const SEGMENTS: usize> ElfImage<'file, SEGMENTS> {
         self.page_count = page_count;
         Ok(())
     }
+
+    fn read_only_file_address(&self, offset: u64, length: u64) -> Option<u64> {
+        let mut address = None;
+        for segment in self.segments() {
+            if !segment.permissions.writable()
+                && let Some(mapped) = segment.file_address(offset, length)
+            {
+                if address.is_some() {
+                    return None;
+                }
+                address = Some(mapped);
+            }
+        }
+        address
+    }
+
+    fn validate_tls(&self, tls: TlsSegment<'file>) -> Result<(), ElfError> {
+        if tls.contents.is_empty() {
+            return Ok(());
+        }
+        let mut backing = None;
+        for segment in self.segments() {
+            if let Some(address) = segment.file_address(tls.file_offset, tls.contents.len() as u64)
+            {
+                if backing.is_some() {
+                    return Err(ElfError::InvalidTls);
+                }
+                backing = Some(address);
+            }
+        }
+        if backing != Some(tls.address) {
+            return Err(ElfError::InvalidTls);
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct LoadSegment<'file> {
+    file_offset: u64,
     address: u64,
     memory_len: u64,
     contents: &'file [u8],
@@ -174,6 +277,10 @@ pub struct LoadSegment<'file> {
 }
 
 impl<'file> LoadSegment<'file> {
+    pub const fn file_offset(&self) -> u64 {
+        self.file_offset
+    }
+
     pub const fn address(&self) -> u64 {
         self.address
     }
@@ -210,12 +317,10 @@ impl<'file> LoadSegment<'file> {
             return Err(ElfError::InvalidSegment);
         }
         let contents = file_range(file, offset, file_len)?;
-        if address % FRAME_SIZE != offset % FRAME_SIZE
-            || (alignment > 1
-                && (!alignment.is_power_of_two() || address % alignment != offset % alignment))
-        {
+        if address % FRAME_SIZE != offset % FRAME_SIZE {
             return Err(ElfError::InvalidAlignment);
         }
+        check_alignment(address, offset, alignment)?;
         let end = address
             .checked_add(memory_len)
             .ok_or(ElfError::InvalidAddress)?;
@@ -231,6 +336,7 @@ impl<'file> LoadSegment<'file> {
             .ok_or(ElfError::InvalidAddress)?
             & !(FRAME_SIZE - 1);
         Ok(Some(Self {
+            file_offset: offset,
             address,
             memory_len,
             contents,
@@ -238,6 +344,15 @@ impl<'file> LoadSegment<'file> {
             page_start,
             page_end,
         }))
+    }
+
+    fn file_address(&self, offset: u64, length: u64) -> Option<u64> {
+        let relative = offset.checked_sub(self.file_offset)?;
+        let end = relative.checked_add(length)?;
+        if end > self.contents.len() as u64 {
+            return None;
+        }
+        self.address.checked_add(relative)
     }
 
     fn page(self, address: u64) -> LoadPage<'file> {
@@ -259,6 +374,63 @@ impl<'file> LoadSegment<'file> {
             contents,
             offset,
         }
+    }
+}
+
+/// Initialization bytes for one static TLS module. The zero-filled tail is
+/// per-thread storage, not an additional mapping at the template address.
+#[derive(Clone, Copy, Debug)]
+pub struct TlsSegment<'file> {
+    file_offset: u64,
+    address: u64,
+    memory_len: u64,
+    alignment: u64,
+    contents: &'file [u8],
+}
+
+impl<'file> TlsSegment<'file> {
+    pub const fn address(&self) -> u64 {
+        self.address
+    }
+
+    pub const fn memory_len(&self) -> u64 {
+        self.memory_len
+    }
+
+    pub const fn alignment(&self) -> u64 {
+        self.alignment
+    }
+
+    pub const fn contents(&self) -> &'file [u8] {
+        self.contents
+    }
+
+    fn parse(header: &[u8], file: &'file [u8]) -> Result<Self, ElfError> {
+        if word(header, 4) != 4 {
+            return Err(ElfError::InvalidPermissions);
+        }
+        let file_offset = double(header, 8);
+        let address = double(header, 16);
+        let file_len = double(header, 32);
+        let memory_len = double(header, 40);
+        if file_len > memory_len {
+            return Err(ElfError::InvalidTls);
+        }
+        let alignment = double(header, 48);
+        check_alignment(address, file_offset, alignment)?;
+        let end = address
+            .checked_add(memory_len)
+            .ok_or(ElfError::InvalidAddress)?;
+        if address >= USER_END || end > USER_END || (memory_len != 0 && address < FRAME_SIZE) {
+            return Err(ElfError::InvalidAddress);
+        }
+        Ok(Self {
+            file_offset,
+            address,
+            memory_len,
+            alignment: alignment.max(1),
+            contents: file_range(file, file_offset, file_len)?,
+        })
     }
 }
 
@@ -292,6 +464,14 @@ fn file_range(file: &[u8], offset: u64, length: u64) -> Result<&[u8], ElfError> 
     let start = usize::try_from(offset).map_err(|_| ElfError::InvalidSegment)?;
     let end = usize::try_from(end).map_err(|_| ElfError::InvalidSegment)?;
     file.get(start..end).ok_or(ElfError::InvalidSegment)
+}
+
+fn check_alignment(address: u64, offset: u64, alignment: u64) -> Result<(), ElfError> {
+    if alignment > 1 && (!alignment.is_power_of_two() || address % alignment != offset % alignment)
+    {
+        return Err(ElfError::InvalidAlignment);
+    }
+    Ok(())
 }
 
 // Callers pass a complete fixed-size ELF or program header and constant fields.
