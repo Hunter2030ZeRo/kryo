@@ -336,7 +336,7 @@ pub(crate) fn check(
             assert_eq!(tasks.state(task), Ok(TaskState::Dying));
             drop(
                 tasks
-                    .reap(task, |resources| resources.close(pool, region))
+                    .reap(task, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
         }

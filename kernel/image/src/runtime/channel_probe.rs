@@ -76,7 +76,7 @@ pub(crate) fn run(
                 cursor = Some(id);
                 drop(
                     tasks
-                        .reap(id, |resources| resources.close(pool, region))
+                        .reap(id, &mut ipc, |resources| resources.close(pool, region))
                         .expect("Cannot retire service probe resources"),
                 );
             }

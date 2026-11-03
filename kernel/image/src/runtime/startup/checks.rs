@@ -394,7 +394,7 @@ fn spawn_failure(
         ipc.settle(&mut tasks);
         drop(
             tasks
-                .reap(parent, |resources| resources.close(pool, region))
+                .reap(parent, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         assert_eq!(objects.live_count(), 0);

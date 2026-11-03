@@ -48,10 +48,10 @@ simulated success. An accepted timeout may leave I/O uncertain and does not
 release a device's buffer ownership.
 
 Current native calls already provide capability IPC, shared-memory objects,
-monotonic time, threads, explicit FS-base setup and reserve/commit/decommit/release
-for private RW/NX RAM. The optional native bootstrap checks a SysV argument stack
+monotonic time, threads, explicit FS-base setup, atomic private word waits and
+reserve/commit/decommit/release for private RW/NX RAM. The optional native bootstrap checks a SysV argument stack
 and mapped ELF metadata with compiler static TLS. Legacy startup conventions
-remain supported. A complete TCB, user allocator, atomic waits and service-backed
+remain supported. A complete TCB, user allocator and service-backed
 files/streams are still required. The managed scratch TLS page and eight-page
 shared-object API remain separate mechanisms. See
 [interfaces](../interfaces.md) and [the private-VM decision](0026-private-vm-and-atomic-waits.md).
@@ -68,8 +68,8 @@ shared-object API remain separate mechanisms. See
 2. Extend the freestanding startup, compiler TLS and private-VM bootstrap into
    the runtime's `crt0`, full TCB, user allocator and shared platform client.
    Preserve argument, thread-local, allocation-failure and retirement checks in
-   actual user execution. Add the accepted atomic compare-before-park protocol;
-   it is not supplied by notifications alone.
+   actual user execution. Connect the implemented private compare-before-park
+   protocol; it is not supplied by notifications alone.
 3. Port one libc through a small native OS interface. Connect standard streams,
    filesystem descriptors, timing and thread synchronization to real services.
    Add the POSIX-facing surface required by applications incrementally; no

@@ -76,6 +76,30 @@ Its per-process limits are 4,096 mappings and 128 tables. Intermediate page
 tables remain until process-space close; data/reservation credit checks do not
 prove that those table frames have already been reclaimed.
 
+The subsequent private-word phase uses aligned 32-bit atomics in static ELF
+data and committed private VM. A changed value returns immediately without a
+wait charge. A wake without a waiter is not remembered. An absolute five-ms
+timeout must not return before its deadline. Two children register in a known
+order, verified through live wait charges, then wake-one returns only the first
+and wake-zero leaves the other blocked. A final bounded wake releases it.
+
+Separate children check control cancellation, decommit cancellation, recommit
+with a fresh mapping identity, release cancellation and reservation-address
+reuse. A final owner publishes its kernel-managed TLS address; a sibling parks
+there, and owner exit/cleanup must cancel that sibling before TLS backing is
+reused. Results and predicates use Release/Acquire atomics; revocation cases
+hold no Rust references into the affected mappings. Raw entry trampolines and
+native joins retain child argument/code/data lifetimes.
+
+Event 96/value 1 marks completed word checks and zero remaining wait charges.
+The phase creates eight children in groups of at most two; the kernel reaps
+ended children between execution batches, retaining the three-thread account
+limit. It leaves the earlier four/eight private/reserved pages for process
+cleanup. These checks exercise the experimental private park/wake contract,
+not shared-memory waits, pthreads, a lock implementation or measured hardware
+latency. The timeout result alone does not prove the thread entered the idle
+halt path; kernel observation is required for that claim.
+
 Build with `python3 tools/build_abi.py --profile debug|release`. The script builds
 core and compiler builtins for the custom target in `build/abi`, using the
 installed nightly rust-src and Clang. It packages with the existing ELF entry/

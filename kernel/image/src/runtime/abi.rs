@@ -97,6 +97,9 @@ pub(crate) fn check(
         let mut avx_preemptions = None;
         let mut tls_checked = false;
         let mut private_vm_checked = false;
+        let mut words_checked = false;
+        let mut words_halted = false;
+        let mut retired = 0;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
         while tasks.terminal(owner).is_none() {
             assert!(
@@ -107,7 +110,8 @@ pub(crate) fn check(
             if tasks.has_runnable() {
                 super::smp::step(&mut tasks, &mut calls, &mut ipc, region);
             } else {
-                super::idle_until_deadline(&mut tasks, &mut ipc);
+                let words_pending = !ipc.words.is_empty();
+                words_halted |= super::idle_until_deadline(&mut tasks, &mut ipc) && words_pending;
             }
             if calls.last_debug == Some((task, 90, 0)) && start_ticks.is_none() {
                 start_ticks = Some(tasks.thread_mut(task).unwrap().ticks);
@@ -121,10 +125,27 @@ pub(crate) fn check(
             if calls.last_debug == Some((task, 94, 2)) {
                 tls_checked = true;
             }
-            if calls.last_debug == Some((task, 95, 1)) {
+            if calls.last_debug == Some((task, 95, 1)) && !private_vm_checked {
                 assert_eq!(account.count(Resource::PrivatePages), 4);
                 assert_eq!(account.count(Resource::ReservedPages), 8);
                 private_vm_checked = true;
+            }
+            if calls.last_debug == Some((task, 96, 1)) && !words_checked {
+                assert_eq!(account.count(Resource::PrivatePages), 4);
+                assert_eq!(account.count(Resource::ReservedPages), 8);
+                words_checked = true;
+            }
+            // Joined threads release their execution resources while retained
+            // control objects continue to supply their terminal join results.
+            if tasks.terminal(owner).is_none() {
+                while let Some(id) = tasks.next_dying(None) {
+                    drop(
+                        tasks
+                            .reap(id, &mut ipc, |resources| resources.close(pool, region))
+                            .unwrap(),
+                    );
+                    retired += 1;
+                }
             }
         }
         let status = tasks.terminal(owner).unwrap();
@@ -134,18 +155,31 @@ pub(crate) fn check(
         let preemptions = avx_preemptions.expect("Missing AVX2 preemption proof");
         assert!(tls_checked, "Missing static TLS thread isolation proof");
         assert!(private_vm_checked, "Missing private VM ownership proof");
+        assert!(words_checked, "Missing atomic private wait proof");
+        assert!(
+            words_halted,
+            "Private wait deadline did not halt the idle CPU"
+        );
         ipc.settle(&mut tasks);
         assert_eq!(tasks.state(task), Ok(TaskState::Dying));
-        let mut retired = 0;
         while let Some(id) = tasks.next_dying(None) {
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             retired += 1;
         }
-        assert_eq!(retired, 3, "Native TLS threads did not retire");
+        assert_eq!(
+            retired,
+            calls.threads_created + 1,
+            "Native threads did not retire"
+        );
+        assert_eq!(retired, 11, "Native wait fixture thread count changed");
+        assert!(
+            ipc.words.is_empty(),
+            "Private word registrations survived teardown"
+        );
         drop(ipc);
         assert_eq!(objects.live_count(), 0);
         for resource in [
@@ -170,4 +204,7 @@ pub(crate) fn check(
     );
     kryo_hal::emergency_write_str("ABI: startup and execution resources retired\n");
     kryo_hal::emergency_write_str("VM: private reserve commit retirement OK\n");
+    kryo_hal::emergency_write_str(
+        "WAIT: private atomic park wake retirement OK threads=11 halt=true\n",
+    );
 }

@@ -84,7 +84,17 @@ reservations use interval metadata rather than one record per reserved page.
 Intermediate page tables remain until process-space close; data release does
 not implement table pruning.
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md) defines the contract;
-user allocators, atomic park/wake and demand paging remain separate work.
+user allocators and demand paging remain separate work.
+
+Process-private word waits use aligned 32-bit words in owned RW mappings,
+including ELF data and managed stack/TLS. Core validates and snapshots owned
+RAM without borrowing user storage. Keys include space and mapping lifetimes
+plus the exact word address. The image serializes comparison and queue admission
+with wake after all user CPU leases end. The persistent wait table retains wait
+charges and completes one result; image settlement writes saved return values
+before scheduling. Decommit, unmap and execution-resource cleanup invalidate
+affected queues before backing retirement. Wake is bounded and has no buffered
+event. Shared waits and scalable parallel kernel policy remain separate work.
 
 ## User-space services
 
@@ -164,8 +174,8 @@ interface still open. [ADR 0022](decisions/0022-platform-baseline-and-performanc
 records the requirements, performance work and decisions requiring review.
 [ADR 0024](decisions/0024-native-bootstrap-stack.md) defines the bootstrap gate.
 [ADR 0025](decisions/0025-static-tls-and-elf-metadata.md) extends it with truthful
-mapped ELF metadata and runtime-owned compiler static TLS. The full mlibc TCB,
-user allocator and atomic waits remain pending. Explicit private VM now
-provides their page-backing boundary through
+mapped ELF metadata and runtime-owned compiler static TLS. The full mlibc TCB
+and user allocator remain pending. Explicit private VM and atomic private waits
+provide page-backing and synchronization boundaries through
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
 Kernel hot replacement is a separate research topic from user-space service replacement.

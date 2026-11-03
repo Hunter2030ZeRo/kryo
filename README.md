@@ -8,9 +8,11 @@ Native private memory has separate reserve, commit, decommit and release calls.
 Reserve holds address space; successful commit supplies actual zeroed RW/NX RAM.
 Virtual-page and private-page charges remain until their resources retire.
 Incomplete rollback quarantines the process while retaining ownership.
-[The memory contract](docs/decisions/0026-private-vm-and-atomic-waits.md) leaves
-user allocators, atomic park/wake, demand paging and standard-library ports as
-separate work.
+Aligned private 32-bit words support atomic compare-before-park and bounded
+wake, with deadlines, cancellation and mapping-lifetime isolation.
+[The memory/wait contract](docs/decisions/0026-private-vm-and-atomic-waits.md)
+leaves user allocators, shared waits, demand paging and standard-library ports
+as separate work.
 
 BetAFS is the filesystem target. An opt-in Ring 3 driver now validates real
 VirtIO block read/write/flush through private DMA queues. A configured initial block IPC service now remains active after its clients exit.

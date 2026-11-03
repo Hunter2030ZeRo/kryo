@@ -1,4 +1,6 @@
-use super::{BootFramePool, KernelRegion, ProcessResources, Resources, ThreadResources};
+use super::{
+    BootFramePool, IpcRuntime, KernelRegion, ProcessResources, Resources, ThreadResources,
+};
 use core::ops::{Deref, DerefMut};
 use kryo_core::process::{ExitStatus, ProcessId, ProcessState, ProcessTable};
 use kryo_core::sched::{ReturnReason, TaskState};
@@ -373,14 +375,36 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
     pub(crate) fn reap<E>(
         &mut self,
         task: TaskId,
+        ipc: &mut IpcRuntime<'objects>,
         cleanup: impl FnOnce(&mut ResourcesView<'_, 'kernel, 'objects>) -> Result<(), E>,
     ) -> Result<ThreadResources<'kernel, 'objects>, ReapError<E>> {
         self.end_thread(task).map_err(ReapError::Task)?;
+        // Most callers already settled. A stopped waiter still needs its own
+        // queues detached before cleanup can retire the backing it waited on.
+        if self
+            .thread_mut(task)
+            .map_err(ReapError::Task)?
+            .wait
+            .is_some()
+        {
+            ipc.settle(self);
+        }
         let process = self
             .process_for(task)
             .ok_or(ReapError::Task(TaskError::InvalidId))?;
-        cleanup(&mut self.resources_mut(task).map_err(ReapError::Task)?)
-            .map_err(ReapError::Cleanup)?;
+        {
+            let mut resources = self.resources_mut(task).map_err(ReapError::Task)?;
+            assert!(resources.wait.is_none(), "Retiring thread wait invariant");
+            let space = resources.process.space.identity();
+            if resources.final_member {
+                ipc.invalidate_words(space, 0, u64::MAX);
+            } else if resources.user_stack_owned {
+                for page in super::user_pages(resources.user_slot) {
+                    ipc.invalidate_words(space, page, page + 4096);
+                }
+            }
+            cleanup(&mut resources).map_err(ReapError::Cleanup)?;
+        }
         let thread = self.threads.reap(task, |_| Ok::<_, E>(()))?;
         self.processes
             .detach(process, task)

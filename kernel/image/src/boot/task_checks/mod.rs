@@ -51,6 +51,7 @@ pub(super) fn run(
     launch_checks::run(pool, direct, kernel, region);
     spawn_checks::run(pool, direct, kernel, region);
     thread_checks::run(pool, direct, kernel, region);
+    crate::runtime::atomic_wait::checks::run(pool, direct, kernel, region);
     let cpus = crate::runtime::smp::start(mmio);
     crate::runtime::abi::check(pool, direct, kernel, region);
     crate::runtime::transport::run(pool, direct, kernel, region);
@@ -205,7 +206,7 @@ fn check_preemption(
         tasks.stop(id).unwrap();
         drop(
             tasks
-                .reap(id, |resources| resources.close(pool, region))
+                .reap(id, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
     }
@@ -278,7 +279,7 @@ fn check_capabilities(
             }
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
         }
@@ -333,7 +334,7 @@ fn check_invalid_resume(
             assert_eq!(tasks.state(id), Ok(TaskState::Dying));
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             rejected = true;
@@ -349,7 +350,7 @@ fn check_invalid_resume(
     tasks.stop(peer).unwrap();
     drop(
         tasks
-            .reap(peer, |resources| resources.close(pool, region))
+            .reap(peer, &mut ipc, |resources| resources.close(pool, region))
             .unwrap(),
     );
     assert_eq!(tasks.live_count(), 0);

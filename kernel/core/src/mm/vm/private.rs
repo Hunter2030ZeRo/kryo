@@ -213,7 +213,26 @@ impl PrivateVm {
         address: u64,
         bytes: u64,
     ) -> Result<(), PrivateError<B::Error>> {
+        self.decommit_with(space, address, bytes, |_, _| {})
+    }
+
+    /// Runs an infallible, allocation-free invalidation after admission and
+    /// metadata preparation, before any backing in this range can retire.
+    pub fn decommit_with<
+        F: FrameAllocator,
+        B: VmBackend,
+        const M: usize,
+        const T: usize,
+        S: SharedPage,
+    >(
+        &mut self,
+        space: &mut AddressSpace<'_, F, B, M, T, S>,
+        address: u64,
+        bytes: u64,
+        before: impl FnOnce(u64, u64),
+    ) -> Result<(), PrivateError<B::Error>> {
         self.check_space(space)?;
+        space.check_inactive().map_err(PrivateError::Vm)?;
         let (index, end, _) = self
             .range(address, bytes)
             .ok_or(PrivateError::InvalidRange)?;
@@ -233,6 +252,7 @@ impl PrivateVm {
                 part.state = State::Retiring;
             }
         }
+        before(address, end);
         retire(region, space)?;
         if self.retirement_pending() {
             Err(PrivateError::RetirementPending)
@@ -252,7 +272,25 @@ impl PrivateVm {
         space: &mut AddressSpace<'_, F, B, M, T, S>,
         base: u64,
     ) -> Result<(), PrivateError<B::Error>> {
+        self.release_with(space, base, |_, _| {})
+    }
+
+    /// Invalidates the admitted reservation before its first backing retirement.
+    /// The callback must complete without allocating or failing.
+    pub fn release_with<
+        F: FrameAllocator,
+        B: VmBackend,
+        const M: usize,
+        const T: usize,
+        S: SharedPage,
+    >(
+        &mut self,
+        space: &mut AddressSpace<'_, F, B, M, T, S>,
+        base: u64,
+        before: impl FnOnce(u64, u64),
+    ) -> Result<(), PrivateError<B::Error>> {
         self.check_space(space)?;
+        space.check_inactive().map_err(PrivateError::Vm)?;
         let index = self
             .regions
             .binary_search_by_key(&base, |region| region.start)
@@ -262,6 +300,7 @@ impl PrivateVm {
         for part in &mut region.commits {
             part.state = State::Retiring;
         }
+        before(region.start, region.end);
         retire(region, space)?;
         self.regions.remove(index);
         if self.retirement_pending() {

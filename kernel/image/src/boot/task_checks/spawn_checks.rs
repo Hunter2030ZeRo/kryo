@@ -136,7 +136,7 @@ fn run_case(
     if let Some(peer) = peer {
         tasks.stop(peer).unwrap();
         ipc.settle(&mut tasks);
-        reap_task(&mut tasks, peer, pool, region);
+        reap_task(&mut tasks, &mut ipc, peer, pool, region);
     }
     for _ in 0..32 {
         if tasks.state(parent) == Ok(TaskState::Dying) {
@@ -148,7 +148,7 @@ fn run_case(
     }
     assert_eq!(tasks.state(parent), Ok(TaskState::Dying));
     assert_eq!(tasks.resources_mut(parent).unwrap().exit_code, exit_code);
-    reap_task(&mut tasks, parent, pool, region);
+    reap_task(&mut tasks, &mut ipc, parent, pool, region);
     assert_eq!(tasks.live_count(), 0);
     assert_eq!(ipc.waits.next_ready(), None);
     assert_eq!(ipc.waits.next_deadline(), None);
@@ -247,15 +247,16 @@ fn prepare_tasks<'kernel, 'objects>(
 }
 
 #[inline(never)]
-fn reap_task(
-    tasks: &mut Tasks<'_, '_>,
+fn reap_task<'objects>(
+    tasks: &mut Tasks<'_, 'objects>,
+    ipc: &mut IpcRuntime<'objects>,
     task: TaskId,
     pool: &BootFramePool,
     region: &mut KernelRegion,
 ) {
     drop(
         tasks
-            .reap(task, |resources| resources.close(pool, region))
+            .reap(task, ipc, |resources| resources.close(pool, region))
             .unwrap(),
     );
 }

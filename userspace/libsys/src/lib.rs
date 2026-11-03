@@ -137,6 +137,52 @@ pub struct ProcessExit {
     pub reason: ExitReason,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ParkResult {
+    Woken,
+    ValueChanged,
+}
+
+/// Compare an aligned private RW u32 and park only while it still equals expected.
+/// A return is a reason to recheck the predicate, not ownership of a user lock.
+pub fn park(address: u64, expected: u32) -> Result<ParkResult, Error> {
+    park_result(invoke(Call::Park, address, u64::from(expected))?)
+}
+
+/// Like park, with an absolute deadline from the monotonic nanosecond clock.
+pub fn park_until(address: u64, expected: u32, deadline: u64) -> Result<ParkResult, Error> {
+    let status;
+    let result;
+    unsafe {
+        asm!(
+            "int 0x80",
+            inlateout("rax") Call::ParkUntil as u64 => status,
+            in("rdi") address,
+            in("rsi") u64::from(expected),
+            inlateout("rdx") deadline => result,
+            lateout("r8") _, lateout("r9") _, lateout("r10") _, lateout("r11") _,
+            options(nostack),
+        );
+    }
+    check(status)?;
+    park_result(result)
+}
+
+/// Detach up to maximum waiters for the current private word mapping.
+/// Publish the predicate with a Release store before wake, and recheck with an
+/// Acquire load after park. This call neither changes the word nor buffers wakes.
+pub fn wake(address: u64, maximum: u64) -> Result<u64, Error> {
+    invoke(Call::Wake, address, maximum)
+}
+
+fn park_result(value: u64) -> Result<ParkResult, Error> {
+    match value {
+        0 => Ok(ParkResult::Woken),
+        1 => Ok(ParkResult::ValueChanged),
+        _ => Err(Error::InvalidResponse),
+    }
+}
+
 pub fn clock() -> Result<u64, Error> {
     invoke(Call::ClockRead, 0, 0)
 }

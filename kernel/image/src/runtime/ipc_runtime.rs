@@ -1,9 +1,11 @@
 use super::{Batch, KernelObject, Object, Objects, Tasks};
 use kryo_core::ipc::{Completion, Delivery, IpcError};
+use kryo_core::mm::vm::PrivateWordKey;
 use kryo_core::process::ExitStatus;
 use kryo_core::resource::Budget;
 use kryo_core::sched::TaskState;
 use kryo_core::storage::Slots;
+use kryo_core::sync::WordWaiters;
 use kryo_core::sync::wait::{WaitId, WaitTable};
 use kryo_core::task::TaskId;
 use kryo_interfaces::syscall::Error;
@@ -27,6 +29,7 @@ pub(crate) struct IpcRuntime<'objects> {
     transfers: Slots<Option<PendingTransfer<'objects>>, 4>,
     sleepers: Slots<Option<WaitId>, 4>,
     observations: Slots<Option<(WaitId, Object<'objects>)>, 4>,
+    pub(crate) words: WordWaiters<PrivateWordKey>,
     pub(crate) accepted_failures: usize,
     pub(crate) transferred: usize,
     pub(crate) out_of_order: usize,
@@ -44,6 +47,7 @@ impl<'objects> IpcRuntime<'objects> {
             transfers: Slots::new([const { None }; 4]),
             sleepers: Slots::new([None; 4]),
             observations: Slots::new([const { None }; 4]),
+            words: WordWaiters::new(),
             accepted_failures: 0,
             transferred: 0,
             out_of_order: 0,
@@ -185,6 +189,18 @@ impl<'objects> IpcRuntime<'objects> {
     }
 
     pub(crate) fn cancel(&mut self, wait: WaitId) -> Result<Delivery, IpcError> {
+        if self.words.remove(wait) {
+            self.waits
+                .complete(
+                    wait,
+                    Completion::Failed {
+                        error: IpcError::Cancelled,
+                        delivery: Delivery::NotDelivered,
+                    },
+                )
+                .map_err(|_| IpcError::InvalidWait)?;
+            return Ok(Delivery::NotDelivered);
+        }
         if let Some(index) = self.observation(wait) {
             let result = self.observations[index].as_ref().unwrap().1.with(|object| {
                 super::with_exit(object, |exit| exit.cancel(wait, &mut self.waits))
@@ -253,6 +269,18 @@ impl<'objects> IpcRuntime<'objects> {
         let mut expired = false;
         while let Some(wait) = self.waits.next_expired(now) {
             expired = true;
+            if self.words.remove(wait) {
+                self.waits
+                    .complete(
+                        wait,
+                        Completion::Failed {
+                            error: IpcError::TimedOut,
+                            delivery: Delivery::NotDelivered,
+                        },
+                    )
+                    .expect("Expired private word wait invariant");
+                continue;
+            }
             if let Some(index) = self.observation(wait) {
                 self.observations[index].as_ref().unwrap().1.with(|object| {
                     super::with_exit(object, |exit| exit.timeout(wait, &mut self.waits))
@@ -398,6 +426,7 @@ impl<'objects> IpcRuntime<'objects> {
             cursor = Some(id);
             let mut resources = tasks.resources_mut(id).unwrap();
             if let Some(wait) = resources.wait.take() {
+                self.words.remove(wait);
                 self.remove_sleeper(wait);
                 self.remove_observation(wait);
                 self.waits.abandon(wait).expect("Missing dying task wait");
@@ -420,6 +449,7 @@ impl<'objects> IpcRuntime<'objects> {
                 let mut resources = tasks.resources_mut(id).unwrap();
                 assert_eq!(resources.wait.take(), Some(wait));
                 let completion = self.waits.take(wait).expect("Missing IPC completion");
+                self.words.remove(wait);
                 self.remove_sleeper(wait);
                 self.remove_observation(wait);
                 drop(self.take_transfer(wait));
@@ -512,6 +542,32 @@ impl<'objects> IpcRuntime<'objects> {
             }
         }
         retired
+    }
+
+    pub(crate) fn wake_words(&mut self, key: PrivateWordKey, maximum: usize) -> usize {
+        self.words.wake(key, maximum, |wait| {
+            self.waits
+                .complete(wait, Completion::Notified)
+                .expect("Private word wake invariant");
+        })
+    }
+
+    /// Detach registrations before their backing can retire or be reused.
+    pub(crate) fn invalidate_words(&mut self, space: u64, start: u64, end: u64) {
+        self.words.remove_matching(
+            |key| key.space() == space && start <= key.address() && key.address() < end,
+            |wait| {
+                self.waits
+                    .complete(
+                        wait,
+                        Completion::Failed {
+                            error: IpcError::Cancelled,
+                            delivery: Delivery::NotDelivered,
+                        },
+                    )
+                    .expect("Private word invalidation invariant");
+            },
+        );
     }
 
     fn task_died(&mut self, id: TaskId) {

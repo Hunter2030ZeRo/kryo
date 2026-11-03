@@ -2,18 +2,23 @@
 
 Snapshot: 2026-11-03. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [atomic wait milestone](validation/2026-11-03-atomic-waits/README.md) adds
+32-bit process-private Park/ParkUntil/Wake with bounded FIFO wake, absolute
+deadlines and mapping-lifetime cancellation. It uses the existing wait table,
+quota and scheduler handoff. Shared waits, priority inheritance, robust locks
+and a complete pthread/libc integration remain unimplemented.
+
 The [private VM milestone](validation/2026-11-03-private-vm/README.md) adds
 reserve/commit/decommit/release to the native ABI. It separates reserved virtual
 pages from zeroed committed RAM, retains quota through failed retirement and
-verifies process-exit cleanup. Atomic park/wake and a user allocator remain
-unimplemented.
+verifies process-exit cleanup. A user allocator remains unimplemented.
 
 The [static TLS milestone](validation/2026-11-03-static-tls/README.md) extends
 native startup with mapped ELF/PHDR metadata and C/C++/Rust local-exec TLS.
 Its runtime-owned fixture verifies main/two-child isolation and full kernel
 resource retirement. It does not implement a complete mlibc TCB/DTV, dynamic
 TLS, destructors or a user allocator. [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md)
-defines explicit private VM and the accepted direction for future atomic waits.
+defines explicit private VM and process-private atomic waits.
 
 The [native ABI milestone](validation/2026-11-02-native-abi/README.md) adds a
 dedicated v3 hard-float target, an allocation-free initial-stack builder and an
@@ -107,6 +112,13 @@ Before the initial supervisor, the earlier native bootstrap service receives a s
 The original native-smoke ELF remains a boot-test CPU-state fixture. [ADR 0002](decisions/0002-user-address-spaces.md) describes memory ownership, [ADR 0003](decisions/0003-preemption-and-capabilities.md) task execution, [ADR 0004](decisions/0004-waits-ipc-and-idle.md) waits/IPC, [ADR 0005](decisions/0005-shared-memory-and-delegation.md) shared backing, and [ADR 0006](decisions/0006-native-elf-and-extended-state.md) native execution and CPU state.
 
 ## Verification
+
+The [atomic wait matrix](validation/2026-11-03-atomic-waits/evidence.json) passes
+six QEMU configurations, 443 Rust tests and 19 Python tests. Four real native
+ABI runs cover bounded wake, timeout with HLT, cancellation, mapping reuse and
+managed TLS retirement across eleven threads. Trusted boot checks and host
+models separately cover cleanup failures, admission and identity lifetime.
+The existing private VM, TLS, SIMD, SMP and block-service checks remain required.
 
 The [private VM matrix](validation/2026-11-03-private-vm/evidence.json) passes six
 QEMU configurations, 428 Rust tests and 18 Python tests. It covers explicit
@@ -348,8 +360,8 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 
 ## Next work
 
-Implement private compare-before-park/wake and runtime-owned native thread
-resources, then evaluate mlibc sysdeps against those contracts. Mapped ELF
+Implement runtime-owned native thread resources, then evaluate mlibc sysdeps
+against those contracts. Mapped ELF
 metadata, static TLS and explicit private VM are available; a complete TCB/DTV,
 allocator and standard libraries remain separate work. Connect the initial
 block service to VFS, the native runtime and BetAFS. Add storage IRQ

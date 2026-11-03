@@ -11,7 +11,7 @@ use kryo_core::resource::{Charge, Resource};
 use kryo_core::task::TaskId;
 use kryo_interfaces::syscall::Error;
 
-/// Unpublished mappings and stack remain owned until explicit cleanup finishes.
+/// Resources of an unpublished thread remain owned until cleanup finishes.
 pub(crate) struct PendingThread {
     stack: Option<KernelStack>,
     attempted: [bool; 5],
@@ -20,11 +20,23 @@ pub(crate) struct PendingThread {
 }
 
 impl PendingThread {
+    /// Used after process-wide invalidation or before these mappings are visible
+    /// to user execution. Active-process retries must use close_with instead.
     pub(crate) fn close<S: kryo_core::mm::shared::SharedPage>(
         &mut self,
         pool: &BootFramePool,
         region: &mut KernelRegion,
         space: &mut UserSpace<'_, S>,
+    ) -> bool {
+        self.close_with(pool, region, space, |_, _| {})
+    }
+
+    pub(crate) fn close_with<S: kryo_core::mm::shared::SharedPage>(
+        &mut self,
+        pool: &BootFramePool,
+        region: &mut KernelRegion,
+        space: &mut UserSpace<'_, S>,
+        mut before: impl FnMut(u64, u64),
     ) -> bool {
         if let Some(stack) = self.stack.as_mut() {
             // No CPU has entered this unpublished stack.
@@ -35,7 +47,7 @@ impl PendingThread {
         }
         for (index, page) in user_pages(self.user_slot).into_iter().enumerate() {
             if self.attempted[index] {
-                match space.unmap_page(page) {
+                match space.unmap_page_with(page, || before(page, page + 4096)) {
                     Ok(()) | Err(VmError::NotMapped) => self.attempted[index] = false,
                     Err(_) => return false,
                 }
@@ -76,8 +88,11 @@ pub(super) fn create<'kernel, 'objects>(
         caller_resources.memory,
     );
     let owner = tasks.process_mut(process).map_err(|_| Error::PeerClosed)?;
+    let space = owner.space.identity();
     if let Some(pending) = owner.pending_thread.as_mut() {
-        if !pending.close(pool, region, &mut owner.space) {
+        if !pending.close_with(pool, region, &mut owner.space, |start, end| {
+            ipc.invalidate_words(space, start, end);
+        }) {
             return Err(Error::OutOfResources);
         }
         owner.pending_thread = None;
@@ -213,7 +228,10 @@ pub(super) fn create<'kernel, 'objects>(
     })();
     if result.is_err() {
         let owner = tasks.process_mut(process).unwrap();
-        if !pending.close(pool, region, &mut owner.space) {
+        let space = owner.space.identity();
+        if !pending.close_with(pool, region, &mut owner.space, |start, end| {
+            ipc.invalidate_words(space, start, end);
+        }) {
             assert!(
                 owner.pending_thread.is_none(),
                 "One retained thread attempt invariant"

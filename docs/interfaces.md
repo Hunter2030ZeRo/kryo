@@ -61,6 +61,9 @@ The public service ABI is not stable. Experimental task calls are defined below;
 | 55 | VmCommit | Start VA | Byte length | 0 |
 | 56 | VmDecommit | Start VA | Byte length | 0 |
 | 57 | VmRelease | Exact reservation base | 0 | 0 |
+| 58 | Park | Private word VA | u32 expected | 1 on mismatch, 0 after wake |
+| 59 | ParkUntil | Private word VA | u32 expected | As Park; input RDX=absolute deadline |
+| 60 | Wake | Private word VA | Maximum waiters | Number detached |
 
 TaskStatus requires INSPECT; TaskStop and CancelWait require CONTROL. They also accept process-control handles; a retained terminal result continues to report Exited after reaping, and stop/cancel cannot target a replacement generation. Duplicate requires DUP and a subset of the original rights. Rights bits are INSPECT=1, CONTROL=2, DUP=4, SEND=8, RECEIVE=16, WAIT=32, SIGNAL=64, READ=128, WRITE=256, MAP=512, TRANSFER=1024, EXECUTE=2048, CREATE=4096, ASSIGN=8192. Send/Call and their Caps variants require SEND, Receive/Reply require RECEIVE, and EndpointClose requires CONTROL. Wait and Signal require their matching rights. Handles are process-local and opaque; zero is invalid. Close removes one reference, not all authority to an object. A task-control object can outlive its task and report Exited without keeping its VM or stack alive.
 
@@ -70,7 +73,7 @@ The caller becomes the endpoint receiver/replier or notification waiter. Endpoin
 
 Closing the last external reference also closes the channel and resolves pending waits. The serialized runtime removes closed channel registry roots after committing accepted transfers and publishing completions. A closed channel remains charged while any external or staged reference retains its payload. Only final payload destruction returns budget credit. Device notification roots remain until explicit hardware retirement. This channel count does not budget memory, handles, waiting threads, or queued bytes; general quotas remain pending. [ADR 0014](decisions/0014-native-channel-creation.md) defines the lifetime rules.
 
-Errors are InvalidCall, InvalidHandle, PermissionDenied, WrongType, OutOfResources, InvalidArgument, PeerClosed, Cancelled, InvalidReply, and TimedOut. Unknown call numbers and rights bits are rejected. These calls contain no dereferenced user pointers; MemoryMap validates a VA in the caller's own address space. General user-copy recovery remains pending.
+Errors are InvalidCall, InvalidHandle, PermissionDenied, WrongType, OutOfResources, InvalidArgument, PeerClosed, Cancelled, InvalidReply, and TimedOut. Unknown call numbers and rights bits are rejected. MemoryMap validates a VA in the caller's space; private word calls snapshot only validated owned RAM. General arbitrary user-copy recovery remains pending.
 
 SendCaps/CallCaps supply source handles in R12/R13 and requested rights in R14/R15. Every source requires TRANSFER and the requested rights must be a subset. Delegation copies authority; source handles remain valid. RECEIVE and notification WAIT ownership cannot migrate. Receive reserves its requested capacity before publication; insufficient capacity rejects a capability-bearing request before acceptance. Received capabilities install before runnable publication. Reply currently carries inline data only.
 
@@ -207,9 +210,59 @@ decommit/release do not prune them. The per-process table limit still bounds
 these retained paths. PrivatePages/ReservedPages therefore do not measure all
 RAM retained by a process. The 1..8-page MemoryCreate interface remains a separate
 shared-object contract. No demand paging, allocator, protection transitions,
-file-backed mappings or native atomic park/wake are implemented by these calls.
+file-backed mappings are implemented by these calls.
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md) records the accepted
-memory and future private-wait direction.
+memory and private-wait contracts.
+
+## Atomic private word waits
+
+Experimental calls 58..60 use one four-byte aligned native `u32` in a published,
+owned private RW mapping in the caller's address space. ELF data/BSS, managed
+stack/TLS and committed private VM are supported. Shared backing, RO/RX pages,
+reserved holes and unpublished mappings are rejected. The kernel copies a
+validated word through its owned RAM mapping while users are quiescent; no raw
+user pointer is borrowed as Rust data.
+
+| Call | Registers | Successful result in RDX |
+| --- | --- | --- |
+| Park (58) | RDI=word VA, RSI=u32 expected | 1 on value mismatch; 0 after a wake |
+| ParkUntil (59) | RDI=word VA, RSI=u32 expected, RDX=absolute monotonic nanosecond deadline | The same results as Park |
+| Wake (60) | RDI=word VA, RSI=maximum waiters | Number detached, up to maximum; zero detaches none |
+
+Invalid addresses, alignment, backing or expected values above `u32::MAX`
+return InvalidArgument. Metadata or Waits-account exhaustion returns
+OutOfResources. A value mismatch returns immediately without queue metadata or
+a wait charge. When the value matches, an already due deadline returns TimedOut.
+Incoming native calls sample and detach due deadlines before request progress,
+including after earlier long-running calls in the same execution batch. This
+is sampled ordering, not a guarantee of exact wakeup latency.
+
+The matching compare and queue publication are serialized with wake and mapping
+retirement. Word-queue capacity is prepared only for an actual word wait,
+before the persistent wait-table registration is charged and published. Pending
+and Ready registrations retain their Waits charge until completion consumption
+or abandonment. Timeout, cancellation, wake and task death remove queue records
+before completing or abandoning the wait; saved return values precede runnable
+publication. The first completion wins.
+
+Wake does not write the word, acquire a user lock or buffer a signal for a later
+park. The runtime Release-stores its predicate before calling Wake, then loops
+around Acquire loads and park results. Callers must treat ValueChanged, Woken,
+TimedOut and Cancelled according to that predicate rather than assume a lock
+was acquired.
+
+Keys include the unique address space, a monotonic mapping lifetime and the
+exact word address. Reusing a VA cannot wake an old registration. Keys do not
+retain backing while asleep. Admitted decommit/release, legacy private-page
+unmap, managed stack/TLS cleanup, retained thread-creation cleanup retries and
+final process cleanup detach affected
+registrations before retiring storage. Detached live waiters return Cancelled;
+invalidated storage must not be accessed merely because park returned. Failed
+VM validation or metadata preparation leaves wait registrations intact.
+
+These calls are process-private. They implement no shared wait, requeue,
+priority inheritance, robust-mutex recovery, pthread API or libc/std port.
+Word queues and deadline selection remain linear scans under BSP policy.
 
 ## Mediated VirtIO calls
 

@@ -1,7 +1,7 @@
 # Private VM and atomic waits
 
-Date: 2026-11-03. Status: accepted. Explicit private VM is implemented in the
-experimental version-0 ABI; atomic park/wake remains unimplemented.
+Date: 2026-11-03. Status: accepted. Explicit private VM and process-private
+atomic park/wake are implemented in the experimental version-0 ABI.
 
 ## Private memory
 
@@ -77,32 +77,61 @@ through a checked unpublished transaction. Preserve compatibility with earlier
 boot conventions while removing redundant scratch allocations from the general
 runtime. A logical exit flag cannot authorize premature stack/TLS reclamation.
 
-## Atomic wait direction
+## Atomic private waits
 
-Keep uncontended locking in user-space atomics. On contention, enter a native
-compare-before-park operation with an absolute monotonic deadline. Comparison
-and waiter registration must be serialized with wake so a store followed by
-wake cannot fall between them and lose the event. Reuse the existing Parking
-and single-completion rules for wake, timeout, cancellation and peer death.
+Keep uncontended locking in user-space atomics. Park compares one four-byte
+aligned native `u32` in an owned private RW mapping. This includes ELF data/BSS,
+managed stack/TLS and explicitly committed private VM. Shared, read-only,
+executable, uncommitted and unpublished backing is rejected. The kernel copies
+four bytes through validated owned RAM while all user CPU leases are quiescent;
+it creates no Rust reference into user storage.
 
-Start with process-private waits. Their keys must include address-space and
-retained mapping identity so address reuse cannot inherit an old waiter.
-Shared waits need backing-object identity and offset, not an integer VA or
-physical address alone. Resolve shared lifetime rules before exposing
-process-shared pthread operations. Unsupported modes return errors.
+| Operation | Contract |
+| --- | --- |
+| Park | Return ValueChanged if the word differs from expected; otherwise register a wait |
+| ParkUntil | The same comparison, with an absolute monotonic nanosecond deadline; an equal word with an already due deadline returns TimedOut |
+| Wake | Detach up to the requested number of matching waiters in admission order and return that count; zero detaches none |
 
-Reserve fallible wait metadata before taking short queue locks. Validate the
-word's alignment/range and retain readable backing through the compare/register
-transaction. Raw user memory must not be borrowed as trusted Rust data. Unmap,
-object closure and final cancellation need defined queue removal and lifetime
-rules before storage can be reused.
+Wake neither writes the word nor buffers an event for a future waiter. The
+runtime publishes its predicate with a Release store before wake and rechecks
+it with an Acquire load after park. A successful wake does not acquire the
+runtime's lock. Callers loop around the predicate and handle timeout or
+cancellation explicitly. These operations do not replace coalescing
+notifications or expose Linux syscall compatibility.
 
-Measure wake-to-run latency, contention scaling, per-wait allocation and idle
-wakeups on the actual scheduling path. BSP-serialized policy and linear wait
-scans remain existing limits, not the final concurrent implementation.
+Comparison and queue admission share BSP ownership with wake and mapping
+retirement after every CPU returns from its execution batch. A store followed
+by wake cannot fall between comparison and registration. Each incoming native
+call samples due deadlines before progressing requests; a deadline which
+becomes due during an earlier serialized call is considered at the next call's
+admission. This is sampled timeout ordering, not a scheduling-latency guarantee.
+Value mismatch returns without registering a wait, even when the supplied
+deadline is already due.
 
-There are no native park/wake calls yet. Existing notifications are not an
-atomic compare-and-park substitute. Word representation, fault-safe access,
-mapping retention and queue removal on decommit/release must be fixed before
-implementation. Syscall numbers and public records remain experimental.
-Neither mlibc internals nor Linux syscall encoding selects Cryolite's ABI.
+Keys combine unique address-space identity, monotonic mapping identity and the
+exact word address. Sorting metadata does not change a key; unmap/remap or
+address-space replacement does. Keys grant no authority and do not pin backing
+while asleep. The kernel detaches affected registrations before admitted
+decommit/release, ordinary private-page unmap, managed stack/TLS cleanup or final
+process-space retirement can free storage. Retained failed thread-creation
+pages can be observed by their process; cleanup retries invalidate them too.
+Cancellation completes detached
+waits with Cancelled. Failed validation or VM metadata preparation leaves the
+registration intact. Cancellation does not itself promise memory retirement.
+
+Only actual word waits reserve word-queue capacity, after comparison/deadline
+checks and before charging or publishing a wait. The persistent wait table
+owns the Waits charge through pending and Ready states. Wake, timeout,
+cancellation and task death detach their queue records before completion or
+abandonment; one completion wins. Image code writes saved return values before
+publishing a runnable thread. Queue completion and invalidation allocate no
+metadata.
+
+Queues and deadline selection still use linear scans under serialized BSP
+policy. Measure contention, wake-to-run latency, metadata cost and idle wakeups
+before claiming scalability or efficiency. Shared waits, requeue, priority
+inheritance and robust-mutex recovery remain unimplemented. Shared waits need
+backing-object identity and offset, with separate lifetime rules. A user mutex
+implementation, full pthread/TCB integration and libc/std ports remain separate
+work. Syscall numbers and public records remain experimental; neither mlibc
+internals nor Linux syscall encoding selects Cryolite's ABI.

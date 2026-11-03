@@ -15,6 +15,9 @@
 //! VmCommit/VmDecommit: RDI=address, RSI=bytes. Lengths are whole 4 KiB pages.
 //! Commit succeeds only with zeroed RW/NX backing; reserved holes have no backing.
 //! VmRelease: RDI=exact reservation base, RSI=0. Retirement precedes quota refund.
+//! Park/ParkUntil: RDI=private word VA, RSI=u32 expected; timed RDX=deadline.
+//! RDX returns 0 after wake or 1 on value mismatch. Wake: RDI=VA, RSI=maximum;
+//! RDX returns the number detached. Wake never changes or buffers the word value.
 
 pub const ABI_VERSION: u32 = 0;
 
@@ -79,6 +82,9 @@ pub enum Call {
     VmCommit = 55,
     VmDecommit = 56,
     VmRelease = 57,
+    Park = 58,
+    ParkUntil = 59,
+    Wake = 60,
 }
 
 impl TryFrom<u64> for Call {
@@ -144,6 +150,9 @@ impl TryFrom<u64> for Call {
             55 => Ok(Self::VmCommit),
             56 => Ok(Self::VmDecommit),
             57 => Ok(Self::VmRelease),
+            58 => Ok(Self::Park),
+            59 => Ok(Self::ParkUntil),
+            60 => Ok(Self::Wake),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -187,7 +196,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=57 {
+        for number in 0..=60 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

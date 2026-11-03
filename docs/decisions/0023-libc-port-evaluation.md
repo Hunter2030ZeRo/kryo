@@ -32,7 +32,7 @@ program. The following groups describe the actual Cryolite gaps.
 | ClockGet | Monotonic clock and absolute sleeps | Selected clock IDs and errors; wall time needs a real service |
 | TcbSet | Validated per-thread FS-base setup | Actual TCB layout, ELF TLS template allocation and destructor lifetime |
 | AnonAllocate, AnonFree, VmMap, VmUnmap | Explicit private reserve/commit/decommit/release with separate VA/RAM charges | Native mlibc wrappers, user allocator and translation of supported mapping flags; MemoryCreate remains a separate 1..8-page shared-object API |
-| FutexWait, FutexWake | Capability waits and coalescing notifications | Atomic compare-before-park or equivalent race-free address-wait protocol and lifetime rules |
+| FutexWait, FutexWake | Atomic private 32-bit compare-before-park, absolute deadlines, bounded wake and invalidation before mapping retirement | Native mlibc wrappers, errno translation and pthread tests; shared waits remain unsupported |
 | Open, Read, Write, Seek, Close | IPC and persistent block service | Runtime descriptors over VFS/stream capabilities, offsets/duplication, partial I/O and errors |
 
 The initial stack must contain defined argv/envp/auxiliary information. Existing
@@ -59,8 +59,9 @@ source or toolchain was installed by this evaluation.
   Cryolite copies. Upstream permits reuse without Linux syscalls but warns that
   its shared ABI headers can change. Freeze and version only the selected
   Cryolite contract; do not import every Linux ABI assumption by default.
-- Apply the accepted [private-VM contract](0026-private-vm-and-atomic-waits.md) and
-  complete atomic-wait lifetime rules independently of one libc's implementation.
+- Apply the [private-VM and atomic-wait contracts](0026-private-vm-and-atomic-waits.md)
+  independently of one libc's implementation; validate their mlibc wrappers and
+  runtime-owned thread resources before claiming pthread support.
   Keep fd tables and normal allocators in user space.
 - Review the chosen compiler/runtime combination and pinned source/dependencies
   before creating a reproducible target sysroot.

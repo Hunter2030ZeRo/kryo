@@ -155,7 +155,7 @@ pub(crate) fn run(
         ipc.settle(&mut tasks);
         drop(
             tasks
-                .reap(peer, |resources| resources.close(pool, region))
+                .reap(peer, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         invoke(
@@ -187,7 +187,7 @@ pub(crate) fn run(
         ipc.settle(&mut tasks);
         drop(
             tasks
-                .reap(caller, |resources| resources.close(pool, region))
+                .reap(caller, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         ipc.settle(&mut tasks);

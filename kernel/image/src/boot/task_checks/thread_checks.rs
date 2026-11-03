@@ -150,7 +150,7 @@ fn run_case(
                     continue;
                 }
             }
-            reap(&mut tasks, task, pool, region);
+            reap(&mut tasks, &mut ipc, task, pool, region);
         }
     }
 
@@ -272,7 +272,7 @@ fn check_retirement_retry<'objects>(
     let before = pool.stats();
     memory.borrow_mut().fail_next_restore();
     assert!(matches!(
-        tasks.reap(child, |resources| resources.close(pool, region)),
+        tasks.reap(child, ipc, |resources| resources.close(pool, region)),
         Err(kryo_core::task::ReapError::Cleanup(_))
     ));
     assert_eq!(tasks.state(child), Ok(TaskState::Dying));
@@ -310,7 +310,7 @@ fn check_retirement_retry<'objects>(
     );
     assert_eq!(tasks.process_thread_count(process), Ok(2));
     assert_eq!(pool.stats().free, before.free + 4);
-    reap(tasks, child, pool, region);
+    reap(tasks, ipc, child, pool, region);
     assert_eq!(tasks.process_thread_count(process), Ok(1));
     assert!(tasks.state(child).is_err());
     assert_eq!(pool.stats().free, before.free + 9);
@@ -362,10 +362,16 @@ fn check_exit(case: Case, tasks: &mut Tasks<'_, '_>, parent: TaskId, task: TaskI
 }
 
 #[inline(never)]
-fn reap(tasks: &mut Tasks<'_, '_>, task: TaskId, pool: &BootFramePool, region: &mut KernelRegion) {
+fn reap<'objects>(
+    tasks: &mut Tasks<'_, 'objects>,
+    ipc: &mut IpcRuntime<'objects>,
+    task: TaskId,
+    pool: &BootFramePool,
+    region: &mut KernelRegion,
+) {
     drop(
         tasks
-            .reap(task, |resources| resources.close(pool, region))
+            .reap(task, ipc, |resources| resources.close(pool, region))
             .unwrap(),
     );
 }
@@ -383,7 +389,7 @@ fn stop_peer<'objects>(
     thread.exit_reason = ExitReason::Stopped;
     tasks.stop(peer).unwrap();
     ipc.settle(tasks);
-    reap(tasks, peer, pool, region);
+    reap(tasks, ipc, peer, pool, region);
 }
 
 fn expectation(case: Case) -> ExitStatus {

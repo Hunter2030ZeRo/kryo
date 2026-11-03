@@ -60,10 +60,11 @@ rounding memsz works only for the aligned case. Do not claim arbitrary ELF TLS
 support from this fixture.
 
 Native completion is observed before clearing a child slot; a user-space
-didExit flag alone is insufficient. The final kernel check reaps all three
-execution owners and verifies handle/wait/thread charges and frames restore.
-Three threads are a fixture budget, not a global scheduler limit. The fixture
-uses growing production registries instead of the old two-thread constructor.
+didExit flag alone is insufficient. The TLS phase retires three execution
+owners; the kernel verifies final charges and frame ownership after all probe
+phases complete. Later private-wait checks add threads independently. Fixture
+thread budgets are not global scheduler limits. The fixture uses growing
+production registries instead of the old two-thread constructor.
 
 The existing ThreadCreate convention still provides a legacy stack/TLS scratch
 mapping. The new fixture supplies its own TLS separately. Removing that unused
@@ -73,8 +74,8 @@ does not establish production allocator efficiency.
 ## Next contracts
 
 mlibc still needs its complete TCB/DTV/runtime, a user allocator over
-[explicit private VM](0026-private-vm-and-atomic-waits.md), atomic waits and
-service-backed streams/files. Its generic exit path can publish
+[explicit private VM](0026-private-vm-and-atomic-waits.md), wrappers for native
+atomic private waits and service-backed streams/files. Its generic exit path can publish
 didExit before native ThreadExit; storage reclamation must wait for actual
 execution ownership to end. Native capability and lifetime rules remain in
 force through timeout, cancellation and thread/process termination.

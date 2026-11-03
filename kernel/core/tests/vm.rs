@@ -1504,3 +1504,270 @@ fn private_drop_without_close_retains_all_resource_charges() {
     assert_eq!(budget.count(Resource::PrivatePages), 1);
     assert_eq!(budget.count(Resource::ReservedPages), 8);
 }
+
+#[test]
+fn private_words_accept_native_data_and_the_last_aligned_word() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    let mut contents = [0; FRAME_SIZE as usize];
+    contents[..4].copy_from_slice(&0x1234_abcd_u32.to_ne_bytes());
+    contents[4092..].copy_from_slice(&0x8765_4321_u32.to_ne_bytes());
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &contents)
+        .unwrap();
+    let (first, value) = space.private_word(0x40_0000).unwrap();
+    assert_eq!(value, 0x1234_abcd);
+    assert_eq!(first.space(), space.identity());
+    assert_eq!(first.address(), 0x40_0000);
+    assert_eq!(space.private_word_key(0x40_0000), Ok(first));
+    let (last, value) = space.private_word(0x40_0ffc).unwrap();
+    assert_eq!(value, 0x8765_4321);
+    assert_ne!(first, last);
+    for address in [0, 0x40_0001, 0x40_0fff, u64::MAX] {
+        assert_eq!(space.private_word(address), Err(VmError::InvalidAddress));
+        assert_eq!(
+            space.private_word_key(address),
+            Err(VmError::InvalidAddress)
+        );
+    }
+    assert_eq!(space.private_word(0x40_1000), Err(VmError::NotMapped));
+    space.close().unwrap();
+    assert_eq!(space.private_word(first.address()), Err(VmError::Closed));
+}
+
+#[test]
+fn private_word_keys_survive_sorting_but_change_with_mapping_and_space_lifetimes() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let mut first = space(&pool, &model);
+    first
+        .map_page(0x40_1000, Permissions::ReadWrite, &[7])
+        .unwrap();
+    let key = first.private_word_key(0x40_1000).unwrap();
+    first
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    first
+        .map_page(0x40_2000, Permissions::ReadWrite, &[])
+        .unwrap();
+    assert_eq!(first.private_word_key(key.address()), Ok(key));
+    first.unmap_page(0x40_0000).unwrap();
+    assert_eq!(first.private_word_key(key.address()), Ok(key));
+    first.unmap_page(key.address()).unwrap();
+    assert_eq!(
+        first.private_word_key(key.address()),
+        Err(VmError::NotMapped)
+    );
+    first
+        .map_page(key.address(), Permissions::ReadWrite, &[9])
+        .unwrap();
+    let replacement = first.private_word_key(key.address()).unwrap();
+    assert_ne!(replacement, key);
+    let mut second = space(&pool, &model);
+    second
+        .map_page(key.address(), Permissions::ReadWrite, &[9])
+        .unwrap();
+    let other = second.private_word_key(key.address()).unwrap();
+    assert_ne!(other.space(), replacement.space());
+    assert_ne!(other, replacement);
+    first.close().unwrap();
+    second.close().unwrap();
+}
+
+#[test]
+fn private_words_reject_shared_read_only_and_executable_backing() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let objects = Memories::new();
+    let object = objects
+        .create(ObjectKind::Memory, memory(&pool, &model, 1))
+        .unwrap();
+    let mut space = shared_space(&pool, &model);
+    space
+        .map_shared_page(0x40_0000, Permissions::ReadWrite, Page::new(object, 0))
+        .unwrap();
+    space
+        .map_page(0x40_1000, Permissions::ReadOnly, &[])
+        .unwrap();
+    space
+        .map_page(0x40_2000, Permissions::ReadExecute, &[])
+        .unwrap();
+    for address in [0x40_0000, 0x40_1000, 0x40_2000] {
+        assert_eq!(
+            space.private_word(address),
+            Err(VmError::InvalidPermissions)
+        );
+        assert_eq!(
+            space.private_word_key(address),
+            Err(VmError::InvalidPermissions)
+        );
+    }
+    space.close().unwrap();
+    assert_eq!(objects.live_count(), 0);
+}
+
+#[test]
+fn private_words_require_quiescence_and_reject_unpublished_owners() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    model.active_root.set(space.root_frame().unwrap());
+    assert_eq!(
+        space.private_word(0x40_0000),
+        Err(VmError::Backend(ModelError::Active))
+    );
+    assert_eq!(
+        space.private_word_key(0x40_0000),
+        Err(VmError::Backend(ModelError::Active))
+    );
+    model.active_root.set(0);
+    model.failure.set(Some(Failure::Map));
+    model.fail_restore.set(true);
+    assert_eq!(
+        space.map_page(0x40_1000, Permissions::ReadWrite, &[]),
+        Err(VmError::Backend(ModelError::Injected))
+    );
+    assert_eq!(space.private_word(0x40_1000), Err(VmError::NotMapped));
+    assert_eq!(space.private_word_key(0x40_1000), Err(VmError::NotMapped));
+    model.fail_restore.set(false);
+    space.close().unwrap();
+}
+
+#[test]
+fn private_invalidation_hooks_follow_admission_and_precede_backing_retirement() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(8, 8);
+    let mut space = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, 3 * FRAME_SIZE).unwrap();
+    let calls = Cell::new(0);
+    for (address, bytes) in [
+        (base + 1, FRAME_SIZE),
+        (base, 0),
+        (base + 8 * FRAME_SIZE, FRAME_SIZE),
+    ] {
+        assert_eq!(
+            memory.decommit_with(&mut space, address, bytes, |_, _| calls
+                .set(calls.get() + 1)),
+            Err(PrivateError::InvalidRange)
+        );
+    }
+    assert_eq!(
+        memory.release_with(&mut space, base + FRAME_SIZE, |_, _| calls
+            .set(calls.get() + 1)),
+        Err(PrivateError::InvalidRange)
+    );
+    assert_eq!(calls.get(), 0);
+    model.events.borrow_mut().clear();
+    memory
+        .decommit_with(&mut space, base + FRAME_SIZE, FRAME_SIZE, |start, end| {
+            assert_eq!((start, end), (base + FRAME_SIZE, base + 2 * FRAME_SIZE));
+            assert!(model.events.borrow().is_empty());
+            assert_eq!(budget.count(Resource::PrivatePages), 3);
+            calls.set(calls.get() + 1);
+        })
+        .unwrap();
+    assert_eq!(calls.get(), 1);
+    assert!(
+        model
+            .events
+            .borrow()
+            .contains(&Event::Unmap(base + FRAME_SIZE))
+    );
+    assert_eq!(budget.count(Resource::PrivatePages), 2);
+    model.events.borrow_mut().clear();
+    memory
+        .release_with(&mut space, base, |start, end| {
+            assert_eq!((start, end), (base, base + 8 * FRAME_SIZE));
+            assert!(model.events.borrow().is_empty());
+            assert_eq!(budget.count(Resource::PrivatePages), 2);
+            assert_eq!(budget.count(Resource::ReservedPages), 8);
+            calls.set(calls.get() + 1);
+        })
+        .unwrap();
+    assert_eq!(calls.get(), 2);
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+    space.close().unwrap();
+}
+
+#[test]
+fn unmap_invalidation_preserves_unpublished_alias_cleanup_retries() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    space
+        .map_page(0x40_0000, Permissions::ReadWrite, &[])
+        .unwrap();
+    let calls = Cell::new(0);
+    assert_eq!(
+        space.unmap_page_with(0x40_0001, || calls.set(calls.get() + 1)),
+        Err(VmError::NotMapped)
+    );
+    assert_eq!(calls.get(), 0);
+    model.events.borrow_mut().clear();
+    model.fail_restore.set(true);
+    assert_eq!(
+        space.unmap_page_with(0x40_0000, || {
+            assert!(model.events.borrow().is_empty());
+            calls.set(calls.get() + 1);
+        }),
+        Err(VmError::Backend(ModelError::Injected))
+    );
+    assert_eq!(calls.get(), 1);
+    assert_eq!(space.permissions(0x40_0000), None);
+    assert_eq!(space.private_word_key(0x40_0000), Err(VmError::NotMapped));
+    let retained = pool.stats();
+    model.fail_restore.set(false);
+    space
+        .unmap_page_with(0x40_0000, || calls.set(calls.get() + 1))
+        .unwrap();
+    assert_eq!(calls.get(), 2);
+    assert_eq!(pool.stats().free, retained.free + 1);
+    space.close().unwrap();
+}
+
+#[test]
+fn private_invalidation_hooks_reject_active_backends_before_metadata_mutation() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(8, 8);
+    let mut space = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, 3 * FRAME_SIZE).unwrap();
+    let key = space.private_word_key(base + FRAME_SIZE).unwrap();
+    let calls = Cell::new(0);
+    model.active_root.set(space.root_frame().unwrap());
+    assert_eq!(
+        memory.decommit_with(&mut space, base + FRAME_SIZE, FRAME_SIZE, |_, _| calls
+            .set(calls.get() + 1)),
+        Err(PrivateError::Vm(VmError::Backend(ModelError::Active)))
+    );
+    assert_eq!(
+        memory.release_with(&mut space, base, |_, _| calls.set(calls.get() + 1)),
+        Err(PrivateError::Vm(VmError::Backend(ModelError::Active)))
+    );
+    assert_eq!(
+        space.unmap_page_with(base, || calls.set(calls.get() + 1)),
+        Err(VmError::Backend(ModelError::Active))
+    );
+    assert_eq!(calls.get(), 0);
+    assert!(!memory.retirement_pending());
+    assert_eq!(budget.count(Resource::PrivatePages), 3);
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
+    model.active_root.set(0);
+    assert_eq!(space.private_word_key(base + FRAME_SIZE), Ok(key));
+    memory.release(&mut space, base).unwrap();
+    space.close().unwrap();
+}

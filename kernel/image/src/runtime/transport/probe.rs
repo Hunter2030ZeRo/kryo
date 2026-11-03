@@ -171,12 +171,14 @@ fn instance(
     assert_eq!(tasks.state(task), Ok(TaskState::Dying));
     drop(
         tasks
-            .reap(task, |resources| resources.close(pool, region))
+            .reap(task, &mut ipc, |resources| resources.close(pool, region))
             .unwrap(),
     );
     drop(
         tasks
-            .reap(intruder, |resources| resources.close(pool, region))
+            .reap(intruder, &mut ipc, |resources| {
+                resources.close(pool, region)
+            })
             .unwrap(),
     );
     drop(ipc);

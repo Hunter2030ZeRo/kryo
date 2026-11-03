@@ -80,7 +80,10 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
             let _batch = smp::step(&mut tasks, &mut stats, &mut ipc, &mut region);
         } else if retirement.retirement_pending {
             retry_retirement(&mut tasks, &mut ipc);
-        } else if ipc.waits.next_deadline().is_some() || super::devices::has_wake_source(&ipc) {
+        } else if ipc.waits.next_deadline().is_some()
+            || super::devices::has_wake_source(&ipc)
+            || !ipc.words.is_empty()
+        {
             super::idle_for_events(&mut tasks, &mut ipc);
         } else {
             kryo_hal::emergency_write_str("BOOT: no registered wake source; runtime stopped\n");
@@ -155,7 +158,7 @@ fn reap<'objects>(
         cursor = Some(id);
         // A failed cleanup keeps the Dying slot and its owners for retry. Exit
         // observers may already hold the immutable terminal result.
-        if let Ok(resources) = tasks.reap(id, |resources| resources.close(pool, region)) {
+        if let Ok(resources) = tasks.reap(id, ipc, |resources| resources.close(pool, region)) {
             if resources.thread_control.is_some() {
                 stats.created += 1;
                 stats.preempted_created += usize::from(resources.ticks > 0);

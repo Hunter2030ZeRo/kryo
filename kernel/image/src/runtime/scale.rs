@@ -122,7 +122,7 @@ pub(crate) fn check(
     while let Some(id) = tasks.next_dying(None) {
         drop(
             tasks
-                .reap(id, |owner| owner.close(pool, region))
+                .reap(id, &mut ipc, |owner| owner.close(pool, region))
                 .expect("Cannot retire scale thread"),
         );
     }

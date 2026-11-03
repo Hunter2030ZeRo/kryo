@@ -137,11 +137,21 @@ Thread states distinguish New, Runnable, Running, Parking, Blocked, Dying, and D
 - Reclaim a dying thread's stack only after its CPU stops using it.
 - Event, timeout, cancellation, and peer-termination races must produce one completion for a wait.
 
-Uncontended runtime locking stays in user atomics. The accepted private
-compare-before-park direction must serialize comparison/registration with wake
-and retain mapping identity through completion and address reuse. Native
-park/wake, fault-safe word access and shared-memory wait rules remain
-unimplemented; notifications alone do not satisfy that contract.
+Uncontended runtime locking stays in user atomics. Native private park compares
+an aligned 32-bit word in an owned RW mapping and serializes comparison and
+registration with wake. The kernel snapshots validated backing without user
+references while all execution leases are quiescent. Keys include space and
+mapping lifetimes plus the word address; they do not pin backing. Detach affected
+waits before unmap, decommit, managed stack/TLS cleanup or process retirement.
+Reserve word metadata before charging or publishing a wait. Completion and
+cancellation must not allocate, and Ready waits retain their charge until
+consumed. Sample due deadlines at native-call admission before request progress.
+
+The runtime Release-stores its predicate before wake and rechecks it with an
+Acquire load after park. Wake changes no word and buffers no event. A wake is
+not lock acquisition; callers must loop around the predicate. Shared waits,
+priority inheritance, requeue and robust-mutex recovery remain unimplemented.
+Notifications retain their distinct coalescing semantics.
 
 Preserve the registers and FP/SIMD state required by the user ABI. Initialize CPU features and new-thread state before running general Rust, Go, or C runtimes.
 

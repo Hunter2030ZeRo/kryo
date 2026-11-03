@@ -264,7 +264,7 @@ fn run_case(
             assert!(resources.wait.is_none());
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             reaped[index] = true;
@@ -372,7 +372,7 @@ fn check_early_interrupt(
     assert_eq!(ipc.waits.next_ready(), None);
     drop(
         tasks
-            .reap(sleeper, |resources| resources.close(pool, region))
+            .reap(sleeper, &mut ipc, |resources| resources.close(pool, region))
             .unwrap(),
     );
     drop(ipc);

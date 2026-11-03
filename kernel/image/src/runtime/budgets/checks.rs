@@ -201,13 +201,13 @@ fn execution(
         memory.borrow_mut().fail_next_restore();
         assert!(
             tasks
-                .reap(child, |resources| resources.close(pool, region))
+                .reap(child, &mut ipc, |resources| resources.close(pool, region))
                 .is_err()
         );
         assert_eq!(account.count(Resource::Threads), 2);
         drop(
             tasks
-                .reap(child, |resources| resources.close(pool, region))
+                .reap(child, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         assert_eq!(account.count(Resource::Threads), 1);
@@ -234,7 +234,7 @@ fn execution(
         ipc.settle(&mut tasks);
         drop(
             tasks
-                .reap(child, |resources| resources.close(pool, region))
+                .reap(child, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         assert_eq!(account.count(Resource::Threads), 1);
@@ -351,7 +351,7 @@ fn execution(
         ipc.settle(&mut tasks);
         drop(
             tasks
-                .reap(parent, |resources| resources.close(pool, region))
+                .reap(parent, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         assert_eq!(account.count(Resource::Threads), 1);
@@ -360,7 +360,7 @@ fn execution(
         ipc.settle(&mut tasks);
         drop(
             tasks
-                .reap(child, |resources| resources.close(pool, region))
+                .reap(child, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
         for resource in [

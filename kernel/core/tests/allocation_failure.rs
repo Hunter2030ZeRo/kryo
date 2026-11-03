@@ -10,7 +10,7 @@ use kryo_core::mm::vm::{AddressSpace, Permissions, PrivateError, PrivateVm, VmBa
 use kryo_core::object::{ObjectError, ObjectKind, ObjectTable};
 use kryo_core::process::{ProcessTable, ProcessTableError};
 use kryo_core::resource::{Budget, Limits, Resource};
-use kryo_core::sync::{WaitError, WaitTable};
+use kryo_core::sync::{WaitError, WaitTable, WordWaitError, WordWaiters};
 use kryo_core::task::{TaskError, TaskTable};
 
 thread_local! {
@@ -314,4 +314,131 @@ fn private_vm_allocator_null_preserves_reservations_owners_and_quota() {
     space.close().unwrap();
     memory.clear_after_close(&space).unwrap();
     assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn private_decommit_metadata_oom_does_not_invalidate_a_live_word() {
+    let pool = FramePool::<1, 4, 1>::new();
+    let mut regions = [MemoryRegion {
+        range: PhysRange::from_base_len(0x1000, 128 * FRAME_SIZE).unwrap(),
+        kind: RegionKind::Usable,
+    }];
+    let mut output = [PhysRange::EMPTY; 1];
+    let plan = normalize_memory(&mut regions, &mut [], &mut output).unwrap();
+    unsafe { pool.initialize(plan) }.unwrap();
+    let budget = Budget::new(Limits {
+        shared_pages: 0,
+        private_pages: 16,
+        reserved_pages: 16,
+        handles: 0,
+        waits: 0,
+        threads: 0,
+        mappings: 16,
+        tables: 16,
+    });
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| {
+            Ok(FixedVm {
+                root,
+                mappings: [None; 32],
+            })
+        },
+        16,
+        16,
+    )
+    .unwrap();
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 16 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, 3 * FRAME_SIZE).unwrap();
+    for offset in [4, 6, 8] {
+        memory
+            .commit(&mut space, base + offset * FRAME_SIZE, FRAME_SIZE)
+            .unwrap();
+    }
+    let address = base + FRAME_SIZE;
+    let key = space.private_word_key(address).unwrap();
+    let before = pool.stats();
+    let invalidated = Cell::new(false);
+    assert_eq!(
+        fail_allocations(|| memory
+            .decommit_with(&mut space, address, FRAME_SIZE, |_, _| invalidated
+                .set(true))),
+        Err(PrivateError::OutOfResources),
+    );
+    assert!(!invalidated.get());
+    assert_eq!(space.private_word_key(address), Ok(key));
+    assert_eq!(space.mapped_pages(), 6);
+    assert_eq!(budget.count(Resource::PrivatePages), 6);
+    assert_eq!(budget.count(Resource::ReservedPages), 16);
+    assert_eq!(pool.stats(), before);
+    memory
+        .decommit_with(&mut space, address, FRAME_SIZE, |_, _| {
+            invalidated.set(true)
+        })
+        .unwrap();
+    assert!(invalidated.get());
+    assert_eq!(space.private_word_key(address), Err(VmError::NotMapped));
+    assert_eq!(budget.count(Resource::PrivatePages), 5);
+    memory.release(&mut space, base).unwrap();
+    space.close().unwrap();
+}
+
+#[test]
+fn word_queue_oom_preserves_admitted_waits_and_prepared_paths_do_not_allocate() {
+    let budget = Budget::new(Limits {
+        shared_pages: 0,
+        private_pages: 0,
+        reserved_pages: 0,
+        handles: 0,
+        waits: 2,
+        threads: 0,
+        mappings: 0,
+        tables: 0,
+    });
+    let mut tasks = TaskTable::<(), 2>::new();
+    let first = tasks.spawn(()).unwrap();
+    let second = tasks.spawn(()).unwrap();
+    let mut waits = WaitTable::<u8, 2>::new();
+    let mut words = WordWaiters::<u64>::new();
+    assert_eq!(
+        fail_allocations(|| words.prepare(1)),
+        Err(WordWaitError::Capacity)
+    );
+    assert!(words.is_empty());
+    assert_eq!(waits.live_count(), 0);
+    assert_eq!(budget.count(Resource::Waits), 0);
+
+    words.prepare(1).unwrap();
+    let first = waits.begin_budgeted(first, None, &budget).unwrap();
+    fail_allocations(|| words.push(7, first)).unwrap();
+    assert_eq!(
+        fail_allocations(|| words.prepare(1024)),
+        Err(WordWaitError::Capacity)
+    );
+    assert_eq!(words.len(), 1);
+    assert!(waits.is_pending(first));
+    assert_eq!(budget.count(Resource::Waits), 1);
+    words.prepare(2).unwrap();
+    let second = waits.begin_budgeted(second, None, &budget).unwrap();
+    words.push(7, second).unwrap();
+    waits.park(first).unwrap();
+    waits.park(second).unwrap();
+
+    let completed = fail_allocations(|| {
+        words.remove_matching(
+            |_| true,
+            |wait| {
+                waits.complete(wait, 9).unwrap();
+            },
+        )
+    });
+    assert_eq!(completed, 2);
+    assert!(words.is_empty());
+    assert_eq!(budget.count(Resource::Waits), 2);
+    assert_eq!(waits.take(first), Ok(9));
+    assert_eq!(waits.take(second), Ok(9));
+    assert_eq!(budget.count(Resource::Waits), 0);
 }

@@ -23,10 +23,30 @@ impl<S: SharedPage> Backing<'_, S> {
 }
 
 struct Mapping<'pool, S: SharedPage> {
+    id: u64,
     address: u64,
     backing: Backing<'pool, S>,
     permissions: Permissions,
     published: bool,
+}
+
+/// Identifies one word in a particular private mapping lifetime, without
+/// retaining its backing or granting authority over the address space.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PrivateWordKey {
+    space: u64,
+    mapping: u64,
+    address: u64,
+}
+
+impl PrivateWordKey {
+    pub const fn space(self) -> u64 {
+        self.space
+    }
+
+    pub const fn address(self) -> u64 {
+        self.address
+    }
 }
 
 pub struct AddressSpace<
@@ -43,6 +63,7 @@ pub struct AddressSpace<
     root: Option<OwnedFrame<'pool>>,
     mappings: Slots<Option<Mapping<'pool, S>>, MAPPINGS>,
     mapping_count: usize,
+    next_mapping: Option<u64>,
     tables: Slots<Option<OwnedFrame<'pool>>, TABLES>,
     table_count: usize,
 }
@@ -120,6 +141,7 @@ impl<
                 Slots::new([const { None }; MAPPINGS])
             },
             mapping_count: 0,
+            next_mapping: Some(1),
             tables: if let Some((_, tables)) = limits {
                 Slots::limited(tables)
             } else {
@@ -129,7 +151,8 @@ impl<
         })
     }
 
-    pub(crate) fn identity(&self) -> u64 {
+    /// A descriptive lifetime ID; it grants no address-space authority.
+    pub fn identity(&self) -> u64 {
         self.identity
     }
 
@@ -152,8 +175,9 @@ impl<
             return Err(VmError::AlreadyMapped);
         }
         self.reserve_mappings(1)?;
+        let id = self.reserve_mapping_ids(1)?;
         let frame = self.allocator.allocate().map_err(VmError::Allocation)?;
-        self.map_owned_frame(address, permissions, contents, frame)
+        self.map_owned_frame(id, address, permissions, contents, frame)
     }
 
     /// Obtains every data frame before publishing the first anonymous mapping.
@@ -183,6 +207,7 @@ impl<
         frames
             .try_reserve_exact(pages)
             .map_err(|_| VmError::MappingCapacity)?;
+        let first_id = self.reserve_mapping_ids(pages)?;
         for _ in 0..pages {
             match self.allocator.allocate() {
                 Ok(frame) => frames.push(frame),
@@ -198,6 +223,7 @@ impl<
         for page in 0..pages {
             let frame = frames.next().unwrap();
             if let Err(error) = self.map_owned_frame(
+                first_id + page as u64,
                 address + page as u64 * FRAME_SIZE,
                 Permissions::ReadWrite,
                 &[],
@@ -214,6 +240,7 @@ impl<
 
     fn map_owned_frame(
         &mut self,
+        id: u64,
         address: u64,
         permissions: Permissions,
         contents: &[u8],
@@ -243,6 +270,7 @@ impl<
         };
         let physical = table_addresses(&prepared);
         let slot = self.insert_mapping(Mapping {
+            id,
             address,
             backing: Backing::Private(frame),
             permissions,
@@ -300,6 +328,7 @@ impl<
             return Err(VmError::AlreadyMapped);
         }
         self.reserve_mappings(1)?;
+        let id = self.reserve_mapping_ids(1)?;
         let needed = self
             .backend
             .tables_needed(address)
@@ -315,6 +344,7 @@ impl<
         let prepared = self.prepare_tables(needed)?;
         let physical = table_addresses(&prepared);
         let slot = self.insert_mapping(Mapping {
+            id,
             address,
             backing: Backing::Shared(page),
             permissions,
@@ -345,8 +375,19 @@ impl<
     }
 
     pub fn unmap_page(&mut self, address: u64) -> Result<(), VmError<B::Error>> {
+        self.unmap_page_with(address, || {})
+    }
+
+    /// Invalidate external users only after locating an owned mapping. Retained
+    /// unpublished owners remain eligible for cleanup retries through this path.
+    pub fn unmap_page_with(
+        &mut self,
+        address: u64,
+        before: impl FnOnce(),
+    ) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
         let slot = self.find(address).ok_or(VmError::NotMapped)?;
+        before();
         self.remove_mapping(slot)?;
         self.compact_mappings();
         Ok(())
@@ -397,6 +438,45 @@ impl<
             Some(error) => Err(error),
             None => Ok(()),
         }
+    }
+
+    /// Snapshot a private native word while the backend excludes user writers.
+    /// No user reference or backing lease escapes this call.
+    pub fn private_word(&self, address: u64) -> Result<(PrivateWordKey, u32), VmError<B::Error>> {
+        let key = self.private_word_key(address)?;
+        let mut bytes = [0; 4];
+        self.read_page(
+            address & !(FRAME_SIZE - 1),
+            (address % FRAME_SIZE) as usize,
+            &mut bytes,
+        )?;
+        Ok((key, u32::from_ne_bytes(bytes)))
+    }
+
+    /// Resolve a private RW word without reading its contents. Queues must
+    /// invalidate this identity before the mapping can retire or be reused.
+    pub fn private_word_key(&self, address: u64) -> Result<PrivateWordKey, VmError<B::Error>> {
+        self.check_inactive()?;
+        if !address.is_multiple_of(4) {
+            return Err(VmError::InvalidAddress);
+        }
+        let base = address & !(FRAME_SIZE - 1);
+        validate_address(base).ok_or(VmError::InvalidAddress)?;
+        let slot = self.find(base).ok_or(VmError::NotMapped)?;
+        let mapping = self.mappings[slot].as_ref().unwrap();
+        if !mapping.published {
+            return Err(VmError::NotMapped);
+        }
+        if mapping.permissions != Permissions::ReadWrite
+            || !matches!(mapping.backing, Backing::Private(_))
+        {
+            return Err(VmError::InvalidPermissions);
+        }
+        Ok(PrivateWordKey {
+            space: self.identity,
+            mapping: mapping.id,
+            address,
+        })
     }
 
     pub fn read_page(
@@ -483,7 +563,7 @@ impl<
         Ok(())
     }
 
-    fn check_inactive(&self) -> Result<(), VmError<B::Error>> {
+    pub(super) fn check_inactive(&self) -> Result<(), VmError<B::Error>> {
         self.root_frame()?;
         self.backend.check_inactive().map_err(VmError::Backend)
     }
@@ -507,6 +587,10 @@ impl<
         self.mappings
             .reserve_len(length, || None)
             .map_err(|_| VmError::MappingCapacity)
+    }
+
+    fn reserve_mapping_ids(&mut self, count: usize) -> Result<u64, VmError<B::Error>> {
+        take_mapping_ids(&mut self.next_mapping, count).ok_or(VmError::MappingCapacity)
     }
 
     fn insert_mapping(&mut self, mapping: Mapping<'pool, S>) -> usize {
@@ -623,4 +707,29 @@ fn range_end(address: u64, pages: usize) -> Option<u64> {
     let bytes = u64::try_from(pages).ok()?.checked_mul(FRAME_SIZE)?;
     let end = address.checked_add(bytes)?;
     (end <= 0x0000_8000_0000_0000).then_some(end)
+}
+
+fn take_mapping_ids(next: &mut Option<u64>, count: usize) -> Option<u64> {
+    let first = (*next)?;
+    let additional = u64::try_from(count.checked_sub(1)?).ok()?;
+    let last = first.checked_add(additional)?;
+    *next = last.checked_add(1);
+    Some(first)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::take_mapping_ids;
+
+    #[test]
+    fn mapping_identity_exhaustion_never_partially_reserves_or_wraps() {
+        let mut next = Some(u64::MAX - 1);
+        assert_eq!(take_mapping_ids(&mut next, 3), None);
+        assert_eq!(next, Some(u64::MAX - 1));
+        assert_eq!(take_mapping_ids(&mut next, 0), None);
+        assert_eq!(next, Some(u64::MAX - 1));
+        assert_eq!(take_mapping_ids(&mut next, 2), Some(u64::MAX - 1));
+        assert_eq!(next, None);
+        assert_eq!(take_mapping_ids(&mut next, 1), None);
+    }
 }

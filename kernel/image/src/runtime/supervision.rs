@@ -223,7 +223,7 @@ pub(crate) fn check(
             while let Some(id) = tasks.next_dying(cursor) {
                 cursor = Some(id);
                 let retired = tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .expect("Cannot retire supervised process");
                 if retired.exit_code != 0 {
                     let _ = kryo_hal::print(format_args!(

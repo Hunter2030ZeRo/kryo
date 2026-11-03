@@ -10,8 +10,11 @@ Cargo package remain reserved locations.
 The optional `abi-probe` uses a dedicated x86-64-v3 target for freestanding
 C/C++/Rust calls, SysV startup, compiler static TLS and explicit private VM.
 Reserve holds VA without data RAM; commit supplies zeroed RW/NX backing;
-decommit/release return credit after retirement. User allocation and atomic
-park/wake remain separate work. mlibc is the primary port candidate, not an
+decommit/release return credit after retirement. Libsys also wraps private
+32-bit compare-before-park and bounded wake with absolute deadlines and mapping
+invalidation. Users publish the predicate with a Release store and recheck with
+an Acquire load; wake has no buffered event. User allocation and shared waits
+remain separate work. mlibc is the primary port candidate, not an
 installed native sysroot; libc, libc++ and Rust std ports are incomplete.
 
 `filesystems/betafs/` is reserved for the independent BetAFS engine's Kryo adapter. Keep the engine in its own project.

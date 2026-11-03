@@ -399,7 +399,7 @@ fn probe_instance(
         assert_eq!(tasks.state(id), Ok(TaskState::Dying));
         drop(
             tasks
-                .reap(id, |resources| resources.close(pool, region))
+                .reap(id, &mut ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
     }

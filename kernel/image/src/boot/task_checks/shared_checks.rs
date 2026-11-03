@@ -97,7 +97,7 @@ fn check_read_only_fault(
             assert_eq!(resources.process.handles.reserved_count(), 0);
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             reaped += 1;
@@ -224,7 +224,7 @@ fn run_pair(
             assert_eq!(resources.process.handles.reserved_count(), 0);
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             reaped[index] = true;

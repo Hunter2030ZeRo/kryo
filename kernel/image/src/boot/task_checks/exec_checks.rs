@@ -112,7 +112,7 @@ pub(super) fn run(
             assert!(resources.wait.is_none());
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             reaped[index] = true;
@@ -262,7 +262,7 @@ fn check_scalar_mode(
     }
     drop(
         tasks
-            .reap(id, |resources| resources.close(pool, region))
+            .reap(id, &mut ipc, |resources| resources.close(pool, region))
             .unwrap(),
     );
     assert_eq!(pool.stats(), before);

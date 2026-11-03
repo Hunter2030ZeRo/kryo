@@ -6,7 +6,7 @@ use core::arch::{asm, global_asm};
 use core::cell::UnsafeCell;
 use core::hint::black_box;
 use core::panic::PanicInfo;
-use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use kryo_interfaces::syscall::{Call, Error as CallError};
 use kryo_libsys::{self as sys, Handle, ObjectKind};
 
@@ -35,6 +35,9 @@ static C_TLS_ADDRESSES: [AtomicU64; TLS_THREADS] = [const { AtomicU64::new(0) };
 static CPP_TLS_ADDRESSES: [AtomicU64; TLS_THREADS] = [const { AtomicU64::new(0) }; TLS_THREADS];
 static RUST_TLS_ADDRESSES: [AtomicU64; TLS_THREADS] = [const { AtomicU64::new(0) }; TLS_THREADS];
 static CHILD_READY: AtomicUsize = AtomicUsize::new(0);
+static WAIT_WORD: AtomicU32 = AtomicU32::new(0);
+static WORD_RESULTS: [AtomicUsize; 2] = [const { AtomicUsize::new(0) }; 2];
+static MANAGED_TLS: AtomicU64 = AtomicU64::new(0);
 
 #[repr(C, align(64))]
 struct RustTlsValue(u64);
@@ -80,9 +83,19 @@ tls_thread_start:
     call {thread}
     ud2
     .size tls_thread_start, .-tls_thread_start
+
+    .global word_thread_start
+    .type word_thread_start,@function
+word_thread_start:
+    cld
+    xor ebp, ebp
+    call {word_thread}
+    ud2
+    .size word_thread_start, .-word_thread_start
 "#,
     main = sym probe_main,
     thread = sym tls_thread,
+    word_thread = sym word_thread,
 );
 
 unsafe extern "C" {
@@ -113,6 +126,7 @@ unsafe extern "C" {
     fn cpp_tls_check(value: u64) -> u64;
     fn cpp_tls_address() -> u64;
     fn tls_thread_start() -> !;
+    fn word_thread_start() -> !;
     static __ehdr_start: u8;
 }
 
@@ -160,6 +174,7 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     sys::debug_log(debug, 94, 1).unwrap_or_else(|_| exit(207));
     check_thread_tls(debug);
     check_private_vm(debug);
+    check_atomic_wait(debug);
     for round in 0..32u64 {
         let first = black_box(19 + round);
         let second = black_box(1.25);
@@ -329,6 +344,184 @@ fn check_private_vm(debug: Handle) {
     check_vm_usage(4, 8);
     check_tls(MAIN_TLS_VALUE);
     sys::debug_log(debug, 95, 1).unwrap_or_else(|_| exit(237));
+}
+
+fn check_atomic_wait(debug: Handle) {
+    let address = core::ptr::addr_of!(WAIT_WORD) as u64;
+    WAIT_WORD.store(1, Ordering::Release);
+    if vm_result(sys::wake(address, u64::MAX)) != 0
+        || vm_result(sys::park(address, 0)) != sys::ParkResult::ValueChanged
+    {
+        exit(238);
+    }
+    check_wait_usage(0);
+    for invalid in [0, address + 1, IMAGE_BASE] {
+        expect_vm_error(sys::park(invalid, 0), CallError::InvalidArgument);
+        expect_vm_error(sys::wake(invalid, 1), CallError::InvalidArgument);
+    }
+    WAIT_WORD.store(0, Ordering::Release);
+    let deadline = vm_result(sys::clock()) + 5_000_000;
+    expect_vm_error(sys::park_until(address, 0, deadline), CallError::TimedOut);
+    if vm_result(sys::clock()) < deadline {
+        exit(238);
+    }
+    check_wait_usage(0);
+
+    reset_word_results();
+    let first = start_word(0, address, false);
+    await_waits(1);
+    let second = start_word(1, address, false);
+    await_waits(2);
+    WAIT_WORD.store(1, Ordering::Release);
+    if vm_result(sys::wake(address, 1)) != 1 {
+        exit(238);
+    }
+    finish_word(first, 0, 1);
+    if WORD_RESULTS[1].load(Ordering::Acquire) != 0 || vm_result(sys::wake(address, 0)) != 0 {
+        exit(238);
+    }
+    check_wait_usage(1);
+    if vm_result(sys::wake(address, u64::MAX)) != 1 {
+        exit(238);
+    }
+    finish_word(second, 1, 1);
+
+    reset_word_results();
+    WAIT_WORD.store(0, Ordering::Release);
+    let cancelled = start_word(0, address, false);
+    await_waits(1);
+    if vm_result(sys::cancel_wait(cancelled)) {
+        exit(238);
+    }
+    finish_word(cancelled, 0, 4);
+
+    // No Rust reference points into this arena. Children pass only a numeric
+    // address to the checked kernel call and never access it after cancellation.
+    let arena = reserve_private(2);
+    vm_result(sys::vm_commit(arena, PAGE_BYTES));
+    expect_vm_error(sys::park(arena + PAGE_BYTES, 0), CallError::InvalidArgument);
+    reset_word_results();
+    let old = start_word(0, arena, false);
+    await_waits(1);
+    vm_result(unsafe { sys::vm_decommit(arena, PAGE_BYTES) });
+    vm_result(sys::vm_commit(arena, PAGE_BYTES));
+    if vm_result(sys::wake(arena, u64::MAX)) != 0 {
+        exit(238);
+    }
+    let fresh = start_word(1, arena, false);
+    await_waits(1);
+    if vm_result(sys::wake(arena, 1)) != 1 {
+        exit(238);
+    }
+    finish_word(old, 0, 4);
+    finish_word(fresh, 1, 1);
+
+    reset_word_results();
+    let released = start_word(0, arena, false);
+    await_waits(1);
+    vm_result(unsafe { sys::vm_release(arena) });
+    finish_word(released, 0, 4);
+    let reused = reserve_private(2);
+    if reused != arena {
+        exit(238);
+    }
+    vm_result(sys::vm_commit(reused, PAGE_BYTES));
+    if vm_result(sys::wake(reused, u64::MAX)) != 0 {
+        exit(238);
+    }
+    vm_result(unsafe { sys::vm_release(reused) });
+
+    reset_word_results();
+    WAIT_WORD.store(0, Ordering::Release);
+    let owner = start_word(0, address, true);
+    await_waits(1);
+    let tls = MANAGED_TLS.load(Ordering::Acquire);
+    if tls == 0 {
+        exit(238);
+    }
+    let observer = start_word(1, tls, false);
+    await_waits(2);
+    WAIT_WORD.store(1, Ordering::Release);
+    if vm_result(sys::wake(address, 1)) != 1 {
+        exit(238);
+    }
+    finish_word(owner, 0, 1);
+    finish_word(observer, 1, 4);
+    check_wait_usage(0);
+    check_vm_usage(4, 8);
+    check_tls(MAIN_TLS_VALUE);
+    vm_result(sys::debug_log(debug, 96, 1));
+}
+
+fn reset_word_results() {
+    for result in &WORD_RESULTS {
+        result.store(0, Ordering::Release);
+    }
+}
+
+fn start_word(index: u64, address: u64, publishes_tls: bool) -> Handle {
+    let argument = address | index | (u64::from(publishes_tls) << 1);
+    // The assembly entry implements the raw thread ABI; static atomics outlive
+    // all children, and arena backing remains valid until the tested revocation.
+    vm_result(unsafe { sys::thread_create(word_thread_start, argument) })
+}
+
+extern "C" fn word_thread(argument: u64, tls: u64) -> ! {
+    let index = (argument & 1) as usize;
+    if argument & 2 != 0 {
+        MANAGED_TLS.store(tls, Ordering::Release);
+    }
+    let parked = if index == 0 {
+        sys::park(argument & !3, 0)
+    } else {
+        sys::park_until(argument & !3, 0, vm_result(sys::clock()) + 1_000_000_000)
+    };
+    let result = match parked {
+        Ok(sys::ParkResult::Woken) => 1,
+        Ok(sys::ParkResult::ValueChanged) => 2,
+        Err(sys::Error::Kernel(status)) if status == CallError::Cancelled.status() as i64 => 4,
+        _ => exit(238),
+    };
+    WORD_RESULTS[index].store(result, Ordering::Release);
+    unsafe { sys::thread_exit(0) }
+}
+
+fn finish_word(thread: Handle, index: usize, expected: usize) {
+    let status = vm_result(sys::thread_join(thread));
+    if status.reason != sys::ExitReason::Exited
+        || status.code != 0
+        || WORD_RESULTS[index].load(Ordering::Acquire) != expected
+    {
+        exit(238);
+    }
+    vm_result(sys::close(thread));
+}
+
+fn await_waits(expected: u64) {
+    let deadline = vm_result(sys::clock()) + 1_000_000_000;
+    loop {
+        let used = vm_result(sys::budget_self(
+            sys::Resource::Waits,
+            sys::BudgetQuery::Used,
+        ));
+        if used == expected {
+            return;
+        }
+        if vm_result(sys::clock()) >= deadline {
+            exit(239);
+        }
+        vm_result(sys::yield_now());
+    }
+}
+
+fn check_wait_usage(expected: u64) {
+    if vm_result(sys::budget_self(
+        sys::Resource::Waits,
+        sys::BudgetQuery::Used,
+    )) != expected
+    {
+        exit(238);
+    }
 }
 
 fn vm_result<T>(result: Result<T, sys::Error>) -> T {

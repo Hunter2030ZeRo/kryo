@@ -516,7 +516,7 @@ fn retire_pair<'objects>(
     for task in ids {
         drop(
             tasks
-                .reap(task, |resources| resources.close(pool, region))
+                .reap(task, ipc, |resources| resources.close(pool, region))
                 .unwrap(),
         );
     }

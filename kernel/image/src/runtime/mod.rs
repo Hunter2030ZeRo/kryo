@@ -1,4 +1,5 @@
 pub(crate) mod abi;
+pub(crate) mod atomic_wait;
 pub(crate) mod block_service;
 pub(crate) mod budgets;
 pub(crate) mod channel_probe;
@@ -458,7 +459,10 @@ pub(crate) fn idle_for_events<'objects>(
     if ipc.waits.next_deadline().is_some() {
         idle_until_deadline(tasks, ipc);
     } else {
-        assert!(devices::has_wake_source(ipc), "No registered wake source");
+        assert!(
+            devices::has_wake_source(ipc) || !ipc.words.is_empty(),
+            "No registered wake source"
+        );
         kryo_hal::idle_event().expect("Cannot idle for device IRQ");
         expire_waits(tasks, ipc);
     }
@@ -467,10 +471,10 @@ pub(crate) fn idle_for_events<'objects>(
 pub(crate) fn idle_until_deadline<'objects>(
     tasks: &mut Tasks<'_, 'objects>,
     ipc: &mut IpcRuntime<'objects>,
-) {
+) -> bool {
     expire_waits(tasks, ipc);
     if tasks.has_runnable() {
-        return;
+        return false;
     }
     let deadline = ipc
         .waits
@@ -482,4 +486,5 @@ pub(crate) fn idle_until_deadline<'objects>(
     kryo_hal::idle_until_interrupt().expect("Cannot halt for deadline");
     unsafe { kryo_hal::stop_timer() }.expect("Cannot stop idle event");
     expire_waits(tasks, ipc);
+    true
 }

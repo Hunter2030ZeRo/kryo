@@ -20,12 +20,18 @@ pub(crate) fn dispatch<'objects>(
     ipc: &mut IpcRuntime<'objects>,
     region: Option<&mut KernelRegion>,
 ) {
+    // Earlier calls in a quiescent CPU batch can cross another wait's deadline.
+    // Sample again at admission so a late wake/cancel cannot beat that timeout.
+    ipc.expire(now());
     let context = tasks.resources_mut(caller).expect("Missing caller").context;
     let result = Call::try_from(context.rax).and_then(|call| {
         let handle = Handle::from_raw(context.rdi);
         match call {
             Call::VmReserve | Call::VmCommit | Call::VmDecommit | Call::VmRelease => {
-                super::private_vm::dispatch(caller, call, context, tasks).map(Some)
+                super::private_vm::dispatch(caller, call, context, tasks, ipc).map(Some)
+            }
+            Call::Park | Call::ParkUntil | Call::Wake => {
+                super::atomic_wait::dispatch(caller, call, context, tasks, ipc)
             }
             Call::VirtioInfo
             | Call::VirtioStart
@@ -412,12 +418,14 @@ pub(crate) fn dispatch<'objects>(
                 {
                     return Err(Error::InvalidArgument);
                 }
-                tasks
-                    .resources_mut(caller)
-                    .unwrap()
+                let owner = tasks.resources_mut(caller).unwrap();
+                let space = owner.process.space.identity();
+                owner
                     .process
                     .space
-                    .unmap_page(context.rdi)
+                    .unmap_page_with(context.rdi, || {
+                        ipc.invalidate_words(space, context.rdi, context.rdi + 4096);
+                    })
                     .map(|()| Some(0))
                     .map_err(map_vm_error)
             }

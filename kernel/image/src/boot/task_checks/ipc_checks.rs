@@ -267,7 +267,7 @@ fn run_case(
             assert!(resources.wait.is_none());
             drop(
                 tasks
-                    .reap(id, |resources| resources.close(pool, region))
+                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
                     .unwrap(),
             );
             reaped[index] = true;

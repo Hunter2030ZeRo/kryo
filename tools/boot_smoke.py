@@ -55,6 +55,9 @@ MARKERS = {
     "supervisor_authority": "SUPERVISOR: manifests and authority isolation OK instances=2",
     "relative_receive": "RECEIVE: relative admission and absolute expiry OK",
     "resource_budgets": "BUDGET: inheritance, retained owners and recovery OK",
+    "private_pending_cleanup": "WAIT: pending thread retirement cancels word",
+    "private_expiry_admission": "WAIT: expired word precedes wake admission",
+    "private_untimed_idle": "WAIT: unbounded word idle preserves registration",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
 
@@ -72,6 +75,7 @@ def abi_checks(log, enabled):
         "native_abi_retired": "ABI: startup and execution resources retired" in log,
         "native_tls": "TLS: ELF template and thread isolation OK threads=3" in log,
         "native_private_vm": "VM: private reserve commit retirement OK" in log,
+        "native_atomic_wait": bool(re.search(r"(?m)^WAIT: private atomic park wake retirement OK threads=11 halt=true$", log)),
     }
 
 

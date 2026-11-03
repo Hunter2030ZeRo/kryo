@@ -1,4 +1,4 @@
-use super::Tasks;
+use super::{IpcRuntime, Tasks};
 use kryo_core::mm::vm::{PrivateError, VmError};
 use kryo_core::process::{ExitReason, ExitStatus};
 use kryo_core::task::TaskId;
@@ -10,6 +10,7 @@ pub(crate) fn dispatch(
     call: Call,
     context: UserContext,
     tasks: &mut Tasks<'_, '_>,
+    ipc: &mut IpcRuntime<'_>,
 ) -> Result<u64, Error> {
     let process = tasks.process_for(caller).ok_or(Error::PeerClosed)?;
     let (result, pending) = {
@@ -25,17 +26,25 @@ pub(crate) fn dispatch(
                 .private_vm
                 .commit(&mut owner.space, context.rdi, context.rsi)
                 .map(|()| 0),
-            Call::VmDecommit => owner
-                .private_vm
-                .decommit(&mut owner.space, context.rdi, context.rsi)
-                .map(|()| 0),
+            Call::VmDecommit => {
+                let space = owner.space.identity();
+                owner
+                    .private_vm
+                    .decommit_with(&mut owner.space, context.rdi, context.rsi, |start, end| {
+                        ipc.invalidate_words(space, start, end)
+                    })
+                    .map(|()| 0)
+            }
             Call::VmRelease => {
                 if context.rsi != 0 {
                     return Err(Error::InvalidArgument);
                 }
+                let space = owner.space.identity();
                 owner
                     .private_vm
-                    .release(&mut owner.space, context.rdi)
+                    .release_with(&mut owner.space, context.rdi, |start, end| {
+                        ipc.invalidate_words(space, start, end)
+                    })
                     .map(|()| 0)
             }
             _ => return Err(Error::InvalidCall),
