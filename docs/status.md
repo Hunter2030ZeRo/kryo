@@ -2,6 +2,11 @@
 
 Snapshot: 2026-11-03. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [Cryolite C ABI proposal](decisions/0028-cryolite-owned-c-abi.md) records the
+decision to own public definitions before the libc port. Its foundation layouts
+are proposals, not installed headers or an ABI release. Pinned provider research
+and target layout checks do not establish a built or executed libc.
+
 The [runtime-owned thread milestone](validation/2026-11-03-native-threads/README.md)
 adds native call 61 with caller-prepared stack/TLS and optional guard ranges.
 Execution loans preserve mappings until actual user termination, then release

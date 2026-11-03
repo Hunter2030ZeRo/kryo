@@ -1,0 +1,161 @@
+{
+  "scope": "Compile-only candidate C/C++ target layouts and Rust host layouts; no installed headers, libc build, bare-metal execution or new public ABI release",
+  "checks": [
+    {
+      "name": "target_c",
+      "command": [
+        "rtk",
+        "proxy",
+        "clang",
+        "--target=x86_64-unknown-none-elf",
+        "-march=x86-64-v3",
+        "-ffreestanding",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-c",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/mlibc-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/mlibc-work/layout-c.o"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "target_cpp",
+      "command": [
+        "rtk",
+        "proxy",
+        "clang++",
+        "--target=x86_64-unknown-none-elf",
+        "-march=x86-64-v3",
+        "-ffreestanding",
+        "-std=c++23",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-x",
+        "c++",
+        "-c",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/mlibc-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/mlibc-work/layout-cpp.o"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "rust_host",
+      "command": [
+        "rtk",
+        "proxy",
+        "rustc",
+        "--edition=2024",
+        "--crate-type=lib",
+        "--emit=obj",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "-Dwarnings",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/mlibc-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.rs",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/mlibc-work/layout-rust.o"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "versions": {
+    "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+    "rustc": "rustc 1.101.0-nightly (3e92e1a2d 2026-11-01)\nbinary: rustc\ncommit-hash: 3e92e1a2d20b991ef23a6c6064c34d57ee8c98d3\ncommit-date: 2026-11-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+    "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n"
+  },
+  "target": "x86_64-unknown-none-elf",
+  "inputs": {
+    "docs/validation/2026-11-03-c-abi-design/layout.c": "d3d3c97ad18040fdb3f61e9599316e3ea5c9e123e52b18a5acc2d5e6f4cd6b03",
+    "docs/validation/2026-11-03-c-abi-design/layout.rs": "41b5e10c75eba0548ee050de1b6234eb8af8a81f45b84d86f084750553e47c43",
+    "interfaces/src/virtio.rs": "2e26b83fc36001302a0b1397b2cc8f299b6e90ee8e8c9051e4a604467de216e5",
+    "targets/x86_64-unknown-cryolite.json": "70316f70ee874d5ec3ea9c244e2ab15cf66a3c4cde4f3e9ba8cd3543af62c109",
+    "targets/cryolite-toolchain.json": "1f28bcbd9dfc16b39b99ebd4a1c5ca19a13509a8241a42b3c2704065495c2e86"
+  },
+  "provider": {
+    "repository": "https://github.com/managarm/mlibc",
+    "commit": "07cfd943977737b8147c1289922c23479feef53d",
+    "source_sha256": {
+      "sysdeps/demo/meson.build": "1c287b01abd7bf07ca729e5d2a92efbcc720895cdb46a3fe8522f5ea4e5874cc",
+      "options/internal/include/mlibc/sysdep-signatures.hpp": "a9b76656a5a864a9b40d07406b4fa3fa4dc29eb54a3138935ed726eadf4d0851",
+      "options/internal/include/mlibc/tcb.hpp": "15bc16b86c42f7c0d7714fb9f463083af2e1c9bdd5b48a6c5912b69b15b7b73f",
+      "options/internal/include/mlibc/tid.hpp": "dbc9d6a5059c0ce874e92290cf31ef37becda358b2369f16e33367b62606ab20",
+      "options/internal/include/mlibc/lock.hpp": "70252335b632877d30f686b5d6fab6a8dcbdbdded82f79a8a2c5e784ea44b5e7",
+      "options/internal/include/mlibc/thread-types.hpp": "f79f5d7e90f1c765b3c09751e1030256a54fbd8443e16b9bcf43a24d721539f4",
+      "options/internal/generic/threads.cpp": "da291d374b4f52db3a235351975884e7e7e10cbe06000990516ecba7ca3bd035",
+      "options/internal/generic/sigset.cpp": "ddc74e84f1295470322b9fe789b026d0de2f278e595bbc879af34b327f8443fb",
+      "options/posix/include/bits/posix/pthread_t.h": "ec7f881b1f54bdf345555814ef29a4d96e0e376b51fdd14e4544d93a0e890f2a",
+      "options/ansi/generic/errno.cpp": "a067ea41503583e01bae10137ed2e9bf16bbc4a3b7359fb6f22d375fadc2b27e",
+      "options/rtld/generic/linker.cpp": "558d42d1682c7766f31f3a96d0d2b15e891a2a7254889617babbdf3542285f4e",
+      "subprojects/frigg.wrap": "aa90287b590158d902349d06aad3aa25ea6dab9b41eabf98e72a78c64786961a",
+      "subprojects/libsmarter.wrap": "982b4b8273d78ac19a2b0e411fed18a0330395089bcb0f16385961e38af3149e"
+    },
+    "dependency_pins": {
+      "frigg": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+      "libsmarter": "f7d061bc37d485418344452c7ceb28d5df3ba85d"
+    },
+    "built": false,
+    "executed": false,
+    "demo_abi_headers": {
+      "scope": "Starter port inventory, not the proven minimum x86-64 compilation closure",
+      "count": 50,
+      "names": [
+        "auxv.h",
+        "blkcnt_t.h",
+        "blksize_t.h",
+        "clockid_t.h",
+        "dev_t.h",
+        "errno.h",
+        "fcntl.h",
+        "gid_t.h",
+        "ino_t.h",
+        "limits.h",
+        "mode_t.h",
+        "nlink_t.h",
+        "pid_t.h",
+        "seek-whence.h",
+        "signal.h",
+        "stat.h",
+        "uid_t.h",
+        "vm-flags.h",
+        "wait.h",
+        "riscv-hwprobe.h",
+        "sigevent.h",
+        "sigval.h",
+        "sa_family_t.h",
+        "sockaddr_storage.h",
+        "sig-limits.h",
+        "suseconds_t.h",
+        "access.h",
+        "socklen_t.h",
+        "socket.h",
+        "poll.h",
+        "resource.h",
+        "in.h",
+        "rlim_t.h",
+        "utsname.h",
+        "fd_set.h",
+        "sem.h",
+        "time.h",
+        "ipc.h",
+        "statvfs.h",
+        "fsblkcnt_t.h",
+        "fsfilcnt_t.h",
+        "shm.h",
+        "termios.h",
+        "msg.h",
+        "mqueue.h",
+        "utmp-defines.h",
+        "utmpx.h",
+        "sigset_t.h",
+        "aio.h",
+        "sched_param.h"
+      ]
+    }
+  },
+  "all_passed": true,
+  "compiler_pin_matched": true
+}

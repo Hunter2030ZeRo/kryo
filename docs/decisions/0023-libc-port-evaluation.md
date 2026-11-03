@@ -53,6 +53,9 @@ source or toolchain was installed by this evaluation.
 
 ## Decisions before publishing the ABI
 
+- The maintainer selected a Cryolite-owned public ABI before sysdeps work.
+  [ADR 0028](0028-cryolite-owned-c-abi.md) and its candidate profile record the
+  foundation proposal and remaining registry/file/signal/provider gates.
 - Preserve the accepted SysV stack, separate capability handoff and runtime-owned
   static TLS direction; define the complete mlibc TCB and cleanup contract.
 - Decide whether to reuse selected POSIX-facing ABI constants/structures or own
