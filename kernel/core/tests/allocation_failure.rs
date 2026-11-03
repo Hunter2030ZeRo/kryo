@@ -3,6 +3,10 @@ use std::cell::Cell;
 
 use kryo_core::capability::{CapabilityError, HandleTable, Rights};
 use kryo_core::ipc::{Completion, Endpoint, IpcError, Message};
+use kryo_core::mm::frame::{
+    FRAME_SIZE, FramePool, MemoryRegion, PhysRange, RegionKind, normalize_memory,
+};
+use kryo_core::mm::vm::{AddressSpace, Permissions, PrivateError, PrivateVm, VmBackend, VmError};
 use kryo_core::object::{ObjectError, ObjectKind, ObjectTable};
 use kryo_core::process::{ProcessTable, ProcessTableError};
 use kryo_core::resource::{Budget, Limits, Resource};
@@ -58,6 +62,8 @@ fn fail_allocations<T>(operation: impl FnOnce() -> T) -> T {
 fn budgeted_metadata_oom_refunds_charges_before_retry() {
     let budget = Budget::new(Limits {
         shared_pages: 0,
+        private_pages: 0,
+        reserved_pages: 0,
         handles: 1,
         waits: 1,
         threads: 1,
@@ -175,4 +181,137 @@ fn wait_and_endpoint_oom_do_not_register_or_accept_a_partial_request() {
             ..
         })
     ));
+}
+
+struct FixedVm {
+    root: u64,
+    mappings: [Option<(u64, u64)>; 32],
+}
+
+// The model never dereferences logical physical addresses or allocates metadata.
+unsafe impl VmBackend for FixedVm {
+    type Error = ();
+    fn root_frame(&self) -> u64 {
+        self.root
+    }
+    fn check_inactive(&self) -> Result<(), ()> {
+        Ok(())
+    }
+    fn tables_needed(&self, _: u64) -> Result<usize, ()> {
+        Ok(0)
+    }
+    unsafe fn initialize_frame(&mut self, _: u64, _: &[u8]) -> Result<(), ()> {
+        Ok(())
+    }
+    unsafe fn seal_frame(&mut self, _: u64, _: Permissions) -> Result<(), ()> {
+        Ok(())
+    }
+    unsafe fn restore_frame(&mut self, _: u64) -> Result<(), ()> {
+        Ok(())
+    }
+    unsafe fn map(
+        &mut self,
+        address: u64,
+        physical: u64,
+        _: Permissions,
+        _: &[u64],
+    ) -> Result<usize, ()> {
+        let slot = self
+            .mappings
+            .iter_mut()
+            .find(|slot| slot.is_none())
+            .ok_or(())?;
+        *slot = Some((address, physical));
+        Ok(0)
+    }
+    unsafe fn unmap(&mut self, address: u64) -> Result<u64, ()> {
+        let slot = self
+            .mappings
+            .iter_mut()
+            .find(|slot| slot.is_some_and(|entry| entry.0 == address))
+            .ok_or(())?;
+        Ok(slot.take().unwrap().1)
+    }
+    unsafe fn read_frame(&self, _: u64, _: usize, output: &mut [u8]) -> Result<(), ()> {
+        output.fill(0);
+        Ok(())
+    }
+    unsafe fn retire(&mut self) -> Result<(), ()> {
+        assert!(self.mappings.iter().all(Option::is_none));
+        Ok(())
+    }
+}
+
+#[test]
+fn private_vm_allocator_null_preserves_reservations_owners_and_quota() {
+    let pool = FramePool::<1, 4, 1>::new();
+    let mut regions = [MemoryRegion {
+        range: PhysRange::from_base_len(0x1000, 128 * FRAME_SIZE).unwrap(),
+        kind: RegionKind::Usable,
+    }];
+    let mut output = [PhysRange::EMPTY; 1];
+    let plan = normalize_memory(&mut regions, &mut [], &mut output).unwrap();
+    unsafe { pool.initialize(plan) }.unwrap();
+    let before = pool.stats();
+    let budget = Budget::new(Limits {
+        shared_pages: 0,
+        private_pages: 32,
+        reserved_pages: 32,
+        handles: 0,
+        waits: 0,
+        threads: 0,
+        mappings: 32,
+        tables: 16,
+    });
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| {
+            Ok(FixedVm {
+                root,
+                mappings: [None; 32],
+            })
+        },
+        32,
+        16,
+    )
+    .unwrap();
+    let mut memory = PrivateVm::new();
+    let root_only = pool.stats();
+    assert_eq!(
+        fail_allocations(|| memory.reserve(&space, &budget, 32 * FRAME_SIZE, FRAME_SIZE)),
+        Err(PrivateError::OutOfResources),
+    );
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+    assert_eq!(pool.stats(), root_only);
+    let base = memory
+        .reserve(&space, &budget, 32 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    // The first commit needs its interval vector before acquiring backing.
+    assert_eq!(
+        fail_allocations(|| memory.commit(&mut space, base, FRAME_SIZE)),
+        Err(PrivateError::OutOfResources),
+    );
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(space.mapped_pages(), 0);
+    assert_eq!(pool.stats(), root_only);
+    memory.commit(&mut space, base, FRAME_SIZE).unwrap();
+    let one_page = pool.stats();
+    // Interval capacity is reusable; a larger commit now needs mapping metadata.
+    assert_eq!(
+        fail_allocations(|| memory.commit(&mut space, base + FRAME_SIZE, 8 * FRAME_SIZE)),
+        Err(PrivateError::Vm(VmError::MappingCapacity)),
+    );
+    assert_eq!(space.mapped_pages(), 1);
+    assert_eq!(budget.count(Resource::PrivatePages), 1);
+    assert_eq!(pool.stats(), one_page);
+    assert!(!memory.retirement_pending());
+    memory
+        .commit(&mut space, base + FRAME_SIZE, 8 * FRAME_SIZE)
+        .unwrap();
+    memory.release(&mut space, base).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+    space.close().unwrap();
+    memory.clear_after_close(&space).unwrap();
+    assert_eq!(pool.stats(), before);
 }

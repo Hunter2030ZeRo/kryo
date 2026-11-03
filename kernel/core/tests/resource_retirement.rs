@@ -50,6 +50,8 @@ fn failed_backing_retirement_cannot_refund_a_shared_page_charge_during_unwind() 
     unsafe { allocator.pool.initialize(plan) }.unwrap();
     let budget = Budget::new(Limits {
         shared_pages: 1,
+        private_pages: 0,
+        reserved_pages: 0,
         handles: 0,
         waits: 0,
         threads: 0,

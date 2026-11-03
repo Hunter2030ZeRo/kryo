@@ -7,7 +7,7 @@ use core::cell::UnsafeCell;
 use core::hint::black_box;
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use kryo_interfaces::syscall::Call;
+use kryo_interfaces::syscall::{Call, Error as CallError};
 use kryo_libsys::{self as sys, Handle, ObjectKind};
 
 const STACK_BASE: u64 = 0x80_0000;
@@ -16,6 +16,11 @@ const IMAGE_BASE: u64 = 0x40_0000;
 const TLS_SLOT_BYTES: usize = 4096;
 const TLS_THREADS: usize = 3;
 const MAIN_TLS_VALUE: u64 = 0x1000;
+const PAGE_BYTES: u64 = 4096;
+const PRIVATE_PAGES: u64 = 1024;
+const RESERVED_PAGES: u64 = 65_536;
+const REGION_PAGES: u64 = RESERVED_PAGES / 2;
+const COMMITTED_PAGES: u64 = 512;
 
 #[repr(C, align(4096))]
 struct TlsStorage(UnsafeCell<[[u8; TLS_SLOT_BYTES]; TLS_THREADS]>);
@@ -154,6 +159,7 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     store_tls(MAIN_TLS_VALUE);
     sys::debug_log(debug, 94, 1).unwrap_or_else(|_| exit(207));
     check_thread_tls(debug);
+    check_private_vm(debug);
     for round in 0..32u64 {
         let first = black_box(19 + round);
         let second = black_box(1.25);
@@ -205,6 +211,195 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     preempt_vector(debug);
     sys::debug_log(debug, 90, 2).unwrap_or_else(|_| exit(207));
     exit(0)
+}
+
+fn check_private_vm(debug: Handle) {
+    use sys::{BudgetQuery, Resource};
+
+    // Child threads have joined. This fixture exclusively owns each reservation,
+    // creates no Rust references into it and ends volatile accesses before
+    // every decommit or release below.
+    if vm_result(sys::budget_self(Resource::PrivatePages, BudgetQuery::Limit)) != PRIVATE_PAGES
+        || vm_result(sys::budget_self(
+            Resource::ReservedPages,
+            BudgetQuery::Limit,
+        )) != RESERVED_PAGES
+    {
+        exit(232);
+    }
+    check_vm_usage(0, 0);
+    expect_vm_error(
+        sys::vm_reserve(PAGE_BYTES, PAGE_BYTES + 1),
+        CallError::InvalidArgument,
+    );
+
+    let full = reserve_private(RESERVED_PAGES);
+    check_vm_usage(0, RESERVED_PAGES);
+    expect_vm_error(
+        sys::vm_reserve(PAGE_BYTES, PAGE_BYTES),
+        CallError::OutOfResources,
+    );
+    vm_result(unsafe { sys::vm_release(full) });
+    check_vm_usage(0, 0);
+
+    let base = reserve_private(REGION_PAGES);
+    vm_result(sys::vm_commit(base, COMMITTED_PAGES * PAGE_BYTES));
+    check_vm_usage(COMMITTED_PAGES, REGION_PAGES);
+    // These ranges are private, committed and accessed only by this thread.
+    unsafe {
+        check_zero_pages(base, COMMITTED_PAGES);
+        write_page_pattern(base, 0, COMMITTED_PAGES);
+    }
+    vm_result(sys::yield_now());
+    vm_result(sys::sleep_for(100_000));
+    unsafe { check_page_pattern(base, 0, COMMITTED_PAGES) };
+
+    for result in [
+        sys::vm_commit(base, PAGE_BYTES),
+        sys::vm_commit(base + 1, PAGE_BYTES),
+        sys::vm_commit(!(PAGE_BYTES - 1), 2 * PAGE_BYTES),
+        sys::vm_commit(base - PAGE_BYTES, PAGE_BYTES),
+        unsafe { sys::vm_release(base + PAGE_BYTES) },
+    ] {
+        expect_vm_error(result, CallError::InvalidArgument);
+    }
+    let extra = base + COMMITTED_PAGES * PAGE_BYTES;
+    expect_vm_error(
+        sys::vm_commit(extra, 513 * PAGE_BYTES),
+        CallError::OutOfResources,
+    );
+    check_vm_usage(COMMITTED_PAGES, REGION_PAGES);
+    unsafe { check_page_pattern(base, 0, COMMITTED_PAGES) };
+
+    let middle = base + 128 * PAGE_BYTES;
+    vm_result(unsafe { sys::vm_decommit(middle, 16 * PAGE_BYTES) });
+    check_vm_usage(COMMITTED_PAGES - 16, REGION_PAGES);
+    unsafe {
+        check_page_pattern(base, 0, 128);
+        check_page_pattern(base, 144, COMMITTED_PAGES - 144);
+    }
+
+    // Refunded credit admits the entire range rejected at quota admission.
+    // Reusing it also checks that rejection left no conflicting mapping.
+    vm_result(sys::vm_commit(extra, 513 * PAGE_BYTES));
+    check_vm_usage(COMMITTED_PAGES - 16 + 513, REGION_PAGES);
+    unsafe { check_zero_pages(extra, 513) };
+    vm_result(unsafe { sys::vm_decommit(extra, 513 * PAGE_BYTES) });
+    vm_result(sys::vm_commit(middle, 16 * PAGE_BYTES));
+    check_vm_usage(COMMITTED_PAGES, REGION_PAGES);
+    unsafe {
+        check_zero_pages(middle, 16);
+        check_page_pattern(base, 0, 128);
+        check_page_pattern(base, 144, COMMITTED_PAGES - 144);
+        write_page_pattern(base, 128, 16);
+    }
+
+    let second = reserve_private(REGION_PAGES);
+    check_vm_usage(COMMITTED_PAGES, RESERVED_PAGES);
+    expect_vm_error(
+        sys::vm_reserve(PAGE_BYTES, PAGE_BYTES),
+        CallError::OutOfResources,
+    );
+    vm_result(sys::vm_commit(second, 12 * PAGE_BYTES));
+    check_vm_usage(COMMITTED_PAGES + 12, RESERVED_PAGES);
+    unsafe {
+        check_zero_pages(second, 12);
+        write_page_pattern(second, 0, 12);
+        check_page_pattern(base, 0, COMMITTED_PAGES);
+        check_page_pattern(second, 0, 12);
+    }
+    vm_result(unsafe { sys::vm_release(second) });
+    check_vm_usage(COMMITTED_PAGES, REGION_PAGES);
+    vm_result(unsafe { sys::vm_release(base) });
+    check_vm_usage(0, 0);
+
+    let reused = reserve_private(REGION_PAGES);
+    if reused != base {
+        exit(236);
+    }
+    vm_result(sys::vm_commit(reused, 12 * PAGE_BYTES));
+    unsafe { check_zero_pages(reused, 12) };
+    vm_result(unsafe { sys::vm_release(reused) });
+    check_vm_usage(0, 0);
+
+    // Leave both owners live so process teardown must retire backing and quota.
+    let retained = reserve_private(8);
+    vm_result(sys::vm_commit(retained, 4 * PAGE_BYTES));
+    unsafe { check_zero_pages(retained, 4) };
+    check_vm_usage(4, 8);
+    check_tls(MAIN_TLS_VALUE);
+    sys::debug_log(debug, 95, 1).unwrap_or_else(|_| exit(237));
+}
+
+fn vm_result<T>(result: Result<T, sys::Error>) -> T {
+    result.unwrap_or_else(|_| exit(230))
+}
+
+fn expect_vm_error<T>(result: Result<T, sys::Error>, error: CallError) {
+    if !matches!(result, Err(sys::Error::Kernel(status)) if status == error.status() as i64) {
+        exit(231);
+    }
+}
+
+fn check_vm_usage(private: u64, reserved: u64) {
+    use sys::{BudgetQuery, Resource};
+
+    if vm_result(sys::budget_self(Resource::PrivatePages, BudgetQuery::Used)) != private
+        || vm_result(sys::budget_self(Resource::ReservedPages, BudgetQuery::Used)) != reserved
+    {
+        exit(232);
+    }
+}
+
+fn reserve_private(pages: u64) -> u64 {
+    let bytes = pages * PAGE_BYTES;
+    let address = vm_result(sys::vm_reserve(bytes, PAGE_BYTES));
+    if address < 0x1_0000_0000
+        || !address.is_multiple_of(PAGE_BYTES)
+        || address.checked_add(bytes).is_none()
+    {
+        exit(233);
+    }
+    address
+}
+
+// Callers retain exclusive access to all sampled committed pages. Decommit and
+// release occur only after these volatile accesses end.
+unsafe fn check_zero_pages(base: u64, pages: u64) {
+    for page in 0..pages {
+        let first = (base + page * PAGE_BYTES) as *const u64;
+        let last = (base + (page + 1) * PAGE_BYTES - 8) as *const u64;
+        if unsafe { first.read_volatile() } != 0 || unsafe { last.read_volatile() } != 0 {
+            exit(234);
+        }
+    }
+}
+
+unsafe fn write_page_pattern(base: u64, first_page: u64, pages: u64) {
+    for page in first_page..first_page + pages {
+        let first = (base + page * PAGE_BYTES) as *mut u64;
+        let last = (base + (page + 1) * PAGE_BYTES - 8) as *mut u64;
+        let value = page_pattern(base, page);
+        unsafe {
+            first.write_volatile(value);
+            last.write_volatile(!value);
+        }
+    }
+}
+
+unsafe fn check_page_pattern(base: u64, first_page: u64, pages: u64) {
+    for page in first_page..first_page + pages {
+        let first = (base + page * PAGE_BYTES) as *const u64;
+        let last = (base + (page + 1) * PAGE_BYTES - 8) as *const u64;
+        let value = page_pattern(base, page);
+        if unsafe { first.read_volatile() } != value || unsafe { last.read_volatile() } != !value {
+            exit(235);
+        }
+    }
+}
+
+fn page_pattern(base: u64, page: u64) -> u64 {
+    0x6b72_796f_a55a_1234 ^ base.rotate_left(17) ^ page.wrapping_mul(0x9e37_79b9_7f4a_7c15)
 }
 
 fn vector_call(number: Call, argument: u64, seed: u64) {

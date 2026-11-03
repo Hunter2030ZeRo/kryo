@@ -1,3 +1,8 @@
+use alloc::vec::Vec;
+use core::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_SPACE_ID: AtomicU64 = AtomicU64::new(1);
+
 use super::{FrameAllocator, Permissions, VmBackend, VmError};
 use crate::mm::frame::{FRAME_SIZE, OwnedFrame};
 use crate::mm::shared::{NoSharedPage, SharedPage};
@@ -34,8 +39,10 @@ pub struct AddressSpace<
 > {
     allocator: &'pool F,
     backend: B,
+    identity: u64,
     root: Option<OwnedFrame<'pool>>,
     mappings: Slots<Option<Mapping<'pool, S>>, MAPPINGS>,
+    mapping_count: usize,
     tables: Slots<Option<OwnedFrame<'pool>>, TABLES>,
     table_count: usize,
 }
@@ -80,6 +87,9 @@ impl<
         create: impl FnOnce(u64) -> Result<B, B::Error>,
         limits: Option<(usize, usize)>,
     ) -> Result<Self, VmError<B::Error>> {
+        let identity = NEXT_SPACE_ID
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
+            .map_err(|_| VmError::MappingCapacity)?;
         let root = allocator.allocate().map_err(VmError::Allocation)?;
         let backend = match create(root.address()) {
             Ok(backend) => backend,
@@ -102,12 +112,14 @@ impl<
         Ok(Self {
             allocator,
             backend,
+            identity,
             root: Some(root),
             mappings: if let Some((mappings, _)) = limits {
                 Slots::limited(mappings)
             } else {
                 Slots::new([const { None }; MAPPINGS])
             },
+            mapping_count: 0,
             tables: if let Some((_, tables)) = limits {
                 Slots::limited(tables)
             } else {
@@ -115,6 +127,10 @@ impl<
             },
             table_count: 0,
         })
+    }
+
+    pub(crate) fn identity(&self) -> u64 {
+        self.identity
     }
 
     pub fn root_frame(&self) -> Result<u64, VmError<B::Error>> {
@@ -135,32 +151,98 @@ impl<
         if self.find(address).is_some() {
             return Err(VmError::AlreadyMapped);
         }
-        let slot = self
-            .mappings
-            .vacant(Option::is_none, || None)
-            .map_err(|_| VmError::MappingCapacity)?;
-        let needed = self
-            .backend
-            .tables_needed(address)
-            .map_err(VmError::Backend)?;
-        assert!(needed <= 3, "VM backend table count invariant");
-        let length = self
-            .table_count
-            .checked_add(needed)
-            .ok_or(VmError::TableCapacity)?;
-        self.tables
-            .reserve_len(length, || None)
-            .map_err(|_| VmError::TableCapacity)?;
+        self.reserve_mappings(1)?;
         let frame = self.allocator.allocate().map_err(VmError::Allocation)?;
-        let prepared = match self.prepare_tables(needed) {
-            Ok(tables) => tables,
+        self.map_owned_frame(address, permissions, contents, frame)
+    }
+
+    /// Obtains every data frame before publishing the first anonymous mapping.
+    /// On failure, callers must retire any owners retained in this range.
+    pub(crate) fn map_private_range(
+        &mut self,
+        address: u64,
+        pages: usize,
+    ) -> Result<(), VmError<B::Error>> {
+        self.check_inactive()?;
+        let end = range_end(address, pages).ok_or(VmError::InvalidAddress)?;
+        if self.last_occupied(address, end).is_some() {
+            return Err(VmError::AlreadyMapped);
+        }
+        self.reserve_mappings(pages)?;
+        // Reserve the possible table metadata up to this space's configured cap.
+        // Exact physical table requirements depend on previously published paths.
+        if let Slots::Growing { values, limit } = &mut self.tables {
+            let additional = pages
+                .saturating_mul(3)
+                .min(limit.saturating_sub(values.len()));
+            values
+                .try_reserve(additional)
+                .map_err(|_| VmError::TableCapacity)?;
+        }
+        let mut frames = Vec::new();
+        frames
+            .try_reserve_exact(pages)
+            .map_err(|_| VmError::MappingCapacity)?;
+        for _ in 0..pages {
+            match self.allocator.allocate() {
+                Ok(frame) => frames.push(frame),
+                Err(error) => {
+                    for frame in frames {
+                        unsafe { release(self.allocator, frame) };
+                    }
+                    return Err(VmError::Allocation(error));
+                }
+            }
+        }
+        let mut frames = frames.into_iter();
+        for page in 0..pages {
+            let frame = frames.next().unwrap();
+            if let Err(error) = self.map_owned_frame(
+                address + page as u64 * FRAME_SIZE,
+                Permissions::ReadWrite,
+                &[],
+                frame,
+            ) {
+                for frame in frames {
+                    unsafe { release(self.allocator, frame) };
+                }
+                return Err(error);
+            }
+        }
+        Ok(())
+    }
+
+    fn map_owned_frame(
+        &mut self,
+        address: u64,
+        permissions: Permissions,
+        contents: &[u8],
+        frame: OwnedFrame<'pool>,
+    ) -> Result<(), VmError<B::Error>> {
+        let prepared = (|| {
+            let needed = self
+                .backend
+                .tables_needed(address)
+                .map_err(VmError::Backend)?;
+            assert!(needed <= 3, "VM backend table count invariant");
+            let length = self
+                .table_count
+                .checked_add(needed)
+                .ok_or(VmError::TableCapacity)?;
+            self.tables
+                .reserve_len(length, || None)
+                .map_err(|_| VmError::TableCapacity)?;
+            Ok((needed, self.prepare_tables(needed)?))
+        })();
+        let (needed, prepared) = match prepared {
+            Ok(prepared) => prepared,
             Err(error) => {
                 unsafe { release(self.allocator, frame) };
                 return Err(error);
             }
         };
         let physical = table_addresses(&prepared);
-        self.mappings[slot] = Some(Mapping {
+        let slot = self.insert_mapping(Mapping {
             address,
             backing: Backing::Private(frame),
             permissions,
@@ -184,17 +266,17 @@ impl<
                 Ok(())
             }
             Err(error) => {
-                // Failed publication cannot retain the prepared user page tables.
                 for table in prepared.into_iter().flatten() {
                     unsafe { release(self.allocator, table) };
                 }
-                // Keep the data owner for close retry if alias restoration fails.
+                // Unpublished frames still need their kernel alias restored.
                 if unsafe { self.backend.restore_frame(data) }.is_ok() {
                     let mapping = self.mappings[slot].take().unwrap();
                     let Backing::Private(frame) = mapping.backing else {
-                        unreachable!("Private mapping backing invariant");
+                        unreachable!()
                     };
                     unsafe { release(self.allocator, frame) };
+                    self.compact_mappings();
                 }
                 Err(VmError::Backend(error))
             }
@@ -217,10 +299,7 @@ impl<
         if self.find(address).is_some() {
             return Err(VmError::AlreadyMapped);
         }
-        let slot = self
-            .mappings
-            .vacant(Option::is_none, || None)
-            .map_err(|_| VmError::MappingCapacity)?;
+        self.reserve_mappings(1)?;
         let needed = self
             .backend
             .tables_needed(address)
@@ -235,7 +314,7 @@ impl<
             .map_err(|_| VmError::TableCapacity)?;
         let prepared = self.prepare_tables(needed)?;
         let physical = table_addresses(&prepared);
-        self.mappings[slot] = Some(Mapping {
+        let slot = self.insert_mapping(Mapping {
             address,
             backing: Backing::Shared(page),
             permissions,
@@ -259,6 +338,7 @@ impl<
                     unsafe { release(self.allocator, table) };
                 }
                 self.mappings[slot].take();
+                self.compact_mappings();
                 Err(VmError::Backend(error))
             }
         }
@@ -267,7 +347,56 @@ impl<
     pub fn unmap_page(&mut self, address: u64) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
         let slot = self.find(address).ok_or(VmError::NotMapped)?;
-        self.remove_mapping(slot)
+        self.remove_mapping(slot)?;
+        self.compact_mappings();
+        Ok(())
+    }
+
+    /// Includes unpublished owners whose aliases are still awaiting retirement.
+    pub(crate) fn owned_pages_in_range(&self, start: u64, end: u64) -> usize {
+        let first = self.lower_bound(start);
+        let last = self.lower_bound(end);
+        last - first
+    }
+
+    pub(crate) fn last_occupied(&self, start: u64, end: u64) -> Option<u64> {
+        let last = self.lower_bound(end);
+        if last == 0 {
+            return None;
+        }
+        let address = self.mappings[last - 1].as_ref().unwrap().address;
+        (address >= start).then_some(address)
+    }
+
+    /// Retires a range in one metadata pass, even if individual retirements fail.
+    pub(crate) fn unmap_private_range(
+        &mut self,
+        start: u64,
+        end: u64,
+    ) -> Result<(), VmError<B::Error>> {
+        self.check_inactive()?;
+        let first = self.lower_bound(start);
+        let last = self.lower_bound(end);
+        let mut failure = None;
+        for slot in first..last {
+            if !matches!(
+                self.mappings[slot].as_ref().unwrap().backing,
+                Backing::Private(_)
+            ) {
+                failure.get_or_insert(VmError::InvalidPermissions);
+                continue;
+            }
+            if let Err(error) = self.remove_mapping(slot)
+                && failure.is_none()
+            {
+                failure = Some(error);
+            }
+        }
+        self.compact_mappings();
+        match failure {
+            Some(error) => Err(error),
+            None => Ok(()),
+        }
     }
 
     pub fn read_page(
@@ -333,10 +462,14 @@ impl<
     pub fn close(&mut self) -> Result<(), VmError<B::Error>> {
         self.check_inactive()?;
         for slot in 0..self.mappings.len() {
-            if self.mappings[slot].is_some() {
-                self.remove_mapping(slot)?;
+            if self.mappings[slot].is_some()
+                && let Err(error) = self.remove_mapping(slot)
+            {
+                self.compact_mappings();
+                return Err(error);
             }
         }
+        self.mapping_count = 0;
         // All data access is retired; the backend unlinks the inactive root and flushes.
         unsafe { self.backend.retire() }.map_err(VmError::Backend)?;
         for table in &mut self.tables[..self.table_count] {
@@ -344,6 +477,7 @@ impl<
         }
         self.table_count = 0;
         unsafe { release(self.allocator, self.root.take().unwrap()) };
+        self.mapping_count = 0;
         self.mappings.release();
         self.tables.release();
         Ok(())
@@ -354,12 +488,48 @@ impl<
         self.backend.check_inactive().map_err(VmError::Backend)
     }
 
+    fn lower_bound(&self, address: u64) -> usize {
+        self.mappings[..self.mapping_count]
+            .partition_point(|entry| entry.as_ref().unwrap().address < address)
+    }
+
     fn find(&self, address: u64) -> Option<usize> {
-        self.mappings.iter().position(|mapping| {
-            mapping
-                .as_ref()
-                .is_some_and(|mapping| mapping.address == address)
-        })
+        let slot = self.lower_bound(address);
+        (slot < self.mapping_count && self.mappings[slot].as_ref().unwrap().address == address)
+            .then_some(slot)
+    }
+
+    fn reserve_mappings(&mut self, additional: usize) -> Result<(), VmError<B::Error>> {
+        let length = self
+            .mapping_count
+            .checked_add(additional)
+            .ok_or(VmError::MappingCapacity)?;
+        self.mappings
+            .reserve_len(length, || None)
+            .map_err(|_| VmError::MappingCapacity)
+    }
+
+    fn insert_mapping(&mut self, mapping: Mapping<'pool, S>) -> usize {
+        let slot = self.lower_bound(mapping.address);
+        for index in (slot..self.mapping_count).rev() {
+            self.mappings[index + 1] = self.mappings[index].take();
+        }
+        self.mappings[slot] = Some(mapping);
+        self.mapping_count += 1;
+        slot
+    }
+
+    fn compact_mappings(&mut self) {
+        let mut target = 0;
+        for source in 0..self.mapping_count {
+            if self.mappings[source].is_some() {
+                if source != target {
+                    self.mappings[target] = self.mappings[source].take();
+                }
+                target += 1;
+            }
+        }
+        self.mapping_count = target;
     }
 
     fn prepare_tables(
@@ -443,4 +613,14 @@ unsafe fn release<F: FrameAllocator>(allocator: &F, frame: OwnedFrame<'_>) {
     if unsafe { allocator.release(frame) }.is_err() {
         panic!("VM frame ownership invariant");
     }
+}
+
+fn range_end(address: u64, pages: usize) -> Option<u64> {
+    validate_address(address)?;
+    if pages == 0 {
+        return None;
+    }
+    let bytes = u64::try_from(pages).ok()?.checked_mul(FRAME_SIZE)?;
+    let end = address.checked_add(bytes)?;
+    (end <= 0x0000_8000_0000_0000).then_some(end)
 }

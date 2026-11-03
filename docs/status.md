@@ -2,12 +2,18 @@
 
 Snapshot: 2026-11-03. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [private VM milestone](validation/2026-11-03-private-vm/README.md) adds
+reserve/commit/decommit/release to the native ABI. It separates reserved virtual
+pages from zeroed committed RAM, retains quota through failed retirement and
+verifies process-exit cleanup. Atomic park/wake and a user allocator remain
+unimplemented.
+
 The [static TLS milestone](validation/2026-11-03-static-tls/README.md) extends
 native startup with mapped ELF/PHDR metadata and C/C++/Rust local-exec TLS.
 Its runtime-owned fixture verifies main/two-child isolation and full kernel
 resource retirement. It does not implement a complete mlibc TCB/DTV, dynamic
-TLS, destructors or the general private allocator. The proposed VM/wait contracts
-are in [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
+TLS, destructors or a user allocator. [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md)
+defines explicit private VM and the accepted direction for future atomic waits.
 
 The [native ABI milestone](validation/2026-11-02-native-abi/README.md) adds a
 dedicated v3 hard-float target, an allocation-free initial-stack builder and an
@@ -30,6 +36,7 @@ libc/std or GPU support is implied by those requirements.
 - HHDM access, zeroing, and BSP scratch mappings.
 - User spaces with growing mapping/table metadata owning their root, intermediate tables, and data frames.
 - RO/RW/RX mappings, initialization before publication, inactive-space mutation, and explicit cleanup.
+- Private reserve/commit/decommit/release with separate virtual/data-page charges. Commit supplies zeroed RW/NX backing; retirement retains failed owners and charges. Intermediate user tables remain until address-space close.
 - Supervisor-only kernel mappings, HHDM NX policy, and read-only aliases for executable/read-only user frames.
 - Huge HHDM splitting with retained kernel table ownership.
 - A supervisor-only kernel region for uncached APIC access and guarded per-task entry stacks; added leaf tables extend it up to a one-GiB address budget.
@@ -101,7 +108,16 @@ The original native-smoke ELF remains a boot-test CPU-state fixture. [ADR 0002](
 
 ## Verification
 
-### Current resource budget validation
+The [private VM matrix](validation/2026-11-03-private-vm/evidence.json) passes six
+QEMU configurations, 428 Rust tests and 18 Python tests. It covers explicit
+memory in four native ABI runs and legacy normal/boot-test regressions with
+one/four CPUs. Core failure models cover partial publication, retirement and
+metadata OOM; guest checks cover quota admission, zeroing, reuse and final
+process cleanup. Normal/all-feature kernel, userspace and scoped host Clippy
+and formatting pass. These are functional model/emulator results, not hardware
+performance or standard-library integration.
+
+### Previous resource budget validation
 
 The [budget matrix](validation/2026-11-01-budgets/evidence.json) passes all 16 configurations: default-model one-CPU 512-MiB guests, max-model two-/four-CPU 512-MiB guests and max-model two-CPU 129-GiB guests, each in debug/release and boot-tests/normal boot. [Source hashes](validation/2026-11-01-budgets/source-manifest.json) identify 245 unchanged source/configuration/runner inputs. Host tests pass 336 cases: core 261, HAL 58, interfaces 2, libsys 4 and service policy 11. Kernel normal/all-feature Clippy, scoped changed core tests, userspace workspace Clippy and formatting pass. Independent review found no blocker and separately passed 44 targeted model tests.
 
@@ -320,9 +336,9 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 - One to 255 xAPIC logical processors with directed APIC IDs 0..254 and multiword CPU sets, four-level paging, PCID off, and serialized BSP page-table policy. Larger CPU inventories are rejected before HHDM protection changes. No hotplug, x2APIC, affinity, topology/NUMA policy, per-CPU run queues, or parallel kernel syscall processing. IRQs remain disabled during policy work; idle, drain, and user execution use controlled IRQ windows.
 - xAPIC only. Time requires an ACPI-described 64-bit HPET, bounded firmware tables, and BSP configuration ownership with shared registered-CPU reads. PIT/PM/TSC fallbacks, 32-bit counter extension, suspend/resume, and hardware clock/latency validation are pending. Calibration does not guarantee scheduling latency while kernel IRQs remain off.
 - Scalar entry traps FP; extended entry supports x87/SSE and optional AVX in a private 1,024-byte standard state area. XCR0 components beyond bits 0..2, AVX-512, AMX, and supervisor state are unsupported. Kernel code remains soft-float.
-- The native test uses scalar Rust compilation and manual SIMD assembly. A general user target, hard-float ABI, libc/std, dynamic linking, ELF TLS templates, and argc/argv/envp/auxv startup are pending. FS setup is explicit.
+- Legacy native tests use scalar Rust compilation and manual SIMD assembly. The optional v3 hard-float C/C++/Rust probe uses SysV startup and static ELF TLS; complete libc/std, dynamic linking, dynamic TLS and runtime-owned native thread creation remain pending.
 - Initial executable policy is static little-endian AMD64 ET_EXEC only, at most 64 program headers/eight load segments/16 pages and a 1-MiB boot-module cap. The page budget was expanded after the budget-aware supervisor measured nine load pages. This is not ICE execution or general ELF compatibility.
-- Normal metadata grows through fallible allocation within configured service accounts. Shared pages, handles, waits and live threads have persistent charges; VM mapping/table limits are per process. Exact kernel-metadata byte accounting, aggregate private-RAM and CPU-time budgets remain pending. These are account policy limits, not a fixed kernel-wide process/thread count. Endpoint RECEIVE and notification WAIT remain thread-bound. General process hierarchy, multi-receiver IPC, dynamic service inventory, supervisor recovery and WAIT delegation remain pending. The configured registry is scoped to one supervisor lifetime.
+- Normal metadata grows through fallible allocation within configured service accounts. Shared pages, handles, waits, live threads, explicit private VM pages and reserved virtual pages have persistent charges; VM mapping/table limits are per process. Exact kernel-metadata byte accounting, private-RAM accounting for ELF/stacks/legacy TLS and CPU-time budgets remain pending. These are account policy limits, not a fixed kernel-wide process/thread count. Endpoint RECEIVE and notification WAIT remain thread-bound. General process hierarchy, multi-receiver IPC, dynamic service inventory, supervisor recovery and WAIT delegation remain pending. The configured registry is scoped to one supervisor lifetime.
 - Frame metadata scales with the Usable RAM plan and has no fixed four-GiB or 128-GiB bitmap cap. Boot discovery still accepts at most 256 raw map entries and 288 normalized ranges, and metadata requires one contiguous Usable span. CPU physical-address width and canonical HHDM bounds remain enforced. The shared entry-stack branch has a one-GiB virtual-address budget, roughly 52,000 guarded cells; other resources can exhaust sooner. Private user VM metadata grows instead of retaining the earlier 16-mapping/64-table fixture limits.
 - Private mappings have unique backing; shared mappings retain the whole memory object and its shared-page charge. Native memory objects allow up to eight pages each, subject to the account total. Buffer loans, bulk queues, pin accounting and revocation remain pending.
 - HHDM split tables and their growable ownership metadata remain kernel-owned, without coalescing. Bootloader-reclaimable/ACPI memory and active boot tables remain reserved.
@@ -332,14 +348,17 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 
 ## Next work
 
-Connect the initial block service to VFS, the native runtime and BetAFS. Establish
-the general user runtime, mapped ELF metadata and TLS before claiming standard-library support. Add storage IRQ
+Implement private compare-before-park/wake and runtime-owned native thread
+resources, then evaluate mlibc sysdeps against those contracts. Mapped ELF
+metadata, static TLS and explicit private VM are available; a complete TCB/DTV,
+allocator and standard libraries remain separate work. Connect the initial
+block service to VFS, the native runtime and BetAFS. Add storage IRQ
 completion and general device assignment while retaining the private queue
 boundary. The current HPET grant remains a bootstrap device path. CPU-time
 accounting must measure individual CPU jobs; preemption counts and BSP batch wall
 time do not establish service fairness. SIMD remains user-state preservation for
 x87/SSE/YMM on admitted v3 hardware with kernel soft-float. Efficient heap backing, scalable event
-waits, dynamic configuration, private/kernel memory accounting and supervisor
+waits, dynamic configuration, complete private/kernel memory accounting and supervisor
 recovery remain follow-ups. x2APIC, memory hotplug and NUMA remain separate.
 General user runtimes, PTY and compatibility execution are required before
 ordinary applications. The [roadmap](roadmap.md) lists terminal, Velocity and KDE

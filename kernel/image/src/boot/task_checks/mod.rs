@@ -117,6 +117,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         context.r13 = SEED_B;
         Self {
             process: ProcessResources {
+                private_vm: kryo_core::mm::vm::PrivateVm::new(),
                 account: None,
                 space,
                 handles: Handles::new(),

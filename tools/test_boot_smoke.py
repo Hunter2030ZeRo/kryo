@@ -8,10 +8,17 @@ class PciEvidenceTests(unittest.TestCase):
         ready = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=1\n"
         retired = "ABI: startup and execution resources retired\n"
         tls = "TLS: ELF template and thread isolation OK threads=3\n"
-        self.assertTrue(all(abi_checks(ready + retired + tls, True).values()))
-        for log in (ready + tls, retired + tls, ready.replace("=1", "=0") + retired + tls, ready + retired):
+        vm = "VM: private reserve commit retirement OK\n"
+        self.assertTrue(all(abi_checks(ready + retired + tls + vm, True).values()))
+        for log in (ready + tls + vm, retired + tls + vm, ready.replace("=1", "=0") + retired + tls + vm, ready + retired + vm, ready + retired + tls):
             self.assertFalse(all(abi_checks(log, True).values()))
         self.assertEqual(abi_checks("", False), {})
+
+    def test_private_vm_requires_retirement_not_only_user_event(self):
+        log = "USERLOG: process=0x100 event=95 value=1\n"
+        self.assertFalse(abi_checks(log, True)["native_private_vm"])
+        log += "VM: private reserve commit retirement OK\n"
+        self.assertTrue(abi_checks(log, True)["native_private_vm"])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

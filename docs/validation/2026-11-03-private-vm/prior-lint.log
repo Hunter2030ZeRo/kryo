@@ -1,0 +1,57 @@
+   Compiling const_fn v0.4.12
+    Checking scopeguard v1.2.0
+   Compiling rustversion v1.0.23
+    Checking bitflags v2.13.2
+    Checking volatile v0.4.6
+    Checking bit_field v0.10.3
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/kernel/image)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/interfaces)
+    Checking limine v0.6.5
+    Checking lock_api v0.4.14
+    Checking spin v0.12.3
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/kernel/core)
+error: this `if` statement can be collapsed
+   --> kernel/core/src/mm/vm/space.rs:389:13
+    |
+389 | /             if let Err(error) = self.remove_mapping(slot) {
+390 | |                 if failure.is_none() {
+391 | |                     failure = Some(error);
+392 | |                 }
+393 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://clippy.rust-lang.org/main/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+389 ~             if let Err(error) = self.remove_mapping(slot)
+390 ~                 && failure.is_none() {
+391 |                     failure = Some(error);
+392 ~                 }
+    |
+
+error: this `if` statement can be collapsed
+   --> kernel/core/src/mm/vm/space.rs:465:13
+    |
+465 | /             if self.mappings[slot].is_some() {
+466 | |                 if let Err(error) = self.remove_mapping(slot) {
+467 | |                     self.compact_mappings();
+468 | |                     return Err(error);
+469 | |                 }
+470 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://clippy.rust-lang.org/main/index.html#collapsible_if
+help: collapse nested if block
+    |
+465 ~             if self.mappings[slot].is_some()
+466 ~                 && let Err(error) = self.remove_mapping(slot) {
+467 |                     self.compact_mappings();
+468 |                     return Err(error);
+469 ~                 }
+    |
+
+    Checking x86_64 v0.15.5
+error: could not compile `kryo-core` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

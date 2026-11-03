@@ -285,6 +285,7 @@ fn prepare_image<'kernel, 'objects>(
     };
     Ok(Resources {
         process: super::ProcessResources {
+            private_vm: kryo_core::mm::vm::PrivateVm::new(),
             space: pending.space.take().unwrap(),
             handles: account
                 .clone()

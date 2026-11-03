@@ -35,6 +35,8 @@ pub(crate) fn start<'kernel, 'objects>(
     let accounts = [
         Budget::new(Limits {
             shared_pages: 64,
+            private_pages: 0,
+            reserved_pages: 0,
             handles: 128,
             waits: 16,
             threads: 16,
@@ -152,6 +154,8 @@ pub(crate) fn start<'kernel, 'objects>(
 fn service_budget() -> Budget {
     Budget::new(Limits {
         shared_pages: 8,
+        private_pages: 0,
+        reserved_pages: 0,
         handles: 32,
         waits: 2,
         threads: 4,

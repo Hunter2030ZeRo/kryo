@@ -24,6 +24,9 @@ pub(crate) fn dispatch<'objects>(
     let result = Call::try_from(context.rax).and_then(|call| {
         let handle = Handle::from_raw(context.rdi);
         match call {
+            Call::VmReserve | Call::VmCommit | Call::VmDecommit | Call::VmRelease => {
+                super::private_vm::dispatch(caller, call, context, tasks).map(Some)
+            }
             Call::VirtioInfo
             | Call::VirtioStart
             | Call::VirtioSubmit
@@ -357,6 +360,15 @@ pub(crate) fn dispatch<'objects>(
                 if super::threads::reserved_address(context.rsi) {
                     return Err(Error::InvalidArgument);
                 }
+                if tasks
+                    .resources_mut(caller)
+                    .unwrap()
+                    .process
+                    .private_vm
+                    .overlaps(context.rsi, 4096)
+                {
+                    return Err(Error::InvalidArgument);
+                }
                 let permissions = match context.r8 {
                     0 => Permissions::ReadOnly,
                     1 => Permissions::ReadWrite,
@@ -389,6 +401,15 @@ pub(crate) fn dispatch<'objects>(
             }
             Call::MemoryUnmap => {
                 if super::threads::reserved_address(context.rdi) {
+                    return Err(Error::InvalidArgument);
+                }
+                if tasks
+                    .resources_mut(caller)
+                    .unwrap()
+                    .process
+                    .private_vm
+                    .overlaps(context.rdi, 4096)
+                {
                     return Err(Error::InvalidArgument);
                 }
                 tasks

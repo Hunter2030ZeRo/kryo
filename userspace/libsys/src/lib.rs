@@ -32,6 +32,8 @@ pub enum Resource {
     Threads = 3,
     Mappings = 4,
     Tables = 5,
+    PrivatePages = 6,
+    ReservedPages = 7,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -302,6 +304,34 @@ pub fn budget_self(resource: Resource, query: BudgetQuery) -> Result<u64, Error>
 
 pub fn memory_create(pages: usize) -> Result<Handle, Error> {
     handle_result(invoke(Call::MemoryCreate, pages as u64, 0)?)
+}
+
+/// Reserves an address range in this process without allocating its data pages.
+pub fn vm_reserve(bytes: u64, alignment: u64) -> Result<u64, Error> {
+    invoke(Call::VmReserve, bytes, alignment)
+}
+
+/// Commits zeroed, private RW pages in an existing reservation.
+pub fn vm_commit(address: u64, bytes: u64) -> Result<(), Error> {
+    invoke(Call::VmCommit, address, bytes).map(|_| ())
+}
+
+/// Returns backing after retirement while retaining the address reservation.
+///
+/// # Safety
+/// The caller must own the affected range and end every reference or concurrent
+/// access to it, including allocator and runtime uses, before decommitting.
+pub unsafe fn vm_decommit(address: u64, bytes: u64) -> Result<(), Error> {
+    invoke(Call::VmDecommit, address, bytes).map(|_| ())
+}
+
+/// Releases the entire reservation and any committed backing at its base.
+///
+/// # Safety
+/// The caller must own the reservation and end every reference or concurrent
+/// access to its entire range, including allocator and runtime uses.
+pub unsafe fn vm_release(base: u64) -> Result<(), Error> {
+    invoke(Call::VmRelease, base, 0).map(|_| ())
 }
 
 /// # Safety

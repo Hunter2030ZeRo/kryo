@@ -4,6 +4,14 @@ Kryo is the Rust `no_std` microkernel for Cryolite. It targets x86-64 and boots 
 
 The kernel provides owned memory, shared pages, SMP user execution, calibrated timer preemption, and IPC with capability delegation and deadlines. Metadata grows through fallible allocation within configured service accounts: handles, waits, shared payload pages and live threads retain charges through retirement, while VM mappings/tables have per-process bounds. CPU storage and multiword masks cover 255 directed xAPIC identities; [implementation status](docs/status.md) records verified guest inventories. Threads execute with private stacks, TLS, and FP/SIMD state. Restricted device registers and a real HPET interrupt connect to a Ring 3 probe through owned handles. The BSP coordinates native calls and memory retirement between execution batches. Normal boot starts a native supervisor with versioned startup grants, role allowlists, private discovery gateways and service replacement.
 
+Native private memory has separate reserve, commit, decommit and release calls.
+Reserve holds address space; successful commit supplies actual zeroed RW/NX RAM.
+Virtual-page and private-page charges remain until their resources retire.
+Incomplete rollback quarantines the process while retaining ownership.
+[The memory contract](docs/decisions/0026-private-vm-and-atomic-waits.md) leaves
+user allocators, atomic park/wake, demand paging and standard-library ports as
+separate work.
+
 BetAFS is the filesystem target. An opt-in Ring 3 driver now validates real
 VirtIO block read/write/flush through private DMA queues. A configured initial block IPC service now remains active after its clients exit.
 The BetAFS adapter and native standard-library ports remain pending. See

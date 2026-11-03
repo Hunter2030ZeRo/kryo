@@ -72,8 +72,9 @@ does not establish production allocator efficiency.
 
 ## Next contracts
 
-mlibc still needs its complete TCB/DTV/runtime, private VM allocation, atomic
-waits and service-backed streams/files. Its generic exit path can publish
+mlibc still needs its complete TCB/DTV/runtime, a user allocator over
+[explicit private VM](0026-private-vm-and-atomic-waits.md), atomic waits and
+service-backed streams/files. Its generic exit path can publish
 didExit before native ThreadExit; storage reclamation must wait for actual
 execution ownership to end. Native capability and lifetime rules remain in
 force through timeout, cancellation and thread/process termination.

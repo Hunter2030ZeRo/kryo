@@ -31,7 +31,7 @@ program. The following groups describe the actual Cryolite gaps.
 | Exit, LibcLog, LibcPanic | Native process exit and capability-scoped diagnostic events | Native C wrappers, bootstrap text diagnostic sink and runtime teardown |
 | ClockGet | Monotonic clock and absolute sleeps | Selected clock IDs and errors; wall time needs a real service |
 | TcbSet | Validated per-thread FS-base setup | Actual TCB layout, ELF TLS template allocation and destructor lifetime |
-| AnonAllocate, AnonFree, VmMap, VmUnmap | Owned zeroed memory objects and mappings | General private heap/VM contract, sizes, alignment, protection, errors and reclaim; MemoryCreate currently permits only 1..8 shared pages |
+| AnonAllocate, AnonFree, VmMap, VmUnmap | Explicit private reserve/commit/decommit/release with separate VA/RAM charges | Native mlibc wrappers, user allocator and translation of supported mapping flags; MemoryCreate remains a separate 1..8-page shared-object API |
 | FutexWait, FutexWake | Capability waits and coalescing notifications | Atomic compare-before-park or equivalent race-free address-wait protocol and lifetime rules |
 | Open, Read, Write, Seek, Close | IPC and persistent block service | Runtime descriptors over VFS/stream capabilities, offsets/duplication, partial I/O and errors |
 
@@ -53,13 +53,15 @@ source or toolchain was installed by this evaluation.
 
 ## Decisions before publishing the ABI
 
-- Select the native initial stack, TLS/TCB and capability handoff layouts.
+- Preserve the accepted SysV stack, separate capability handoff and runtime-owned
+  static TLS direction; define the complete mlibc TCB and cleanup contract.
 - Decide whether to reuse selected POSIX-facing ABI constants/structures or own
   Cryolite copies. Upstream permits reuse without Linux syscalls but warns that
   its shared ABI headers can change. Freeze and version only the selected
   Cryolite contract; do not import every Linux ABI assumption by default.
-- Define private VM and atomic wait semantics independently of one libc's
-  implementation. Keep fd tables and normal allocators in user space.
+- Apply the accepted [private-VM contract](0026-private-vm-and-atomic-waits.md) and
+  complete atomic-wait lifetime rules independently of one libc's implementation.
+  Keep fd tables and normal allocators in user space.
 - Review the chosen compiler/runtime combination and pinned source/dependencies
   before creating a reproducible target sysroot.
 

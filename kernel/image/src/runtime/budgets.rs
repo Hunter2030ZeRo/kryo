@@ -15,6 +15,8 @@ pub(crate) fn query(
         1 => Some(Resource::Handles),
         2 => Some(Resource::Waits),
         3 => Some(Resource::Threads),
+        6 => Some(Resource::PrivatePages),
+        7 => Some(Resource::ReservedPages),
         _ => None,
     };
     if let Some(resource) = resource {

@@ -374,6 +374,8 @@ fn receiving(tasks: &Tasks<'_, '_>, task: TaskId) -> bool {
 fn budget() -> Budget {
     Budget::new(Limits {
         shared_pages: 8,
+        private_pages: 0,
+        reserved_pages: 0,
         handles: 64,
         waits: 8,
         threads: 1,

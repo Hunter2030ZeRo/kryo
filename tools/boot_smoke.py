@@ -71,6 +71,7 @@ def abi_checks(log, enabled):
         "native_abi": bool(re.search(r"(?m)^ABI: v3 SysV C C\+\+ Rust stack and state OK preemptions=[1-9][0-9]*$", log)),
         "native_abi_retired": "ABI: startup and execution resources retired" in log,
         "native_tls": "TLS: ELF template and thread isolation OK threads=3" in log,
+        "native_private_vm": "VM: private reserve commit retirement OK" in log,
     }
 
 

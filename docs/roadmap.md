@@ -6,7 +6,7 @@ Develop one verifiable capability at a time. The [design contract](design-contra
 | --- | --- | --- |
 | P01: Boot memory | Discover boot resources, distinguish address types, and preserve reserved memory | Complete |
 | P02: Physical frames | Normalize usable ranges, reserve runtime-sized frame metadata, establish ownership, and test allocation, return, exhaustion, and failed initialization | Runtime metadata and high-address allocation implemented; current large-memory evidence is recorded in status |
-| P03: Virtual memory | Own address spaces and mappings; enforce permissions and alias policy; reclaim frames after TLB completion; test protection and guard pages | Growing VM metadata, shared backing, guarded entry stacks, and acknowledged SMP retirement implemented; general paging policy pending |
+| P03: Virtual memory | Own address spaces and mappings; enforce permissions and alias policy; reclaim frames after TLB completion; test protection and guard pages | Growing VM metadata, explicit private reserve/commit/decommit/release, shared backing, guarded entry stacks and acknowledged SMP retirement implemented; demand paging and table pruning pending |
 | P04: User entry | CPU-local state, user/kernel stacks, validated IRETQ entry and return, native calls, and user fault isolation | Static native ELF, CPU-local SMP FP/SIMD contexts, FS setup, and fault isolation implemented; general runtime and stable ABI pending |
 | P05: Tasks and IPC | Timer, context switching, wait/wakeup, kernel objects, capabilities, endpoints, notifications, and shared memory | SMP execution, growing metadata, deadlines, delegation, native channels and shared resource accounts implemented; CPU-time budgets and scheduling scalability pending |
 | P06: Services and DMA | Boot image, init, supervisor, device authority, DMA lifetime, and service failure recovery | Native supervisor, versioned atomic startup grants, role allowlists, private discovery gateways, generations and service replacement implemented for a configured inventory; mediated HPET IRQ, read-only PCI discovery and owned DMA storage implemented; private queued hardware DMA and Ring 3 block commands validated; general assignment and broader recovery pending |
@@ -17,8 +17,11 @@ The native platform minimum is x86-64-v3; Intel is the first Vulkan hardware
 target. An opt-in mixed-language probe now tests the v3 hard-float convention
 and owned initial stack. The
 [static TLS extension](decisions/0025-static-tls-and-elf-metadata.md) adds mapped
-ELF metadata and runtime-owned compiler TLS. Full mlibc startup and allocation
-remain pending. Review
+ELF metadata and runtime-owned compiler TLS. Explicit private VM now supplies
+page backing with separate virtual/RAM charges and retirement. Full mlibc
+startup, a user allocator and atomic waits remain pending. Apply the
+[accepted memory/wait direction](decisions/0026-private-vm-and-atomic-waits.md)
+before connecting mlibc synchronization. Review
 libc selection, parallel kernel ownership and the GPU-service interface before
 freezing their ABI. Measure IPC, scheduler, heap and I/O costs alongside runtime
 porting rather than postponing them until desktop integration. See
@@ -30,7 +33,7 @@ Frame metadata now scales with the normalized Usable RAM inventory. The image re
 
 Normal boot starts a native supervisor with explicit root authority. Versioned manifests install role-labeled grants before child execution. Private instance registration and client discovery gateways bind service policy to capabilities; claimed IDs do not authenticate it. Shared resource accounts now bound handles, waits, live threads and shared payload pages, with additional per-process VM limits. Ordinary children inherit accounts and restart retains usage. [ADR 0015](decisions/0015-service-startup-and-authority.md) defines startup/discovery and [ADR 0016](decisions/0016-service-resource-budgets.md) defines resource lifetime. Validated private DMA queues now carry Ring 3 block commands. A configured persistent block IPC service now connects clients through private read/write gates. The next path is the dedicated user ABI, native runtime, VFS/BetAFS and storage IRQ completion. CPU elapsed-time accounting, scalable service events and dynamic configuration remain separate work. The current HPET grant validates restricted registers and IRQ notification; it is not a general device manager.
 
-A general user target/runtime, ELF TLS templates, libc/std, dynamic linking, and libsys startup conventions remain necessary for ordinary applications. Shared pages and copied capabilities are implemented; buffer loans, bulk queues, object revocation, DMA pins, and IOMMU isolation remain pending.
+A general supported runtime/sysroot, full TLS/TCB, libc/std and dynamic linking remain necessary for ordinary applications. The freestanding target, static TLS and explicit private-memory API do not establish those ports. Shared pages and copied capabilities are implemented; buffer loans, bulk queues, object revocation, DMA pins, and IOMMU isolation remain pending.
 
 ## Service and application checkpoints
 

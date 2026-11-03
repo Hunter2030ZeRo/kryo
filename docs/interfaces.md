@@ -57,6 +57,10 @@ The public service ABI is not stable. Experimental task calls are defined below;
 | 46 | ManifestBudget | Manifest handle | Resource-budget handle | 0 |
 | 47 | BudgetInfo | Resource-budget handle | Resource index | Limit/usage; input RDX=query |
 | 48 | BudgetSelf | Resource index | Query | Caller account limit/usage |
+| 54 | VmReserve | Byte length | Alignment | Chosen reservation base |
+| 55 | VmCommit | Start VA | Byte length | 0 |
+| 56 | VmDecommit | Start VA | Byte length | 0 |
+| 57 | VmRelease | Exact reservation base | 0 | 0 |
 
 TaskStatus requires INSPECT; TaskStop and CancelWait require CONTROL. They also accept process-control handles; a retained terminal result continues to report Exited after reaping, and stop/cancel cannot target a replacement generation. Duplicate requires DUP and a subset of the original rights. Rights bits are INSPECT=1, CONTROL=2, DUP=4, SEND=8, RECEIVE=16, WAIT=32, SIGNAL=64, READ=128, WRITE=256, MAP=512, TRANSFER=1024, EXECUTE=2048, CREATE=4096, ASSIGN=8192. Send/Call and their Caps variants require SEND, Receive/Reply require RECEIVE, and EndpointClose requires CONTROL. Wait and Signal require their matching rights. Handles are process-local and opaque; zero is invalid. Close removes one reference, not all authority to an object. A task-control object can outlive its task and report Exited without keeping its VM or stack alive.
 
@@ -151,9 +155,13 @@ thread, VM and handle publication. The version-1 startup record is unchanged.
 BudgetInfo requires READ. BudgetSelf inspects the caller's bound account without
 granting assignment authority; unbudgeted trusted fixtures return InvalidCall.
 Queries are Limit=0 and Used=1. Resource indices are SharedPages=0, Handles=1,
-Waits=2, Threads=3, Mappings=4 and Tables=5. The first four report shared-account
-usage. Mapping/table limits are per process; BudgetSelf reports the caller's
-current mappings and root-inclusive owned tables. BudgetInfo rejects Used for
+Waits=2, Threads=3, Mappings=4, Tables=5, PrivatePages=6 and ReservedPages=7.
+Indices 0..3 and 6..7 report shared-account usage. PrivatePages counts only
+explicit private-VM data backing; existing ELF, managed stacks and legacy TLS
+are excluded. ReservedPages counts private virtual reservations independently
+of their committed backing. Mapping/table limits are per process; BudgetSelf
+reports the caller's current mappings and root-inclusive owned tables.
+BudgetInfo rejects Used for
 those two indices because there is no aggregate counter. Unknown indices/queries
 return InvalidArgument. Exhausted allocation returns OutOfResources.
 
@@ -164,6 +172,44 @@ cleanup. [ADR 0016](decisions/0016-service-resource-budgets.md) describes the li
 and the remaining kernel-memory/CPU accounting boundary.
 
 Use kernel IPC for small control requests and capability transfer. Use registered shared memory and bounded request/completion queues for bulk data. Measure registration, mapping, copying, and wakeup costs before selecting a path for a workload.
+
+## Explicit private VM
+
+Calls 54..57 operate on reservations owned by the caller's process, shared by
+its threads. They return no transferable memory handle and provide anonymous
+RW/NX pages only. VmReserve requires a bound account, a nonzero byte length
+divisible by 4096 and power-of-two alignment of at least 4096. The kernel chooses
+first-fit placement in `[0x1_0000_0000, 0x2000_0000_0000)` and charges reserved
+virtual pages. Reserve creates no accessible data pages and allocates no data
+frames. Ordinary MemoryMap/MemoryUnmap cannot change the reserved range.
+
+VmCommit requires an aligned, nonempty subrange entirely inside one reservation
+with no committed pages. It obtains real RAM, completes zeroing and publishes
+private mappings before successful return. Data backing need not be physically
+contiguous. Malformed ranges, overflow, overlap and unreserved operations return
+InvalidArgument; quota, metadata, mapping/table capacity and RAM exhaustion
+return OutOfResources. A normal failed commit leaves existing contents and
+private/reservation charges unchanged. Incomplete rollback or retirement quarantines the entire
+process and retains owners/charges for teardown instead of resuming partial
+state.
+
+VmDecommit accepts aligned nonempty subranges within one reservation, including
+uncommitted holes. It removes live data backing and refunds private-page credit
+only after access and TLB retirement complete. The VA remains reserved and a
+later commit supplies zeroed RAM. VmRelease requires the exact reservation base
+and RSI=0. It retires any remaining committed pages before returning the
+reservation credit. The runtime must stop all accesses before either operation;
+an address does not keep a Rust borrow or concurrent thread access valid.
+The Rust libsys decommit/release wrappers are unsafe for this reason.
+
+Intermediate page-table frames remain owned until full process-space close;
+decommit/release do not prune them. The per-process table limit still bounds
+these retained paths. PrivatePages/ReservedPages therefore do not measure all
+RAM retained by a process. The 1..8-page MemoryCreate interface remains a separate
+shared-object contract. No demand paging, allocator, protection transitions,
+file-backed mappings or native atomic park/wake are implemented by these calls.
+[ADR 0026](decisions/0026-private-vm-and-atomic-waits.md) records the accepted
+memory and future private-wait direction.
 
 ## Mediated VirtIO calls
 

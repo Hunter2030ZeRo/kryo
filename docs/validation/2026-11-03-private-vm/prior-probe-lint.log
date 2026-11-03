@@ -1,0 +1,58 @@
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/kernel/core)
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/hal)
+    Checking kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.82s
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/kernel/image)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/interfaces)
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/kernel/core)
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.09s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+    Checking bitflags v2.13.2
+    Checking volatile v0.4.6
+    Checking bit_field v0.10.3
+    Checking x86_64 v0.15.5
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.98s
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/interfaces)
+   Compiling service-peer v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/service-peer)
+   Compiling device-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/device-probe)
+   Compiling supervisor v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/supervisor)
+   Compiling registry-client v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/registry-client)
+   Compiling block-client v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/block-client)
+   Compiling block-service v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/block-service)
+   Compiling virtio-block v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/virtio-block)
+   Compiling scale-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/scale-probe)
+   Compiling bootstrap-worker v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/bootstrap-worker)
+   Compiling echo-service v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/echo-service)
+   Compiling init v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/init)
+   Compiling service-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/service-probe)
+    Checking kryo-libsys v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/libsys)
+    Checking kryo-services v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/services)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.48s
+   Compiling compiler_builtins v0.1.160 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins)
+   Compiling core v0.0.0 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core)
+   Compiling abi-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/abi-probe)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/interfaces)
+    Checking kryo-libsys v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/private-vm-work/kryo/userspace/libsys)
+error: this operation has no effect
+   --> src/main.rs:260:24
+    |
+260 |         sys::vm_commit(u64::MAX & !(PAGE_BYTES - 1), 2 * PAGE_BYTES),
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider reducing it to: `!(PAGE_BYTES - 1)`
+    |
+    = help: for further information visit https://clippy.rust-lang.org/main/index.html#identity_op
+    = note: `-D clippy::identity-op` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::identity_op)]`
+
+error: manual implementation of `.is_multiple_of()`
+   --> src/main.rs:357:35
+    |
+357 |     if address < 0x1_0000_0000 || address % PAGE_BYTES != 0 || address.checked_add(bytes).is_none()
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^ help: replace with: `!address.is_multiple_of(PAGE_BYTES)`
+    |
+    = help: for further information visit https://clippy.rust-lang.org/main/index.html#manual_is_multiple_of
+    = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: could not compile `abi-probe` (bin "abi-probe") due to 2 previous errors

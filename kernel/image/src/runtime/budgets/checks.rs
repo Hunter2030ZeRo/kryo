@@ -16,6 +16,8 @@ use kryo_interfaces::{
 
 const LIMITS: Limits = Limits {
     shared_pages: 2,
+    private_pages: 0,
+    reserved_pages: 0,
     handles: 32,
     waits: 1,
     threads: 2,
@@ -41,6 +43,35 @@ fn descriptor() {
     let other = owners.insert(()).unwrap();
     let objects = Objects::growing();
     let account = Budget::new(LIMITS);
+    for (index, limit) in [
+        LIMITS.shared_pages,
+        LIMITS.handles,
+        LIMITS.waits,
+        LIMITS.threads,
+        LIMITS.mappings,
+        LIMITS.tables,
+        LIMITS.private_pages,
+        LIMITS.reserved_pages,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert_eq!(
+            super::query(&account, index as u64, 0, None),
+            Ok(limit as u64)
+        );
+        assert_eq!(super::query(&account, index as u64, 1, Some((0, 0))), Ok(0));
+    }
+    assert_eq!(super::query(&account, 4, 1, Some((7, 9))), Ok(7));
+    assert_eq!(super::query(&account, 5, 1, Some((7, 9))), Ok(9));
+    assert_eq!(
+        super::query(&account, 8, 0, None),
+        Err(Error::InvalidArgument)
+    );
+    assert_eq!(
+        super::query(&account, 0, 2, None),
+        Err(Error::InvalidArgument)
+    );
     let mut handles = Handles::growing();
     let object = objects
         .create(

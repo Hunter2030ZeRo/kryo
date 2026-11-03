@@ -1,0 +1,41 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (../host-target/x86_64-unknown-linux-gnu/debug/build/kryo-libsys/8e880ecdf60c8961/out/kryo_libsys-8e880ecdf60c8961)
+
+running 4 tests
+test tests::startup_record_preserves_named_attenuated_grants ... ok
+test tests::startup_rejects_unknown_headers_and_invalid_lengths ... ok
+test tests::startup_rejects_duplicate_roles_bad_kinds_and_rights ... ok
+test tests::startup_budget_assignment_requires_the_budget_kind ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_libsys
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (../host-target/x86_64-unknown-linux-gnu/debug/build/kryo-services/4858843faa589dc3/out/kryo_services-4858843faa589dc3)
+
+running 11 tests
+test tests::budget_inspection_cannot_smuggle_assignment_authority ... ok
+test tests::gateway_binding_controls_lookup_and_never_grants_transitive_authority ... ok
+test tests::failed_start_consumes_generation_and_stale_registration_cannot_publish ... ok
+test tests::identifiers_and_invalid_inventory_do_not_create_authority ... ok
+test tests::generation_never_wraps_and_registry_reconstruction_keeps_history ... ok
+test tests::malformed_policy_fails_closed ... ok
+test tests::manifest_requires_named_roles_and_rejects_unlisted_authority ... ok
+test tests::manifests_allow_only_explicit_transitive_rights ... ok
+test tests::protocol_rejects_unknown_versions_and_operations ... ok
+test tests::stopping_withdraws_lookup_before_replacement_and_keeps_old_snapshot ... ok
+test tests::registration_is_bound_to_expected_service_and_endpoint_authority ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_services
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -72,6 +72,20 @@ Kernel entry stacks use guarded cells in a shared supervisor branch. Additional 
 
 HHDM split-table ownership grows as finer alias permissions are needed. Published split tables and their owner-vector heap backing remain kernel-owned. Guest reclamation checks account for both retained resources separately from process allocations; table coalescing is not implemented.
 
+Each process also owns explicit private virtual reservations. Reserve charges
+virtual pages without allocating accessible data backing; commit supplies
+zeroed RW/NX RAM from individually owned frames. Decommit retains the range,
+and release retires the entire reservation. Account credit follows actual
+retirement. Failed rollback retains owners and quarantines the process rather
+than resuming a partial commit. These BSP-serialized mechanisms are independent
+of the kernel heap and the eight-page shared-object interface.
+Mapping records remain sorted for binary lookup and bulk removal. Uncommitted
+reservations use interval metadata rather than one record per reserved page.
+Intermediate page tables remain until process-space close; data release does
+not implement table pruning.
+[ADR 0026](decisions/0026-private-vm-and-atomic-waits.md) defines the contract;
+user allocators, atomic park/wake and demand paging remain separate work.
+
 ## User-space services
 
 | Component | Responsibility |
@@ -151,5 +165,7 @@ records the requirements, performance work and decisions requiring review.
 [ADR 0024](decisions/0024-native-bootstrap-stack.md) defines the bootstrap gate.
 [ADR 0025](decisions/0025-static-tls-and-elf-metadata.md) extends it with truthful
 mapped ELF metadata and runtime-owned compiler static TLS. The full mlibc TCB,
-private VM and atomic waits remain pending.
+user allocator and atomic waits remain pending. Explicit private VM now
+provides their page-backing boundary through
+[ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
 Kernel hot replacement is a separate research topic from user-space service replacement.

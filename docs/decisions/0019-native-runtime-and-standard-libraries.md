@@ -48,11 +48,13 @@ simulated success. An accepted timeout may leave I/O uncertain and does not
 release a device's buffer ownership.
 
 Current native calls already provide capability IPC, shared-memory objects,
-monotonic time, threads and explicit FS-base setup. They do not yet provide this
-complete contract. Startup records are not argv/envp/auxv, the managed TLS page
-is not an ELF TLS implementation, and bounded shared-object allocation is not
-a general private heap API. See [interfaces](../interfaces.md) for current
-behavior.
+monotonic time, threads, explicit FS-base setup and reserve/commit/decommit/release
+for private RW/NX RAM. The optional native bootstrap checks a SysV argument stack
+and mapped ELF metadata with compiler static TLS. Legacy startup conventions
+remain supported. A complete TCB, user allocator, atomic waits and service-backed
+files/streams are still required. The managed scratch TLS page and eight-page
+shared-object API remain separate mechanisms. See
+[interfaces](../interfaces.md) and [the private-VM decision](0026-private-vm-and-atomic-waits.md).
 
 ## Bring-up order
 
@@ -63,9 +65,11 @@ behavior.
    undecided. The finite [bootstrap gate](0024-native-bootstrap-stack.md) now
    uses an experimental v3 target and a mixed C/C++/Rust probe. mlibc is the
    primary port candidate; the general runtime/sysroot remains pending.
-2. Add `crt0`, compiler builtins, private allocation, ELF TLS and the shared
-   platform client. Verify startup arguments, thread-local state, allocation
-   failure, cleanup and process exit in actual user execution.
+2. Extend the freestanding startup, compiler TLS and private-VM bootstrap into
+   the runtime's `crt0`, full TCB, user allocator and shared platform client.
+   Preserve argument, thread-local, allocation-failure and retirement checks in
+   actual user execution. Add the accepted atomic compare-before-park protocol;
+   it is not supplied by notifications alone.
 3. Port one libc through a small native OS interface. Connect standard streams,
    filesystem descriptors, timing and thread synchronization to real services.
    Add the POSIX-facing surface required by applications incrementally; no

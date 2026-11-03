@@ -7,7 +7,7 @@ use kryo_core::mm::frame::{
     FRAME_SIZE, FramePool, MemoryRegion, PhysRange, RegionKind, normalize_memory,
 };
 use kryo_core::mm::shared::{SharedBackend, SharedError, SharedMemory, SharedPage};
-use kryo_core::mm::vm::{AddressSpace, Permissions, VmBackend, VmError};
+use kryo_core::mm::vm::{AddressSpace, Permissions, PrivateError, PrivateVm, VmBackend, VmError};
 use kryo_core::object::{ObjectKind, ObjectRef, ObjectTable};
 use kryo_core::resource::{Budget, Limits, Resource};
 
@@ -17,6 +17,8 @@ type Space<'pool> = AddressSpace<'pool, Pool, ModelBackend, 8, 16>;
 fn resource_budget(pages: usize) -> Budget {
     Budget::new(Limits {
         shared_pages: pages,
+        private_pages: 0,
+        reserved_pages: 0,
         handles: 8,
         waits: 8,
         threads: 8,
@@ -264,6 +266,7 @@ struct Model {
     events: RefCell<Vec<Event>>,
     failure: Cell<Option<Failure>>,
     fail_restore: Cell<bool>,
+    fail_map_address: Cell<Option<u64>>,
 }
 
 struct ModelBackend {
@@ -360,6 +363,10 @@ unsafe impl VmBackend for ModelBackend {
         _: Permissions,
         tables: &[u64],
     ) -> Result<usize, Self::Error> {
+        if self.model.fail_map_address.get() == Some(address) {
+            self.model.fail_map_address.set(None);
+            return Err(ModelError::Injected);
+        }
         self.fail(Failure::Map)?;
         assert!(!self.mappings.contains_key(&address));
         let needed = self.tables_needed(address)?;
@@ -1159,4 +1166,341 @@ fn dropping_an_unclosed_space_forgets_its_shared_backing_lease() {
     }
     // The arena also preserves forgotten references instead of dropping live RAM.
     assert_eq!(pool.stats(), before_drop);
+}
+
+fn private_budget(private_pages: usize, reserved_pages: usize) -> Budget {
+    Budget::new(Limits {
+        shared_pages: 0,
+        private_pages,
+        reserved_pages,
+        handles: 0,
+        waits: 0,
+        threads: 0,
+        mappings: 4096,
+        tables: 128,
+    })
+}
+
+#[test]
+fn private_large_reservation_allocates_only_committed_zeroed_pages() {
+    let pool = FramePool::<1, 16, 1>::new();
+    let mut regions = [MemoryRegion {
+        range: PhysRange::from_base_len(0x1000, 768 * FRAME_SIZE).unwrap(),
+        kind: RegionKind::Usable,
+    }];
+    let mut output = [PhysRange::EMPTY; 1];
+    let plan = normalize_memory(&mut regions, &mut [], &mut output).unwrap();
+    unsafe { pool.initialize(plan) }.unwrap();
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let budget = private_budget(1024, 65536);
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| Ok(ModelBackend::new(root, model.clone())),
+        4096,
+        128,
+    )
+    .unwrap();
+    let root_only = pool.stats();
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 256 * 1024 * 1024, FRAME_SIZE)
+        .unwrap();
+    assert_eq!(base, 0x1_0000_0000);
+    assert_eq!(pool.stats(), root_only);
+    assert_eq!(budget.count(Resource::ReservedPages), 65536);
+    memory.commit(&mut space, base, 512 * FRAME_SIZE).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 512);
+    assert_eq!(space.mapped_pages(), 512);
+    let mut page = [0xff; FRAME_SIZE as usize];
+    for index in 0..512 {
+        let address = base + index * FRAME_SIZE;
+        assert_eq!(space.permissions(address), Some(Permissions::ReadWrite));
+        space.read_page(address, 0, &mut page).unwrap();
+        assert!(page.iter().all(|byte| *byte == 0));
+    }
+    assert!(!memory.retirement_pending());
+    memory.release(&mut space, base).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+    space.close().unwrap();
+    memory.clear_after_close(&space).unwrap();
+    assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn private_ranges_validate_alignment_quota_and_legacy_collisions() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let mut space = space(&pool, &model);
+    space
+        .map_page(0x1_0000_1000, Permissions::ReadOnly, &[])
+        .unwrap();
+    let budget = private_budget(2, 8);
+    let mut memory = PrivateVm::new();
+    for (bytes, alignment) in [
+        (0, FRAME_SIZE),
+        (1, FRAME_SIZE),
+        (FRAME_SIZE, 0),
+        (FRAME_SIZE, 8193),
+    ] {
+        assert_eq!(
+            memory.reserve(&space, &budget, bytes, alignment),
+            Err(PrivateError::InvalidRange)
+        );
+    }
+    assert_eq!(
+        memory.reserve(&space, &budget, 16 * FRAME_SIZE, FRAME_SIZE),
+        Err(PrivateError::OutOfResources)
+    );
+    let base = memory
+        .reserve(&space, &budget, 4 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    assert_eq!(base, 0x1_0000_2000);
+    assert!(memory.overlaps(base + FRAME_SIZE, FRAME_SIZE));
+    assert!(!memory.overlaps(base + 4 * FRAME_SIZE, FRAME_SIZE));
+    assert!(memory.overlaps(u64::MAX, 2));
+    assert_eq!(
+        memory.commit(&mut space, base + 1, FRAME_SIZE),
+        Err(PrivateError::InvalidRange)
+    );
+    assert_eq!(
+        memory.commit(&mut space, base, 3 * FRAME_SIZE),
+        Err(PrivateError::OutOfResources)
+    );
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    memory.commit(&mut space, base, FRAME_SIZE).unwrap();
+    assert_eq!(
+        memory.commit(&mut space, base, FRAME_SIZE),
+        Err(PrivateError::Conflict)
+    );
+    assert_eq!(
+        memory.decommit(&mut space, base + 4 * FRAME_SIZE, FRAME_SIZE),
+        Err(PrivateError::InvalidRange)
+    );
+    assert_eq!(
+        memory.release(&mut space, base + FRAME_SIZE),
+        Err(PrivateError::InvalidRange)
+    );
+    memory.release(&mut space, base).unwrap();
+    space.close().unwrap();
+}
+
+#[test]
+fn private_data_oom_and_mapping_metadata_failure_publish_nothing_and_refund() {
+    for frames in [3, 32] {
+        let pool = pool(frames);
+        let model = Rc::new(Model::default());
+        let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+            &pool,
+            |root| Ok(ModelBackend::new(root, model.clone())),
+            if frames == 3 { 8 } else { 1 },
+            16,
+        )
+        .unwrap();
+        let budget = private_budget(8, 16);
+        let mut memory = PrivateVm::new();
+        let base = memory
+            .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+            .unwrap();
+        let before = pool.stats();
+        assert!(matches!(
+            memory.commit(&mut space, base, 4 * FRAME_SIZE),
+            Err(PrivateError::Vm(_))
+        ));
+        assert_eq!(pool.stats(), before);
+        assert_eq!(space.mapped_pages(), 0);
+        assert!(model.events.borrow().is_empty());
+        assert_eq!(budget.count(Resource::PrivatePages), 0);
+        assert!(!memory.retirement_pending());
+        memory.release(&mut space, base).unwrap();
+        space.close().unwrap();
+    }
+}
+
+#[test]
+fn private_table_oom_after_publication_rolls_back_data_without_poisoning_process() {
+    let pool = pool(6);
+    let before = pool.stats();
+    let model = Rc::new(Model::default());
+    let budget = private_budget(2, 1024);
+    let mut space = AddressSpace::<_, _, 0, 0>::new_limited(
+        &pool,
+        |root| Ok(ModelBackend::new(root, model.clone())),
+        8,
+        16,
+    )
+    .unwrap();
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 513 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    let address = base + 511 * FRAME_SIZE;
+    assert!(matches!(
+        memory.commit(&mut space, address, 2 * FRAME_SIZE),
+        Err(PrivateError::Vm(VmError::Allocation(_)))
+    ));
+    assert!(model.events.borrow().contains(&Event::Map(address)));
+    assert_eq!(space.mapped_pages(), 0);
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert!(!memory.retirement_pending());
+    assert_eq!(space.retained_tables(), 3);
+    memory.release(&mut space, base).unwrap();
+    space.close().unwrap();
+    assert_eq!(pool.stats(), before);
+}
+
+#[test]
+fn private_failed_rollback_keeps_unpublished_owners_and_quota_until_retry() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(2, 8);
+    let mut space = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    model.fail_map_address.set(Some(base + FRAME_SIZE));
+    model.fail_restore.set(true);
+    assert_eq!(
+        memory.commit(&mut space, base, 2 * FRAME_SIZE),
+        Err(PrivateError::RetirementPending)
+    );
+    assert_eq!(space.mapped_pages(), 0);
+    assert_eq!(budget.count(Resource::PrivatePages), 2);
+    assert_eq!(memory.identity(base), None);
+    assert!(memory.retirement_pending());
+    assert_eq!(
+        memory.commit(&mut space, base + 4 * FRAME_SIZE, FRAME_SIZE),
+        Err(PrivateError::RetirementPending)
+    );
+    assert_eq!(
+        memory.retry_retirement(&mut space),
+        Err(PrivateError::RetirementPending)
+    );
+    assert_eq!(budget.count(Resource::PrivatePages), 2);
+    model.fail_restore.set(false);
+    memory.retry_retirement(&mut space).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert!(!memory.retirement_pending());
+    memory.commit(&mut space, base, FRAME_SIZE).unwrap();
+    memory.release(&mut space, base).unwrap();
+    space.close().unwrap();
+}
+
+#[test]
+fn private_partial_decommit_preserves_live_identity_and_changes_recommit_identity() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(8, 8);
+    let mut space = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, 5 * FRAME_SIZE).unwrap();
+    let old = memory.identity(base).unwrap();
+    memory
+        .decommit(&mut space, base + FRAME_SIZE, 2 * FRAME_SIZE)
+        .unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 3);
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
+    assert_eq!(memory.identity(base), Some(old));
+    assert_eq!(memory.identity(base + 3 * FRAME_SIZE), Some(old));
+    assert_eq!(memory.identity(base + FRAME_SIZE), None);
+    memory
+        .decommit(&mut space, base + FRAME_SIZE, 2 * FRAME_SIZE)
+        .unwrap();
+    memory
+        .commit(&mut space, base + FRAME_SIZE, 2 * FRAME_SIZE)
+        .unwrap();
+    assert_ne!(memory.identity(base + FRAME_SIZE), Some(old));
+    memory.release(&mut space, base).unwrap();
+    let reused = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    assert_eq!(reused, base);
+    memory.commit(&mut space, reused, FRAME_SIZE).unwrap();
+    assert_ne!(memory.identity(reused).unwrap().0, old.0);
+    memory.release(&mut space, reused).unwrap();
+    space.close().unwrap();
+}
+
+#[test]
+fn private_partial_retirement_refunds_only_completed_pages_and_release_keeps_reservation() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(3, 8);
+    let mut space = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, 3 * FRAME_SIZE).unwrap();
+    model.failure.set(Some(Failure::Unmap));
+    assert_eq!(
+        memory.decommit(&mut space, base, 3 * FRAME_SIZE),
+        Err(PrivateError::RetirementPending)
+    );
+    assert_eq!(space.mapped_pages(), 1);
+    assert_eq!(budget.count(Resource::PrivatePages), 1);
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
+    model.failure.set(Some(Failure::Unmap));
+    assert_eq!(
+        memory.release(&mut space, base),
+        Err(PrivateError::RetirementPending)
+    );
+    assert!(memory.overlaps(base, FRAME_SIZE));
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
+    memory.retry_retirement(&mut space).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+    assert!(!memory.overlaps(base, FRAME_SIZE));
+    space.close().unwrap();
+}
+
+#[test]
+fn private_close_requires_its_own_closed_address_space() {
+    let pool = pool(64);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(2, 8);
+    let mut owned = space(&pool, &model);
+    let mut foreign = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&owned, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut owned, base, 2 * FRAME_SIZE).unwrap();
+    assert_eq!(
+        memory.clear_after_close(&owned),
+        Err(PrivateError::Conflict)
+    );
+    foreign.close().unwrap();
+    assert_eq!(
+        memory.clear_after_close(&foreign),
+        Err(PrivateError::Conflict)
+    );
+    assert_eq!(budget.count(Resource::PrivatePages), 2);
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
+    owned.close().unwrap();
+    memory.clear_after_close(&owned).unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
+}
+
+#[test]
+fn private_drop_without_close_retains_all_resource_charges() {
+    let pool = pool(32);
+    let model = Rc::new(Model::default());
+    let budget = private_budget(1, 8);
+    let mut space = space(&pool, &model);
+    let mut memory = PrivateVm::new();
+    let base = memory
+        .reserve(&space, &budget, 8 * FRAME_SIZE, FRAME_SIZE)
+        .unwrap();
+    memory.commit(&mut space, base, FRAME_SIZE).unwrap();
+    drop(memory);
+    drop(space);
+    assert_eq!(budget.count(Resource::PrivatePages), 1);
+    assert_eq!(budget.count(Resource::ReservedPages), 8);
 }

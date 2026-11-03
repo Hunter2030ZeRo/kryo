@@ -29,11 +29,13 @@ pub(crate) fn check(
         let mut ipc = IpcRuntime::growing(&objects);
         let account = Budget::new(Limits {
             shared_pages: 0,
+            private_pages: 1024,
+            reserved_pages: 65536,
             handles: 8,
             waits: 4,
             threads: 3,
-            mappings: 64,
-            tables: 32,
+            mappings: 4096,
+            tables: 128,
         });
         let slot = region
             .find_stack(pool, direct)
@@ -94,6 +96,7 @@ pub(crate) fn check(
         let mut start_ticks = None;
         let mut avx_preemptions = None;
         let mut tls_checked = false;
+        let mut private_vm_checked = false;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
         while tasks.terminal(owner).is_none() {
             assert!(
@@ -118,6 +121,11 @@ pub(crate) fn check(
             if calls.last_debug == Some((task, 94, 2)) {
                 tls_checked = true;
             }
+            if calls.last_debug == Some((task, 95, 1)) {
+                assert_eq!(account.count(Resource::PrivatePages), 4);
+                assert_eq!(account.count(Resource::ReservedPages), 8);
+                private_vm_checked = true;
+            }
         }
         let status = tasks.terminal(owner).unwrap();
         assert_eq!(status.reason, ExitReason::Exited);
@@ -125,6 +133,7 @@ pub(crate) fn check(
         assert_eq!(calls.last_debug, Some((task, 90, 2)));
         let preemptions = avx_preemptions.expect("Missing AVX2 preemption proof");
         assert!(tls_checked, "Missing static TLS thread isolation proof");
+        assert!(private_vm_checked, "Missing private VM ownership proof");
         ipc.settle(&mut tasks);
         assert_eq!(tasks.state(task), Ok(TaskState::Dying));
         let mut retired = 0;
@@ -141,6 +150,8 @@ pub(crate) fn check(
         assert_eq!(objects.live_count(), 0);
         for resource in [
             Resource::SharedPages,
+            Resource::PrivatePages,
+            Resource::ReservedPages,
             Resource::Handles,
             Resource::Waits,
             Resource::Threads,
@@ -158,4 +169,5 @@ pub(crate) fn check(
         before.free
     );
     kryo_hal::emergency_write_str("ABI: startup and execution resources retired\n");
+    kryo_hal::emergency_write_str("VM: private reserve commit retirement OK\n");
 }

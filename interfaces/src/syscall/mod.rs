@@ -11,6 +11,10 @@
 //! rights in R8. Neither record words nor descriptive kind IDs grant authority.
 //! ReceiveFor: RDI=endpoint, RSI=capability capacity, RDX=relative nanoseconds.
 //! Its interval begins at kernel admission; absolute deadline calls stay absolute.
+//! VmReserve: RDI=bytes, RSI=alignment; RDX=kernel-selected base.
+//! VmCommit/VmDecommit: RDI=address, RSI=bytes. Lengths are whole 4 KiB pages.
+//! Commit succeeds only with zeroed RW/NX backing; reserved holes have no backing.
+//! VmRelease: RDI=exact reservation base, RSI=0. Retirement precedes quota refund.
 
 pub const ABI_VERSION: u32 = 0;
 
@@ -71,6 +75,10 @@ pub enum Call {
     VirtioSubmit = 51,
     VirtioPoll = 52,
     VirtioReset = 53,
+    VmReserve = 54,
+    VmCommit = 55,
+    VmDecommit = 56,
+    VmRelease = 57,
 }
 
 impl TryFrom<u64> for Call {
@@ -132,6 +140,10 @@ impl TryFrom<u64> for Call {
             51 => Ok(Self::VirtioSubmit),
             52 => Ok(Self::VirtioPoll),
             53 => Ok(Self::VirtioReset),
+            54 => Ok(Self::VmReserve),
+            55 => Ok(Self::VmCommit),
+            56 => Ok(Self::VmDecommit),
+            57 => Ok(Self::VmRelease),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -175,7 +187,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=53 {
+        for number in 0..=57 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

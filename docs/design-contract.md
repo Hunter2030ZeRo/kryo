@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.9, 2026-11-03.
+Version 0.10, 2026-11-03.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -47,6 +47,9 @@ and ordinary child creation inherit the account; selecting another account requi
 explicit ASSIGN and delegation authority. Restart preserves usage. Charge shared
 RAM through final payload retirement, handles through open/reserved slots, waits
 through consumption, and threads through successful execution-resource cleanup.
+Explicit private VM separately charges reserved virtual pages and committed
+private pages. These counters exclude existing ELF, managed stack and legacy
+TLS backing; they do not yet measure all process-private RAM.
 Per-process mapping and page-table bounds include aliases and the root table.
 These bounds do not imply exact kernel-memory or CPU-time accounting.
 
@@ -63,6 +66,31 @@ A safe buffer or pixel-access object must retain ownership or a valid borrow of 
 The current `Framebuffer32` constructor requires one writer and a retained boot mapping. General VM interfaces must encode the corresponding lifetime.
 
 Memory reclamation separates accepting new access, revoking access, and completing revocation. Release storage only after mapping, reference, pin, TLB, and device cleanup has finished. Do not wait for hardware or another CPU in `Drop`; use explicit cleanup and retain resources while it is pending. Pending resources remain subject to accounting and quotas.
+
+### Explicit private memory
+
+Reserve owns an inaccessible virtual range and its metadata without allocating
+data frames. Commit must obtain actual RAM and complete zero initialization
+before reporting success. The initial API supplies anonymous private RW/NX
+pages, with no replacement or demand paging. Virtual contiguity does not imply
+physically contiguous backing.
+
+Commit/decommit use aligned nonempty subranges within one reservation. Commit
+requires every page to be uncommitted. Decommit accepts holes, retires mapped
+backing and refunds only completed private-page ownership. Release requires
+the exact base and retires the entire reservation before refunding virtual
+credit. Ordinary shared-memory map/unmap cannot modify a reserved range.
+
+Decommit/release do not prune intermediate page tables. Those owned frames stay
+within the per-process table limit until full address-space close, independently
+of returned data-page or reservation credit.
+
+A normal failed commit restores the preceding usable state. If rollback or
+retirement remains incomplete, quarantine the process and retain all remaining
+owners and charges for explicit teardown; it must not resume a partial failed
+commit. Users must end accesses before decommit/release and observe actual
+thread completion before reclaiming runtime stacks or TLS. See
+[ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
 
 ### Executable memory
 
@@ -108,6 +136,12 @@ Thread states distinguish New, Runnable, Running, Parking, Blocked, Dying, and D
 - A wakeup during Parking records a pending wake. It must not allow another CPU to run the thread before the handoff. Cancel the sleep or publish Runnable after the handoff.
 - Reclaim a dying thread's stack only after its CPU stops using it.
 - Event, timeout, cancellation, and peer-termination races must produce one completion for a wait.
+
+Uncontended runtime locking stays in user atomics. The accepted private
+compare-before-park direction must serialize comparison/registration with wake
+and retain mapping identity through completion and address reuse. Native
+park/wake, fault-safe word access and shared-memory wait rules remain
+unimplemented; notifications alone do not satisfy that contract.
 
 Preserve the registers and FP/SIMD state required by the user ABI. Initialize CPU features and new-thread state before running general Rust, Go, or C runtimes.
 

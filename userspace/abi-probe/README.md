@@ -49,6 +49,33 @@ isolation checks. The call-free AVX2 preemption interval runs afterward with no
 child runnable. POD TLS needs no destructor callbacks; dynamic TLS and TLS
 destructors remain unimplemented.
 
+After the child joins, the same process exercises explicit private memory with
+native reserve, commit, decommit and release calls. Its account allows 65,536
+reserved pages (256 MiB) and 1,024 committed private pages. Reserving the full
+virtual allowance must leave the private-RAM charge at zero; a further
+reservation must fail. A 512-page commit exceeds the separate shared-memory
+object limit. The probe samples the first and last word of every committed page
+for zero-fill, writes distinct volatile patterns and checks them across yield
+and sleep. It rejects overlap, malformed alignment, overflow, unreserved commit
+and interior-base release.
+
+A rejected 513-page commit must preserve existing contents and accounting.
+At 512/1,024 pages this is a quota-admission rejection before publication;
+it does not exercise backend rollback or quarantine. Decommitting 16 middle
+pages refunds credit, and the previously rejected range then commits completely.
+Recommitted middle pages must be zero while their neighbors keep their patterns. A second
+reservation tests separate live regions and virtual-quota exhaustion. Release
+returns both charges, and first-fit address reuse must expose zero-filled RAM.
+Finally, eight reserved pages with four committed pages remain live for process
+teardown. Event 95/value 1 follows these checks and precedes the mixed-call/YMM
+phase. The kernel checks usage 4/8 at that event and zero after the final thread
+and process resources retire.
+The probe never dereferences an uncommitted range. This validates the explicit
+memory contract, not a heap allocator, demand paging or a hosted runtime.
+Its per-process limits are 4,096 mappings and 128 tables. Intermediate page
+tables remain until process-space close; data/reservation credit checks do not
+prove that those table frames have already been reclaimed.
+
 Build with `python3 tools/build_abi.py --profile debug|release`. The script builds
 core and compiler builtins for the custom target in `build/abi`, using the
 installed nightly rust-src and Clang. It packages with the existing ELF entry/

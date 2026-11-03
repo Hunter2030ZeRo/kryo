@@ -7,6 +7,8 @@ use kryo_core::task::TaskTable;
 fn limits() -> Limits {
     Limits {
         shared_pages: 8,
+        private_pages: 0,
+        reserved_pages: 0,
         handles: 2,
         waits: 1,
         threads: 2,
@@ -59,6 +61,97 @@ fn multi_unit_charges_reject_zero_overflow_and_exhaustion_without_mutation() {
     assert_eq!(budget.count(Resource::Handles), 0);
     drop(charge);
     assert_eq!(budget.count(Resource::SharedPages), 0);
+}
+
+#[test]
+fn all_accounted_resources_exhaust_and_recover_independently() {
+    let budget = Budget::new(Limits {
+        private_pages: 8,
+        reserved_pages: 16,
+        ..limits()
+    });
+    for resource in [
+        Resource::SharedPages,
+        Resource::Handles,
+        Resource::Waits,
+        Resource::Threads,
+        Resource::PrivatePages,
+        Resource::ReservedPages,
+    ] {
+        let limit = budget.limit(resource);
+        let charge = budget.try_charge(resource, limit).unwrap();
+        assert_eq!(budget.count(resource), limit);
+        assert!(matches!(
+            budget.clone().try_charge(resource, 1),
+            Err(BudgetError::Capacity)
+        ));
+        drop(charge);
+        assert_eq!(budget.count(resource), 0);
+        drop(budget.try_charge(resource, limit).unwrap());
+        assert_eq!(budget.count(resource), 0);
+    }
+}
+
+#[test]
+fn bulk_charges_merge_and_refund_only_owned_units() {
+    let budget = Budget::new(Limits {
+        private_pages: 8,
+        ..limits()
+    });
+    let mut charge = budget.try_charge(Resource::PrivatePages, 3).unwrap();
+    let extra = budget
+        .clone()
+        .try_charge(Resource::PrivatePages, 5)
+        .unwrap();
+    charge.merge(extra).unwrap();
+    assert_eq!(charge.amount(), 8);
+    assert_eq!(budget.count(Resource::PrivatePages), 8);
+    assert_eq!(charge.refund(0), Err(BudgetError::InvalidAmount));
+    assert_eq!(charge.refund(9), Err(BudgetError::InvalidAmount));
+    assert_eq!(charge.amount(), 8);
+    assert_eq!(budget.count(Resource::PrivatePages), 8);
+    charge.refund(3).unwrap();
+    assert_eq!(charge.amount(), 5);
+    assert_eq!(budget.count(Resource::PrivatePages), 5);
+    charge
+        .merge(budget.try_charge(Resource::PrivatePages, 3).unwrap())
+        .unwrap();
+    assert_eq!(budget.count(Resource::PrivatePages), 8);
+    charge.refund(8).unwrap();
+    assert_eq!(charge.amount(), 0);
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    drop(charge);
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+}
+
+#[test]
+fn incompatible_merge_preserves_both_owners() {
+    let limits = Limits {
+        private_pages: 8,
+        reserved_pages: 8,
+        ..limits()
+    };
+    let budget = Budget::new(limits);
+    let other = Budget::new(limits);
+    let mut charge = budget.try_charge(Resource::PrivatePages, 3).unwrap();
+    let wrong_account = other.try_charge(Resource::PrivatePages, 2).unwrap();
+    let returned = charge.merge(wrong_account).unwrap_err();
+    assert_eq!(returned.amount(), 2);
+    assert_eq!(returned.resource(), Resource::PrivatePages);
+    assert_eq!(charge.amount(), 3);
+    assert_eq!(budget.count(Resource::PrivatePages), 3);
+    assert_eq!(other.count(Resource::PrivatePages), 2);
+    drop(returned);
+    assert_eq!(other.count(Resource::PrivatePages), 0);
+    let wrong_resource = budget.try_charge(Resource::ReservedPages, 4).unwrap();
+    let returned = charge.merge(wrong_resource).unwrap_err();
+    assert_eq!(returned.amount(), 4);
+    assert_eq!(returned.resource(), Resource::ReservedPages);
+    assert_eq!(charge.amount(), 3);
+    assert_eq!(budget.count(Resource::ReservedPages), 4);
+    drop((returned, charge));
+    assert_eq!(budget.count(Resource::PrivatePages), 0);
+    assert_eq!(budget.count(Resource::ReservedPages), 0);
 }
 
 #[test]

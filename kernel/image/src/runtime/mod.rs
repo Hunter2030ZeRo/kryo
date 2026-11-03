@@ -8,6 +8,7 @@ pub(crate) mod devices;
 pub(crate) mod ipc_runtime;
 pub(crate) mod launch;
 mod native;
+mod private_vm;
 mod process;
 pub(crate) mod region;
 #[cfg(feature = "boot-tests")]
@@ -143,6 +144,7 @@ pub(crate) fn user_pages(slot: usize) -> [u64; 5] {
 }
 
 pub(crate) struct ProcessResources<'kernel, 'objects> {
+    pub(crate) private_vm: kryo_core::mm::vm::PrivateVm,
     pub(crate) account: Option<Budget>,
     pub(crate) space: UserSpace<'kernel, SharedLease<'objects>>,
     pub(crate) handles: Handles<'objects>,
@@ -236,6 +238,9 @@ impl ProcessResources<'_, '_> {
                 .map_err(|_| "Cannot close process address space")?;
             self.space_closed = true;
         }
+        self.private_vm
+            .clear_after_close(&self.space)
+            .map_err(|_| "Cannot retire private VM account")?;
         Ok(())
     }
 }
