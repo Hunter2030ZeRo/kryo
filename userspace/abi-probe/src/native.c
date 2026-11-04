@@ -73,3 +73,98 @@ kryo_u64 c_native_checks(kryo_handle debug, kryo_handle startup,
         return 16;
     return 0;
 }
+
+static kryo_u64 ipc_deadline(void) {
+    kryo_result now = kryo_clock();
+    if (now.status != KRYO_STATUS_OK || now.value > ~(kryo_u64)0 - 1000000000ULL)
+        return 0;
+    return now.value + 1000000000ULL;
+}
+
+kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
+                     kryo_handle *server_out) {
+    *server_out = 0;
+    kryo_result endpoint = kryo_endpoint_create(factory);
+    kryo_result notification = kryo_notification_create(factory);
+    if (endpoint.status != KRYO_STATUS_OK || notification.status != KRYO_STATUS_OK)
+        return 1;
+    kryo_result sender = kryo_duplicate(endpoint.value, KRYO_RIGHT_SEND);
+    kryo_result waiter = kryo_duplicate(notification.value, KRYO_RIGHT_WAIT);
+    if (sender.status != KRYO_STATUS_OK || waiter.status != KRYO_STATUS_OK
+        || kryo_duplicate(endpoint.value, KRYO_RIGHT_CREATE).status != KRYO_STATUS_PERMISSION_DENIED
+        || kryo_signal(waiter.value).status != KRYO_STATUS_PERMISSION_DENIED)
+        return 2;
+    const kryo_u64 high = 0xfedcba9876543210ULL;
+    if (!completed(kryo_signal(notification.value), 0)
+        || !completed(kryo_wait_notification(waiter.value), 0)
+        || kryo_wait_notification_until(waiter.value, 0).status != KRYO_STATUS_TIMED_OUT)
+        return 3;
+    kryo_message empty = {{0, 0, 0, 0}};
+    if (!completed(kryo_endpoint_close(endpoint.value), 0))
+        return 4;
+    kryo_ipc_result closed = kryo_ipc_send(sender.value, empty);
+    if (closed.status != KRYO_STATUS_PEER_CLOSED || kryo_ipc_accepted(closed)
+        || !completed(kryo_close(sender.value), 0)
+        || !completed(kryo_close(endpoint.value), 0)
+        || !completed(kryo_close(waiter.value), 0)
+        || !completed(kryo_close(notification.value), 0))
+        return 5;
+
+    kryo_ipc_result hello = kryo_ipc_receive_until(bootstrap, 2, ipc_deadline());
+    if (hello.status != KRYO_STATUS_OK || hello.count != 1 || hello.value != 0
+        || hello.message.words[0] != 1 || hello.message.words[1] != 0
+        || hello.message.words[2] != 0 || hello.message.words[3] != 0)
+        return 6;
+    kryo_handle server = hello.handles[0];
+    kryo_handle_info_result info = kryo_handle_info(server);
+    if (info.status != KRYO_STATUS_OK || info.kind != KRYO_OBJECT_ENDPOINT
+        || info.rights != KRYO_RIGHT_SEND
+        || kryo_ipc_receive_until(server, 0, ipc_deadline()).status != KRYO_STATUS_PERMISSION_DENIED
+        || kryo_endpoint_close(server).status != KRYO_STATUS_PERMISSION_DENIED)
+        return 7;
+
+    kryo_result memory = kryo_memory_create(1);
+    if (memory.status != KRYO_STATUS_OK)
+        return 8;
+    const kryo_u64 address = 0x2000000;
+    if (!completed(kryo_memory_map(memory.value, address, 0, KRYO_MEMORY_READ_WRITE), 0))
+        return 9;
+    volatile kryo_u64 *words = (volatile kryo_u64 *)address;
+    for (kryo_size index = 0; index < 512; ++index)
+        words[index] = high ^ index;
+    kryo_result restricted = kryo_duplicate(memory.value, KRYO_RIGHT_READ | KRYO_RIGHT_MAP);
+    if (restricted.status != KRYO_STATUS_OK)
+        return 10;
+    kryo_message request = {{2, 1, 41, 0}};
+    kryo_grant grant = {restricted.value, KRYO_RIGHT_READ | KRYO_RIGHT_MAP};
+    kryo_ipc_result denied = kryo_ipc_call_caps_until(server, request, &grant, 1, ipc_deadline());
+    if (denied.status != KRYO_STATUS_PERMISSION_DENIED || kryo_ipc_accepted(denied))
+        return 11;
+    grant.handle = memory.value;
+    kryo_ipc_result response = kryo_ipc_call_caps_until(server, request, &grant, 1, ipc_deadline());
+    if (response.status != KRYO_STATUS_OK
+        || response.message.words[0] != 3 || response.message.words[1] != 1
+        || response.message.words[2] != 42 || response.message.words[3] != 0)
+        return 12;
+    // The peer acknowledges only after unmapping and closing its read-only loan.
+    if (!completed(kryo_memory_unmap(address), 0)
+        || !completed(kryo_close(restricted.value), 0)
+        || !completed(kryo_close(memory.value), 0))
+        return 13;
+    kryo_message stop = {{4, 1, 0, 0}};
+    if (kryo_ipc_send_until(server, stop, ipc_deadline()).status != KRYO_STATUS_OK
+        || !completed(kryo_close(bootstrap), 0)
+        || !completed(kryo_close(factory), 0))
+        return 14;
+    *server_out = server;
+    return 0;
+}
+
+kryo_u64 c_ipc_peer_closed(kryo_handle server) {
+    kryo_message request = {{2, 1, 41, 0}};
+    kryo_ipc_result result = kryo_ipc_call_until(server, request, ipc_deadline());
+    if (result.status != KRYO_STATUS_PEER_CLOSED || kryo_ipc_accepted(result)
+        || !completed(kryo_close(server), 0))
+        return 1;
+    return 0;
+}

@@ -140,13 +140,7 @@ mlibc 7.0.0
     wrap_mode             : nodownload
 
 Found ninja-1.13.2 at /home/entity27th/.local/bin/ninja
-
-Generating targets:   0%|          | 0/12 eta ?
-                                               
-
-Writing build.ninja:   0%|          | 0/407 eta ?
-                                                 
-ninja: Entering directory `/home/entity27th/문서/ChatGPT/프로젝트 Kryo/continuation-work/actual-provider/release/meson'
+Generating targets:   0%|          | 0/12 eta ?                                               Writing build.ninja:   0%|          | 0/407 eta ?                                                 ninja: Entering directory `/home/entity27th/문서/ChatGPT/프로젝트 Kryo/continuation-work/actual-provider/release/meson'
 [1/371] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acoshf.c.o
 [2/371] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosh.c.o
 [3/371] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosf.c.o

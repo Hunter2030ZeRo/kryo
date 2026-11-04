@@ -84,6 +84,7 @@ def main():
     headers = ("types", "errno", "memory", "time", "file", "signal")
     layout = PROFILE / "tests/layout.c"
     thread_fixture = ROOT / "userspace/libsys/c/tests/thread.c"
+    ipc_fixture = ROOT / "userspace/libsys/c/tests/ipc.c"
     for compiler, standard, language in (("clang", "c11", "c"), ("clang++", "c++23", "c++")):
         base = ["rtk", "proxy", compiler, *flags, f"-std={standard}", "-x", language]
         if language == "c++":
@@ -104,6 +105,17 @@ def main():
                 run(name, [*base, optimization, *options, "-mno-red-zone",
                            "-c", str(thread_fixture), "-o", str(output / f"{name}.o")],
                     scope="Target SDK thread layout and compiler/register constraints; no execution")
+                name = f"ipc-{language}-{optimization[1:]}-{mode}"
+                artifact = output / f"{name}.o"
+                run(name, [*base, optimization, *options, "-mno-red-zone",
+                           "-c", str(ipc_fixture), "-o", str(artifact)],
+                    scope="Target SDK IPC/capability/shared-memory layout and register constraints; no execution")
+                audit = ["rtk", "proxy", "llvm-nm", "--undefined-only", str(artifact)]
+                symbols = subprocess.check_output(audit, text=True)
+                (output / f"{name}.undefined.log").write_text(symbols)
+                assert not symbols.strip(), (name, symbols)
+                checks[-1]["undefined_symbol_audit"] = audit
+                checks[-1]["undefined_symbols"] = []
 
     tables = {name: table_constants(ROOT / f"docs/abi/c-v1-{name}.md")
               for name in ("errors", "memory-time", "files", "signals")}
@@ -119,7 +131,7 @@ def main():
     syscall, startup, libsys, native = (path.read_text() for path in (syscall_path, startup_path, libsys_path, NATIVE))
     calls = {"KRYO_CALL_" + screaming(name): value for name, value in enum_values(syscall, "pub enum Call").items()}
     exposed = enum_values(native, "enum kryo_call")
-    assert len(exposed) == 20 and exposed.keys() <= calls.keys()
+    assert len(exposed) == 43 and exposed.keys() <= calls.keys()
     native_expected = {name: calls[name] for name in exposed}
     statuses = {"KRYO_STATUS_" + screaming(name): -value for name, value in enum_values(syscall, "pub enum Error").items()}
     statuses["KRYO_STATUS_OK"] = 0
@@ -133,10 +145,17 @@ def main():
     native_expected.update(exit_reasons)
     native_expected.update({"KRYO_NATIVE_ABI_VERSION": rust_constant(syscall, "ABI_VERSION"),
                             "KRYO_NATIVE_THREAD_VERSION": rust_constant(syscall, "NATIVE_THREAD_VERSION"),
-                            "KRYO_DEBUG_WRITE_MAX": rust_constant(syscall, "DEBUG_WRITE_MAX"),
-                            "KRYO_RIGHT_READ": rust_constant(libsys, "READ"),
-                            "KRYO_RIGHT_WRITE": rust_constant(libsys, "WRITE"),
-                            "KRYO_OBJECT_DEBUG_CONSOLE": enum_values(startup, "pub enum ObjectKind")["DebugConsole"]})
+                            "KRYO_DEBUG_WRITE_MAX": rust_constant(syscall, "DEBUG_WRITE_MAX")})
+    for name in ("INSPECT", "CONTROL", "DUP", "SEND", "RECEIVE", "WAIT", "SIGNAL", "READ",
+                 "WRITE", "MAP", "TRANSFER", "EXECUTE", "CREATE", "ASSIGN"):
+        native_expected["KRYO_RIGHT_" + name] = rust_constant(libsys, name)
+    for name, value in enum_values(startup, "pub enum ObjectKind").items():
+        native_expected["KRYO_OBJECT_" + screaming(name)] = value
+    native_expected["KRYO_IPC_WORDS"] = int(re.search(r"pub type Message = \[u64;\s*(\d+)\]", libsys)[1])
+    received = re.search(r"pub struct Received\s*\{([^}]+)\}", libsys)[1]
+    native_expected["KRYO_IPC_CAPS"] = int(re.search(r"handles: \[Option<Handle>;\s*(\d+)\]", received)[1])
+    native_expected["KRYO_MEMORY_READ_ONLY"] = 0
+    native_expected["KRYO_MEMORY_READ_WRITE"] = 1
     for name in ("VERSION", "HEADER_WORDS", "ENTRY_WORDS", "MAX_GRANTS"):
         native_expected["KRYO_STARTUP_" + name] = rust_constant(startup, name)
     magic = re.search(r'pub const MAGIC: u64 = u64::from_le_bytes\(\*b"([A-Z]+)"\);', startup)
@@ -170,7 +189,21 @@ def main():
     run("wait-host-run", ["rtk", "proxy", "./wait-host"],
         scope="Linux host macro semantics; no native calls", directory=output)
 
-    inputs = [Path(__file__).resolve(), pin_path, target_path, layout, thread_fixture, PROFILE / "tests/wait.c", NATIVE,
+    ipc_host = output / "ipc-host"
+    run("ipc-host-build", ["rtk", "proxy", "clang", "--target=x86_64-unknown-linux-gnu",
+                           "-march=x86-64-v3", "-mno-mmx", "-nostdinc", "-I", str(NATIVE.parents[1]),
+                           "-std=c11", "-O2", "-ffunction-sections", "-Wl,--gc-sections",
+                           "-Wall", "-Wextra", "-Werror", "-DKRYO_HOST_CHECK",
+                           str(ipc_fixture), "-o", str(ipc_host)],
+        scope="Linux host IPC argument/accepted-state helpers; no admitted native calls")
+    run("ipc-host-disassembly", ["rtk", "proxy", "objdump", "-d", "-M", "intel", str(ipc_host)],
+        scope="Reject native int80 instructions before running host-only validation")
+    assembly = (output / "ipc-host-disassembly.stdout.log").read_text()
+    assert not re.search(r"\bint\s+(?:0x80|128)\b", assembly), "Host IPC test contains a native entry"
+    run("ipc-host-run", ["rtk", "proxy", "./ipc-host"],
+        scope="Linux host rejected arguments and accepted-state semantics; no native calls", directory=output)
+
+    inputs = [Path(__file__).resolve(), pin_path, target_path, layout, thread_fixture, ipc_fixture, PROFILE / "tests/wait.c", NATIVE,
               syscall_path, startup_path, libsys_path]
     inputs += sorted((PROFILE / "include/cryolite").glob("*.h"))
     inputs += [ROOT / f"docs/abi/c-v1-{name}.md" for name in tables]

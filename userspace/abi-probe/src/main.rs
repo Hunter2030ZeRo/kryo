@@ -177,6 +177,7 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     check_initial_tls();
     store_tls(MAIN_TLS_VALUE);
     check_native_c(debug, startup);
+    check_c_ipc(debug, startup);
     check_c_threads(debug, startup);
     sys::debug_log(debug, 94, 1).unwrap_or_else(|_| exit(207));
     check_thread_tls(debug);
@@ -249,6 +250,34 @@ fn check_native_c(debug: Handle, startup: u64) {
     if sys::debug_write(debug, message) != Ok(message.len()) {
         exit(302);
     }
+    check_tls(MAIN_TLS_VALUE);
+}
+
+fn check_c_ipc(debug: Handle, startup: u64) {
+    unsafe extern "C" {
+        fn c_ipc_checks(bootstrap: u64, factory: u64, server: *mut u64) -> u64;
+        fn c_ipc_peer_closed(server: u64) -> u64;
+    }
+    let record = Handle::from_raw(startup).unwrap_or_else(|| exit(350));
+    let startup = sys::startup(record).unwrap_or_else(|_| exit(350));
+    let bootstrap = startup.grant(2).unwrap_or_else(|| exit(350)).handle;
+    let factory = startup.grant(3).unwrap_or_else(|| exit(350)).handle;
+    let peer = startup.grant(4).unwrap_or_else(|| exit(350)).handle;
+    let mut server = 0;
+    let result = unsafe { c_ipc_checks(bootstrap.raw(), factory.raw(), &mut server) };
+    if result != 0 {
+        exit(350 + result);
+    }
+    let deadline = sys::clock().unwrap_or_else(|_| exit(370)) + 1_000_000_000;
+    let status = sys::process_wait_until(peer, deadline).unwrap_or_else(|_| exit(370));
+    if status.code != 0 || status.reason != sys::ExitReason::Exited {
+        exit(371);
+    }
+    sys::close(peer).unwrap_or_else(|_| exit(372));
+    if server == 0 || unsafe { c_ipc_peer_closed(server) } != 0 {
+        exit(373);
+    }
+    sys::debug_log(debug, 100, 1).unwrap_or_else(|_| exit(374));
     check_tls(MAIN_TLS_VALUE);
 }
 
@@ -1074,19 +1103,26 @@ fn startup_debug(raw: u64) -> Handle {
     if startup.service != 50
         || startup.instance != 1
         || startup.argument != 0xfedc_ba98_7654_3210
-        || startup.grants().count() != 1
+        || startup.grants().count() != 4
     {
         exit(220);
     }
-    let debug = startup.grant(1).unwrap_or_else(|| exit(220));
-    if debug.kind != ObjectKind::DebugConsole || debug.rights != (sys::WRITE | sys::DUP) {
-        exit(220);
+    for (role, kind, rights) in [
+        (1, ObjectKind::DebugConsole, sys::WRITE | sys::DUP),
+        (2, ObjectKind::Endpoint, sys::RECEIVE),
+        (3, ObjectKind::ChannelFactory, sys::CREATE),
+        (4, ObjectKind::ProcessControl, sys::WAIT),
+    ] {
+        let grant = startup.grant(role).unwrap_or_else(|| exit(220));
+        if grant.kind != kind || grant.rights != rights {
+            exit(220);
+        }
+        let info = sys::handle_info(grant.handle).unwrap_or_else(|_| exit(220));
+        if info.kind != grant.kind || info.rights != grant.rights {
+            exit(220);
+        }
     }
-    let info = sys::handle_info(debug.handle).unwrap_or_else(|_| exit(220));
-    if info.kind != debug.kind || info.rights != debug.rights {
-        exit(220);
-    }
-    debug.handle
+    startup.grant(1).unwrap().handle
 }
 
 fn check_stack(stack: u64) -> TlsTemplate {

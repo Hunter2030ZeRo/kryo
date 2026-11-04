@@ -3,8 +3,9 @@ use super::{
     RefCell, Tasks,
 };
 use kryo_core::capability::Rights;
+use kryo_core::ipc::{ChannelBudget, Endpoint};
 use kryo_core::object::ObjectKind;
-use kryo_core::process::ExitReason;
+use kryo_core::process::{ExitReason, ExitStatus};
 use kryo_core::resource::{Budget, Limits, Resource};
 use kryo_core::sched::TaskState;
 use kryo_hal::DirectMap;
@@ -29,10 +30,10 @@ pub(crate) fn check(
         let mut tasks = Tasks::growing();
         let mut ipc = IpcRuntime::growing(&objects);
         let account = Budget::new(Limits {
-            shared_pages: 0,
+            shared_pages: 1,
             private_pages: 1024,
             reserved_pages: 65536,
-            handles: 8,
+            handles: 16,
             waits: 4,
             threads: 3,
             mappings: 4096,
@@ -71,28 +72,121 @@ pub(crate) fn check(
             .insert(debug, Rights::WRITE | Rights::DUP)
             .unwrap()
             .as_raw();
+        let task = tasks
+            .spawn_suspended(resources)
+            .unwrap_or_else(|_| panic!("Cannot prepare native ABI task"));
+        let owner = tasks.process_for(task).unwrap();
+        let channels = ChannelBudget::new(4);
+        let bootstrap = objects
+            .create(
+                ObjectKind::Endpoint,
+                KernelObject::Endpoint(RefCell::new(Endpoint::leased(
+                    task,
+                    channels.try_reserve().unwrap(),
+                ))),
+            )
+            .unwrap();
+        ipc.try_register(bootstrap.try_clone().unwrap()).unwrap();
+        let factory = objects
+            .create(
+                ObjectKind::ChannelFactory,
+                KernelObject::ChannelFactory(channels.clone()),
+            )
+            .unwrap();
+        let peer_image = crate::boot::module_image("kryo-service-peer")
+            .expect("Missing C IPC Rust service peer");
+        let peer_slot = region.find_stack(pool, direct).unwrap();
+        let mut peer = super::launch::prepare(pool, direct, memory, region, peer_slot, peer_image)
+            .unwrap_or_else(|mut failure| {
+                failure.pending.close(pool, region);
+                panic!("Cannot prepare C IPC Rust peer: {:?}", failure.error);
+            });
+        let peer_control = objects
+            .create(
+                ObjectKind::ProcessControl,
+                KernelObject::ProcessControl(RefCell::new(super::ProcessControl::new())),
+            )
+            .unwrap();
+        peer.process.control = Some(peer_control.try_clone().unwrap());
+        peer.context.rdi = peer
+            .process
+            .handles
+            .insert(
+                bootstrap.try_clone().unwrap(),
+                Rights::SEND | Rights::TRANSFER,
+            )
+            .unwrap()
+            .as_raw();
+        peer.context.rsi = peer
+            .process
+            .handles
+            .insert(
+                factory.try_clone().unwrap(),
+                Rights::CREATE | Rights::TRANSFER,
+            )
+            .unwrap()
+            .as_raw();
+        peer.context.rcx = 1;
+        let peer = tasks
+            .spawn_suspended(peer)
+            .unwrap_or_else(|_| panic!("Cannot publish C IPC Rust peer"));
+        let peer_owner = tasks.process_for(peer).unwrap();
+        let mut resources = tasks.resources_mut(task).unwrap();
+        let bootstrap = resources
+            .process
+            .handles
+            .insert(bootstrap, Rights::RECEIVE)
+            .unwrap();
+        let factory = resources
+            .process
+            .handles
+            .insert(factory, Rights::CREATE)
+            .unwrap();
+        let peer_control = resources
+            .process
+            .handles
+            .insert(peer_control, Rights::WAIT)
+            .unwrap();
         let startup = super::startup::install_record(
             Metadata {
                 service: 50,
                 instance: 1,
                 argument: 0xfedc_ba98_7654_3210,
             },
-            &[Entry {
-                role: 1,
-                handle: debug,
-                kind: WireKind::DebugConsole,
-                rights: (Rights::WRITE | Rights::DUP).bits(),
-            }],
+            &[
+                Entry {
+                    role: 1,
+                    handle: debug,
+                    kind: WireKind::DebugConsole,
+                    rights: (Rights::WRITE | Rights::DUP).bits(),
+                },
+                Entry {
+                    role: 2,
+                    handle: bootstrap.as_raw(),
+                    kind: WireKind::Endpoint,
+                    rights: Rights::RECEIVE.bits(),
+                },
+                Entry {
+                    role: 3,
+                    handle: factory.as_raw(),
+                    kind: WireKind::ChannelFactory,
+                    rights: Rights::CREATE.bits(),
+                },
+                Entry {
+                    role: 4,
+                    handle: peer_control.as_raw(),
+                    kind: WireKind::ProcessControl,
+                    rights: Rights::WAIT.bits(),
+                },
+            ],
             &mut resources.process.handles,
             &objects,
         )
         .expect("Cannot install ABI startup capability");
         resources.context.rdi = startup.as_raw();
         resources.context.rsi = 0;
-        let task = tasks
-            .spawn(resources)
-            .unwrap_or_else(|_| panic!("Cannot publish native ABI probe"));
-        let owner = tasks.process_for(task).unwrap();
+        tasks.wake(task).unwrap();
+        tasks.wake(peer).unwrap();
         let mut calls = CallStats::default();
         let mut start_ticks = None;
         let mut avx_preemptions = None;
@@ -102,6 +196,8 @@ pub(crate) fn check(
         let mut native_threads_checked = false;
         let mut c_checked = false;
         let mut c_threads_checked = false;
+        let mut c_ipc_checked = false;
+        let mut peer_status = None;
         let mut words_halted = false;
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
@@ -138,6 +234,15 @@ pub(crate) fn check(
                 assert_eq!(account.count(Resource::PrivatePages), 0);
                 assert_eq!(account.count(Resource::ReservedPages), 0);
                 c_threads_checked = true;
+            }
+            if calls.last_debug == Some((task, 100, 1)) && !c_ipc_checked {
+                assert_eq!(account.count(Resource::SharedPages), 0);
+                assert_eq!(account.count(Resource::PrivatePages), 0);
+                assert_eq!(account.count(Resource::ReservedPages), 0);
+                c_ipc_checked = true;
+            }
+            if peer_status.is_none() {
+                peer_status = tasks.terminal(peer_owner);
             }
             if calls.last_debug == Some((task, 97, 1)) && !native_threads_checked {
                 assert_eq!(account.count(Resource::PrivatePages), 0);
@@ -178,6 +283,14 @@ pub(crate) fn check(
         assert!(native_threads_checked, "Missing runtime-owned thread proof");
         assert!(c_checked, "Missing native C call proof");
         assert!(c_threads_checked, "Missing native C thread proof");
+        assert!(c_ipc_checked, "Missing C to Rust IPC ownership proof");
+        assert_eq!(
+            peer_status,
+            Some(ExitStatus {
+                reason: ExitReason::Exited,
+                code: 0
+            })
+        );
         assert!(
             words_halted,
             "Private wait deadline did not halt the idle CPU"
@@ -194,15 +307,16 @@ pub(crate) fn check(
         }
         assert_eq!(
             retired,
-            calls.threads_created + 1,
+            calls.threads_created + 2,
             "Native threads did not retire"
         );
-        assert_eq!(retired, 13, "Native ABI fixture thread count changed");
+        assert_eq!(retired, 14, "Native ABI fixture thread count changed");
         assert!(
             ipc.words.is_empty(),
             "Private word registrations survived teardown"
         );
         drop(ipc);
+        assert_eq!(channels.live_count(), 0);
         assert_eq!(objects.live_count(), 0);
         for resource in [
             Resource::SharedPages,
@@ -235,4 +349,5 @@ pub(crate) fn check(
     kryo_hal::emergency_write_str(
         "CTHREAD: native C create join and backing retirement OK threads=2\n",
     );
+    kryo_hal::emergency_write_str("CIPC: C Rust capability and shared memory retirement OK\n");
 }

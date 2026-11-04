@@ -58,7 +58,8 @@ class PciEvidenceTests(unittest.TestCase):
         threads = "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
         native_c = "CABI: native C calls and diagnostic retirement OK\n"
         c_threads = "CTHREAD: native C create join and backing retirement OK threads=2\n"
-        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads]
+        c_ipc = "CIPC: C Rust capability and shared memory retirement OK\n"
+        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads, c_ipc]
         log = "".join(markers)
         self.assertTrue(all(abi_checks(log, True).values()))
         self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))
@@ -117,6 +118,14 @@ class PciEvidenceTests(unittest.TestCase):
                     marker.replace("threads=2", "threads=1")):
             self.assertFalse(abi_checks(log, True)["native_c_threads"])
         self.assertTrue(abi_checks(marker, True)["native_c_threads"])
+
+    def test_c_ipc_evidence_requires_single_kernel_retirement_marker(self):
+        marker = "CIPC: C Rust capability and shared memory retirement OK\n"
+        for invalid in ("USERLOG: process=0x123 event=100 value=1\n",
+                        "USERDIAG: process=0x123 bytes=0 text=" + marker,
+                        marker + marker):
+            self.assertFalse(abi_checks(invalid, True)["native_c_ipc"])
+        self.assertTrue(abi_checks(marker, True)["native_c_ipc"])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

@@ -146,6 +146,7 @@ def abi_checks(log, enabled):
         "native_runtime_threads": bool(re.search(r"(?m)^THREAD: runtime-owned stack TLS and rounding OK threads=2$", log)),
         "native_c_calls": bool(re.search(r"(?m)^CABI: native C calls and diagnostic retirement OK$", log)),
         "native_c_threads": bool(re.search(r"(?m)^CTHREAD: native C create join and backing retirement OK threads=2$", log)),
+        "native_c_ipc": len(re.findall(r"(?m)^CIPC: C Rust capability and shared memory retirement OK$", log)) == 1,
         **diagnostics,
     }
 

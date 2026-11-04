@@ -2,6 +2,13 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [C service-call SDK](decisions/0036-c-service-calls.md) exposes existing
+IPC, capability, notification and shared-memory calls without changing native
+call numbers. The ABI fixture connects C to a Rust peer in another address
+space and checks a reduced read-only memory loan, acknowledged cleanup and
+peer death. See the [validation record](validation/2026-11-04-c-ipc/README.md).
+This is the transport foundation; file/terminal services remain separate work.
+
 Provider C11 threads now create dedicated TCB/static-TLS storage, inherit the
 creator's FP environment and support join/detach through actual native
 completion. A raw process-local reaper retires detached children; creator pins

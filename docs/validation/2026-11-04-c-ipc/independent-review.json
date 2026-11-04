@@ -1,0 +1,41 @@
+{
+  "status": "CLEAR",
+  "source_bundle_sha256": "754603e623db47078085174780b5dfc5c1f90959daedf30f5a1385db7543cf32",
+  "source_inputs_sha256": "1ae84fa572cb59b51a9b401180c89dab44e8d25c8a48fdf046ea2a3bdcc504e4",
+  "checks": {
+    "independent_source_review": true,
+    "final_four_guests": true,
+    "all_required_legacy_checks": true,
+    "single_c_ipc_event_and_kernel_marker": true,
+    "packaged_abi_image_hashes": true,
+    "actual_checkout_matches_stage": true
+  },
+  "cases": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "5cd206072fa6191a82e2914fc8197172633b4e3fa6f19221271be04ace441cb5",
+      "build_sha256": "58420061bbd791a39b930071468f202b45a5b7a070fc0124ff1ef1f3b9e99c80",
+      "abi_build_sha256": "fc608af2ef2d703d1060ef869bf2ca0158027c4dff9b2ca215acecbb56051621"
+    },
+    {
+      "label": "release-max-smp4-abi-libc-block-ro",
+      "evidence_sha256": "2ea2cca671d32eff05825ecf49b5b3a5026129af208c27daa4cc762bcab39fe4",
+      "build_sha256": "e6f0b1819be034e037c08d43455a3d572734b94d869ae213a5b710216364d01c",
+      "abi_build_sha256": "3e1f18b32cdf2bb29900540a42a3e7e32e588a806c31c2aef463142a365ca613"
+    },
+    {
+      "label": "debug-normal-max-smp4-abi-libc-block-rw",
+      "evidence_sha256": "879a0897c8e78d5038b8e696096817265a42add160346688e6c5e42a8e031969",
+      "build_sha256": "58420061bbd791a39b930071468f202b45a5b7a070fc0124ff1ef1f3b9e99c80",
+      "abi_build_sha256": "fc608af2ef2d703d1060ef869bf2ca0158027c4dff9b2ca215acecbb56051621"
+    },
+    {
+      "label": "release-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "30739a30213ffe4bc82b8d33aa39becffb62e5f0bf1486335f8643db16cf2f7d",
+      "build_sha256": "e6f0b1819be034e037c08d43455a3d572734b94d869ae213a5b710216364d01c",
+      "abi_build_sha256": "3e1f18b32cdf2bb29900540a42a3e7e32e588a806c31c2aef463142a365ca613"
+    }
+  ],
+  "scope": "Independent read-only source review found no blockers; final matrix and actual-source artifact checks recorded separately by the executor. Compile coverage does not imply every wrapper was guest-executed.",
+  "artifact_followup": "Restored two earlier provider build logs byte-for-byte from retained originals to preserve their recorded SHA-256 values; executable inputs are unchanged. All 1586 final stage/actual hashes rechecked."
+}

@@ -12,7 +12,7 @@ These flags do not apply to the kernel's separate soft-float compilation.
 
 ## Results and authority
 
-Every returning wrapper yields `kryo_result`: signed 64-bit `status` followed by
+Ordinary value-returning wrappers yield `kryo_result`: signed 64-bit `status` followed by
 unsigned 64-bit `value`. The call returns those fields independently in RAX and
 RDX. Test `status == KRYO_STATUS_OK` before using the value. A successful handle
 or value may have its high bit set; its sign does not indicate failure.
@@ -24,8 +24,8 @@ PID. Zero is invalid. StartupRecord is a separately granted handle arriving in
 RDI at native process entry; the SysV argc/argv/envp/auxv stack remains separate.
 `kryo_startup_read` reads its indexed words. Consumers validate magic, version,
 length, unique roles, kind-specific rights and handles before using grants.
-The header exports the current startup bounds and DebugConsole kind for this
-small interface; it does not declare every object kind or capability operation.
+The header exports current object kinds, rights and startup bounds. These
+numbers describe grants; they confer no authority by themselves.
 
 The inline assembly declares condition-code and compiler-memory barriers and
 the result registers used by the native call boundary. Kernel entry preserves
@@ -93,5 +93,37 @@ thread handle separately. Closing a handle or observing a user flag cannot
 replace join. These calls do not supply a TCB implementation, allocator, POSIX
 attributes, environment inheritance, cleanup handlers or pthread semantics.
 
-The header still omits IPC grant interfaces. Their many-register contract needs
-its own reviewed shim before a general C runtime can use capability transfer.
+## IPC and shared memory
+
+The IPC wrappers pass four inline words and at most two capability grants in
+registers. Grant arrays are read into registers before entry; the kernel never
+receives those C pointers. Invalid counts and null nonempty grant arrays fail
+before entry. C result aggregates describe register outputs, not Rust object
+layouts.
+
+`kryo_ipc_result.status` is independent of all unsigned results. Successful
+Receive returns a message, optional reply token in `value`, received handles
+and `count`. Successful Call returns its reply message; its handles/count are
+unspecified because the existing reply call transfers inline data only. Send
+has no message output. On failure, `kryo_ipc_accepted` reports whether delivery
+already happened. Retrying an accepted operation may repeat service effects.
+Neither timeout nor acceptance alone proves a shared-memory loan has ended.
+
+Duplicate reduces rights and requires DUP. Transferring a grant requires
+TRANSFER on its source and cannot increase rights. A reply token is local to
+its endpoint, bound to the caller and single-use. The absolute timed wrappers
+use monotonic nanoseconds; ReceiveFor starts its duration at kernel admission.
+
+MemoryCreate produces owned zeroed pages. MemoryMap maps one object page into
+a caller-owned vacant page address; MemoryUnmap ends that view. The caller
+ends every access before unmapping. Close releases the handle separately;
+other mappings or handles can retain the backing. A READ|MAP grant allows a
+read-only view, but does not stop the sender writing through another alias.
+Concurrent access needs a protocol and synchronization.
+
+The native ABI fixture sends one shared page from C to a Rust peer in another
+address space. The peer checks exact reduced rights, rejects a writable map,
+reads the payload and releases its mapping/handle before replying. C then
+releases its owners, stops the peer, observes process completion and checks
+PeerClosed. Kernel teardown checks channel, object, quota and frame retirement.
+This supplies native service communication, not libc file or terminal semantics.
