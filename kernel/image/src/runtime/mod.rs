@@ -7,6 +7,7 @@ mod channels;
 pub(crate) mod clock;
 pub(crate) mod devices;
 mod diagnostic;
+pub(crate) mod libc;
 const _: () = assert!(diagnostic::LIMIT == kryo_interfaces::syscall::DEBUG_WRITE_MAX);
 pub(crate) mod ipc_runtime;
 pub(crate) mod launch;

@@ -43,6 +43,10 @@ signal implementation.
 
 ## Provider work
 
+The [static mlibc overlay](../mlibc/README.md) now reuses these definitions for
+an experimental ANSI/static build. It adds only the provider dependency closure
+needed by that profile; it does not complete the public POSIX ABI described here.
+
 At evaluated mlibc revision `07cfd943977737b8147c1289922c23479feef53d`, the
 demo port's fifty headers are only a starter inventory. Resource, network,
 terminal and directory-entry types, limits and provider pthread objects remain

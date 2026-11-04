@@ -1,0 +1,382 @@
+--- a/options/internal/include/bits/nl_item.h
++++ b/options/internal/include/bits/nl_item.h
+@@ -105,19 +105,19 @@
+ 	_NL_NUM_LC_CTYPE,
+ 
+ 	__DECIMAL_POINT = __NL_ITEM(__LC_NUMERIC, 0),
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define DECIMAL_POINT __DECIMAL_POINT
+ #endif
+ 	RADIXCHAR = __DECIMAL_POINT,
+ #define RADIXCHAR RADIXCHAR
+ 	__THOUSANDS_SEP,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define THOUSANDS_SEP __THOUSANDS_SEP
+ #endif
+ 	THOUSEP = __THOUSANDS_SEP,
+ #define THOUSEP THOUSEP
+ 	__GROUPING,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define GROUPING __GROUPING
+ #endif
+ 	_NL_NUMERIC_DECIMAL_POINT_WC,
+@@ -218,7 +218,7 @@
+ 	ERA,
+ #define ERA ERA
+ 	__ERA_YEAR,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define ERA_YEAR __ERA_YEAR
+ #endif
+ 	ERA_D_FMT,
+@@ -314,7 +314,7 @@
+ 	__ALTMON_10,
+ 	__ALTMON_11,
+ 	__ALTMON_12,
+-#if defined(_GNU_SOURCE) || __MLIBC_POSIX2024
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE) || __MLIBC_POSIX2024
+ #define ALTMON_1 __ALTMON_1
+ #define ALTMON_2 __ALTMON_2
+ #define ALTMON_3 __ALTMON_3
+@@ -354,7 +354,7 @@
+ 	_NL_ABALTMON_10,
+ 	_NL_ABALTMON_11,
+ 	_NL_ABALTMON_12,
+-#if defined(_GNU_SOURCE) || __MLIBC_POSIX2024
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE) || __MLIBC_POSIX2024
+ #define ABALTMON_1 _NL_ABALTMON_1
+ #define ABALTMON_2 _NL_ABALTMON_2
+ #define ABALTMON_3 _NL_ABALTMON_3
+@@ -406,89 +406,89 @@
+ 	_NL_NUM_LC_COLLATE,
+ 
+ 	__INT_CURR_SYMBOL = __NL_ITEM(__LC_MONETARY, 0),
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_CURR_SYMBOL __INT_CURR_SYMBOL
+ #endif
+ 	__CURRENCY_SYMBOL,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define CURRENCY_SYMBOL __CURRENCY_SYMBOL
+ #endif
+ 	__MON_DECIMAL_POINT,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define MON_DECIMAL_POINT __MON_DECIMAL_POINT
+ #endif
+ 	__MON_THOUSANDS_SEP,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define MON_THOUSANDS_SEP __MON_THOUSANDS_SEP
+ #endif
+ 	__MON_GROUPING,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define MON_GROUPING __MON_GROUPING
+ #endif
+ 	__POSITIVE_SIGN,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define POSITIVE_SIGN __POSITIVE_SIGN
+ #endif
+ 	__NEGATIVE_SIGN,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define NEGATIVE_SIGN __NEGATIVE_SIGN
+ #endif
+ 	__INT_FRAC_DIGITS,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_FRAC_DIGITS __INT_FRAC_DIGITS
+ #endif
+ 	__FRAC_DIGITS,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define FRAC_DIGITS __FRAC_DIGITS
+ #endif
+ 	__P_CS_PRECEDES,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define P_CS_PRECEDES __P_CS_PRECEDES
+ #endif
+ 	__P_SEP_BY_SPACE,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define P_SEP_BY_SPACE __P_SEP_BY_SPACE
+ #endif
+ 	__N_CS_PRECEDES,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define N_CS_PRECEDES __N_CS_PRECEDES
+ #endif
+ 	__N_SEP_BY_SPACE,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define N_SEP_BY_SPACE __N_SEP_BY_SPACE
+ #endif
+ 	__P_SIGN_POSN,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define P_SIGN_POSN __P_SIGN_POSN
+ #endif
+ 	__N_SIGN_POSN,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define N_SIGN_POSN __N_SIGN_POSN
+ #endif
+ 	_NL_MONETARY_CRNCYSTR,
+ #define CRNCYSTR _NL_MONETARY_CRNCYSTR
+ 	__INT_P_CS_PRECEDES,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_P_CS_PRECEDES __INT_P_CS_PRECEDES
+ #endif
+ 	__INT_P_SEP_BY_SPACE,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_P_SEP_BY_SPACE __INT_P_SEP_BY_SPACE
+ #endif
+ 	__INT_N_CS_PRECEDES,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_N_CS_PRECEDES __INT_N_CS_PRECEDES
+ #endif
+ 	__INT_N_SEP_BY_SPACE,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_N_SEP_BY_SPACE __INT_N_SEP_BY_SPACE
+ #endif
+ 	__INT_P_SIGN_POSN,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_P_SIGN_POSN __INT_P_SIGN_POSN
+ #endif
+ 	__INT_N_SIGN_POSN,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define INT_N_SIGN_POSN __INT_N_SIGN_POSN
+ #endif
+ 	_NL_MONETARY_DUO_INT_CURR_SYMBOL,
+@@ -522,11 +522,11 @@
+ 	__NOEXPR,
+ #define NOEXPR __NOEXPR
+ 	__YESSTR,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define YESSTR __YESSTR
+ #endif
+ 	__NOSTR,
+-#ifdef _GNU_SOURCE
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ #define NOSTR __NOSTR
+ #endif
+ 	_NL_MESSAGES_CODESET,
+--- a/options/ansi/include/stdio.h
++++ b/options/ansi/include/stdio.h
+@@ -102,7 +102,7 @@
+ void setbuf(FILE *__restrict __stream, char *__restrict __buffer);
+ int setvbuf(FILE *__restrict __stream, char *__restrict __buffer, int __mode, size_t __size);
+ 
+-#if defined(_DEFAULT_SOURCE)
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE)
+ void setlinebuf(FILE *__stream);
+ void setbuffer(FILE *__stream, char *__buffer, size_t __size);
+ #endif
+@@ -216,7 +216,7 @@
+ void funlockfile(FILE *__stream);
+ int ftrylockfile(FILE *__stream);
+ 
+-#if defined(_DEFAULT_SOURCE)
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE)
+ void clearerr_unlocked(FILE *__stream);
+ int feof_unlocked(FILE *__stream);
+ int ferror_unlocked(FILE *__stream);
+@@ -228,7 +228,7 @@
+ size_t fwrite_unlocked(const void *__restrict __buffer, size_t __size, size_t __count, FILE *__restrict __stream);
+ #endif
+ 
+-#if defined(_GNU_SOURCE)
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_GNU_SOURCE)
+ char *fgets_unlocked(char *__restrict __buffer, int __size, FILE *__restrict __stream);
+ int fputs_unlocked(const char *__restrict __buffer, FILE *__restrict __stream);
+ #endif
+--- a/options/ansi/include/time.h
++++ b/options/ansi/include/time.h
+@@ -16,17 +16,7 @@
+ 
+ /* POSIX extensions. */
+ 
+-#define CLOCK_REALTIME 0
+-#define CLOCK_MONOTONIC 1
+-#define CLOCK_PROCESS_CPUTIME_ID 2
+-#define CLOCK_THREAD_CPUTIME_ID 3
+-#define CLOCK_MONOTONIC_RAW 4
+-#define CLOCK_REALTIME_COARSE 5
+-#define CLOCK_MONOTONIC_COARSE 6
+-#define CLOCK_BOOTTIME 7
+-#define CLOCK_REALTIME_ALARM 8
+-#define CLOCK_BOOTTIME_ALARM 9
+-#define CLOCK_TAI 11
++#include <cryolite/time.h>
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -57,7 +47,7 @@
+ size_t strftime(char *__restrict __dest, size_t __max_size,
+ 		const char *__restrict __format, const struct tm *__restrict __ptr);
+ 
+-#if defined(_DEFAULT_SOURCE) || __MLIBC_POSIX1
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE) || __MLIBC_POSIX1
+ void tzset(void);
+ #endif
+ 
+@@ -76,7 +66,9 @@
+ 
+ #include <abi-bits/clockid_t.h>
+ 
++#ifndef TIMER_ABSTIME
+ #define TIMER_ABSTIME 1
++#endif
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -84,12 +76,12 @@
+ 
+ #ifndef __MLIBC_ABI_ONLY
+ 
+-#if defined(_DEFAULT_SOURCE) || __MLIBC_XOPEN
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE) || __MLIBC_XOPEN
+ extern int daylight;
+ extern long timezone;
+ #endif
+ 
+-#if defined(_DEFAULT_SOURCE) || __MLIBC_POSIX1
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE) || __MLIBC_POSIX1
+ extern char *tzname[2];
+ #endif
+ 
+@@ -102,7 +94,7 @@
+ 
+ struct tm *localtime_r(const time_t *__timer, struct tm *__buf);
+ 
+-#if defined(_DEFAULT_SOURCE) || (__MLIBC_POSIX1 && !__MLIBC_POSIX2024)
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE) || (__MLIBC_POSIX1 && !__MLIBC_POSIX2024)
+ char *asctime_r(const struct tm *__tm, char *__buf);
+ char *ctime_r(const time_t *__timer, char *__buf);
+ #endif
+@@ -131,7 +123,7 @@
+ 
+ #ifndef __MLIBC_ABI_ONLY
+ 
+-#if defined(_DEFAULT_SOURCE)
++#if defined(__MLIBC_BUILDING_MLIBC) || defined(_DEFAULT_SOURCE)
+ time_t timelocal(struct tm *__tm);
+ time_t timegm(struct tm *__tm);
+ #endif /* defined(_DEFAULT_SOURCE) */
+--- a/options/ansi/generic/string.cpp
++++ b/options/ansi/generic/string.cpp
+@@ -561,39 +561,99 @@
+ 	case EXDEV: s = "Invalid cross-device link (EXDEV)"; break;
+ 	case ENODATA: s = "No data available (ENODATA)"; break;
+ 	case ETIME: s = "Timer expired (ETIME)"; break;
++#ifdef ENOKEY
+ 	case ENOKEY: s = "Required key not available (ENOKEY)"; break;
++#endif
++#ifdef ESHUTDOWN
+ 	case ESHUTDOWN: s = "Cannot send after transport endpoint shutdown (ESHUTDOWN)"; break;
++#endif
++#ifdef EHOSTDOWN
+ 	case EHOSTDOWN: s = "Host is down (EHOSTDOWN)"; break;
++#endif
++#ifdef EBADFD
+ 	case EBADFD: s = "File descriptor in bad state (EBADFD)"; break;
++#endif
++#ifdef ENOMEDIUM
+ 	case ENOMEDIUM: s = "No medium found (ENOMEDIUM)"; break;
++#endif
++#ifdef ENOTBLK
+ 	case ENOTBLK: s = "Block device required (ENOTBLK)"; break;
++#endif
++#ifdef ENONET
+ 	case ENONET: s = "Machine is not on the network (ENONET)"; break;
++#endif
++#ifdef EPFNOSUPPORT
+ 	case EPFNOSUPPORT: s = "Protocol family not supported (EPFNOSUPPORT)"; break;
++#endif
++#ifdef ESOCKTNOSUPPORT
+ 	case ESOCKTNOSUPPORT: s = "Socket type not supported (ESOCKTNOSUPPORT)"; break;
++#endif
++#ifdef ESTRPIPE
+ 	case ESTRPIPE: s = "Streams pipe error (ESTRPIPE)"; break;
++#endif
++#ifdef EREMOTEIO
+ 	case EREMOTEIO: s = "Remote I/O error (EREMOTEIO)"; break;
++#endif
++#ifdef ERFKILL
+ 	case ERFKILL: s = "Operation not possible due to RF-kill (ERFKILL)"; break;
++#endif
++#ifdef EBADR
+ 	case EBADR: s = "Invalid request descriptor (EBADR)"; break;
++#endif
++#ifdef EUNATCH
+ 	case EUNATCH: s = "Protocol driver not attached (EUNATCH)"; break;
++#endif
++#ifdef EMEDIUMTYPE
+ 	case EMEDIUMTYPE: s = "Wrong medium type (EMEDIUMTYPE)"; break;
++#endif
++#ifdef EREMOTE
+ 	case EREMOTE: s = "Object is remote (EREMOTE)"; break;
++#endif
++#ifdef EKEYREJECTED
+ 	case EKEYREJECTED: s = "Key was rejected by service (EKEYREJECTED)"; break;
++#endif
++#ifdef EUCLEAN
+ 	case EUCLEAN: s = "Structure needs cleaning (EUCLEAN)"; break;
++#endif
++#ifdef EBADSLT
+ 	case EBADSLT: s = "Invalid slot (EBADSLT)"; break;
++#endif
++#ifdef ENOANO
+ 	case ENOANO: s = "No anode (ENOANO)"; break;
++#endif
++#ifdef ENOCSI
+ 	case ENOCSI: s = "No CSI structure available (ENOCSI)"; break;
++#endif
+ 	case ENOSTR: s = "Device not a stream (ENOSTR)"; break;
++#ifdef ETOOMANYREFS
+ 	case ETOOMANYREFS: s = "Too many references: cannot splice (ETOOMANYREFS)"; break;
++#endif
++#ifdef ENOPKG
+ 	case ENOPKG: s = "Package not installed (ENOPKG)"; break;
++#endif
++#ifdef EKEYREVOKED
+ 	case EKEYREVOKED: s = "Key has been revoked (EKEYREVOKED)"; break;
++#endif
++#ifdef EXFULL
+ 	case EXFULL: s = "Exchange full (EXFULL)"; break;
++#endif
++#ifdef ELNRNG
+ 	case ELNRNG: s = "Link number out of range (ELNRNG)"; break;
++#endif
++#ifdef ENOTUNIQ
+ 	case ENOTUNIQ: s = "Name not unique on network (ENOTUNIQ)"; break;
++#endif
++#ifdef ERESTART
+ 	case ERESTART: s = "Interrupted system call should be restarted (ERESTART)"; break;
++#endif
++#ifdef EUSERS
+ 	case EUSERS: s = "Too many users (EUSERS)"; break;
+-
++#endif
++
++#ifdef EIEIO
+ #ifdef EIEIO
+ 	case EIEIO: s = "Computer bought the farm; OS internal error (EIEIO)"; break;
++#endif
+ #endif
+ 
+ 	default:

@@ -1,0 +1,16 @@
+[
+  {
+    "profile": "debug",
+    "compile_commands": 357,
+    "target_header_commands": 349,
+    "all_commands_have_v3_no_mmx": true,
+    "host_include_paths": false
+  },
+  {
+    "profile": "release",
+    "compile_commands": 357,
+    "target_header_commands": 349,
+    "all_commands_have_v3_no_mmx": true,
+    "host_include_paths": false
+  }
+]

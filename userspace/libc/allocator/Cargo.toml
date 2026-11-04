@@ -1,0 +1,25 @@
+[package]
+name = "cryolite-allocator"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+talc = { version = "=5.1.1", default-features = false }
+
+[workspace]
+resolver = "3"
+
+[profile.dev]
+panic = "abort"
+opt-level = 1
+debug = true
+
+[profile.release]
+panic = "abort"
+opt-level = 3
+codegen-units = 1
+debug = true

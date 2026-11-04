@@ -102,7 +102,8 @@ reservations use interval metadata rather than one record per reserved page.
 Intermediate page tables remain until process-space close; data release does
 not implement table pruning.
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md) defines the contract;
-user allocators and demand paging remain separate work.
+the static mlibc profile now supplies a user allocator over this backing, while
+demand paging remains separate work.
 
 Process-private word waits use aligned 32-bit words in owned RW mappings,
 including ELF data and managed stack/TLS. Core validates and snapshots owned
@@ -192,8 +193,10 @@ interface still open. [ADR 0022](decisions/0022-platform-baseline-and-performanc
 records the requirements, performance work and decisions requiring review.
 [ADR 0024](decisions/0024-native-bootstrap-stack.md) defines the bootstrap gate.
 [ADR 0025](decisions/0025-static-tls-and-elf-metadata.md) extends it with truthful
-mapped ELF metadata and runtime-owned compiler static TLS. The full mlibc TCB
-and user allocator remain pending. Explicit private VM and atomic private waits
+mapped ELF metadata and runtime-owned compiler static TLS. The limited static
+mlibc profile now uses the upstream initial TCB and a fallible Talc user heap;
+provider thread/TCB lifecycle and hardened hosted startup remain pending.
+Explicit private VM and atomic private waits
 provide page-backing and synchronization boundaries through
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).
 [ADR 0027](decisions/0027-runtime-owned-thread-memory.md) adds runtime-owned

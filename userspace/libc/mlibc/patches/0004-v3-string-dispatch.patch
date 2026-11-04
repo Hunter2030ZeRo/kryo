@@ -1,0 +1,75 @@
+--- a/options/ansi/x86_64/strlen.cpp
++++ b/options/ansi/x86_64/strlen.cpp
+@@ -9,14 +9,11 @@
+ 
+ extern "C" [[gnu::visibility("protected")]]
+ strlen_signature __mlibc_resolve_strlen() {
+-	if (cpu_supports<x86Feature::AVX2>() && cpu_supports<x86Feature::BMI2>())
+-		return __mlibc_strlen_avx2;
+-	if (cpu_supports<x86Feature::SSE2>())
+-		return __mlibc_strlen_sse2;
+-
+-	return __mlibc_strlen_default;
++	return __mlibc_strlen_avx2;
+ }
+ 
+-#if MLIBC_IFUNCS_SUPPORTED
++#if defined(__cryolite__)
++extern "C" size_t strlen(const char *s) { return __mlibc_strlen_avx2(s); }
++#elif MLIBC_IFUNCS_SUPPORTED
+ extern "C" size_t strlen(const char *s) __attribute__((ifunc("__mlibc_resolve_strlen")));
+ #endif
+--- a/options/ansi/x86_64/strcmp.cpp
++++ b/options/ansi/x86_64/strcmp.cpp
+@@ -177,16 +177,11 @@
+ 
+ extern "C" [[gnu::visibility("protected")]]
+ strcmp_signature __mlibc_resolve_strcmp() {
+-	if (cpu_supports<x86Feature::AVX2>())
+-		return __mlibc_strcmp_avx2;
+-	if (cpu_supports<x86Feature::SSE4_2>())
+-		return __mlibc_strcmp_sse4_2;
+-	if (cpu_supports<x86Feature::SSE2>())
+-		return __mlibc_strcmp_sse2;
+-
+-	return __mlibc_strcmp_default;
++	return __mlibc_strcmp_avx2;
+ }
+ 
+-#if MLIBC_IFUNCS_SUPPORTED
++#if defined(__cryolite__)
++extern "C" int strcmp(const char *a, const char *b) { return __mlibc_strcmp_avx2(a, b); }
++#elif MLIBC_IFUNCS_SUPPORTED
+ extern "C" int strcmp(const char *a, const char *b) __attribute__((ifunc("__mlibc_resolve_strcmp")));
+ #endif
+--- a/options/ansi/x86_64/meson.build
++++ b/options/ansi/x86_64/meson.build
+@@ -2,7 +2,6 @@
+ 	'strcmp.cpp',
+ 	'strlen.cpp',
+ 	'strlen-avx2.S',
+-	'strlen-sse2.S',
+ )
+ 
+ arch_defines = [
+--- a/options/ansi/generic/string.cpp
++++ b/options/ansi/generic/string.cpp
+@@ -87,7 +87,7 @@
+ 	}
+ }
+ 
+-#if !defined(MLIBC_ARCH_HAS_STRCMP) || !MLIBC_IFUNCS_SUPPORTED
++#if !defined(__cryolite__) && (!defined(MLIBC_ARCH_HAS_STRCMP) || !MLIBC_IFUNCS_SUPPORTED)
+ int strcmp(const char *a, const char *b) __attribute__((alias("__mlibc_strcmp_default")));
+ #endif
+ 
+--- a/options/internal/generic/essential.cpp
++++ b/options/internal/generic/essential.cpp
+@@ -216,6 +216,6 @@
+ 	return len;
+ }
+ 
+-#if !defined(MLIBC_ARCH_HAS_STRLEN) || !MLIBC_IFUNCS_SUPPORTED
++#if !defined(__cryolite__) && (!defined(MLIBC_ARCH_HAS_STRLEN) || !MLIBC_IFUNCS_SUPPORTED)
+ size_t strlen(const char *s) __attribute__((alias("__mlibc_strlen_default")));
+ #endif

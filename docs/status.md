@@ -2,6 +2,15 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [static mlibc milestone](validation/2026-11-04-static-mlibc/README.md)
+builds and executes pinned upstream mlibc with Cryolite sysdeps and a fallible
+Talc user heap. Two fresh C process instances exercise startup, real provider
+TCB/static TLS, errno, allocation failures, formatting, guarded-page strings,
+sleep and exit callbacks. Separate raw native threads test the allocator only.
+File calls and provider thread creation fail explicitly. No entropy, hardened
+startup, pthreads, general stdio/VFS, C++ standard library or Rust std is implied.
+[ADR 0034](decisions/0034-static-mlibc.md) records the supported boundary.
+
 The [process-link milestone](validation/2026-11-04-process-links/README.md)
 replaces nested process/member scans on image-runtime resource lookup with
 generation-checked thread backlinks. Membership remains canonical; cleanup
@@ -51,7 +60,8 @@ and layouts. Eleven compiler checks cover candidate C/C++ target and Rust host
 layouts, table consistency, v3 instructions and rejected profile changes.
 The compact 64-position signal set does not implement signal delivery.
 Installed headers, resource/network/terminal types, provider objects and the
-actual libc/sysdeps build remain separate gates.
+complete hosted libc integration remain separate gates; the later static
+mlibc milestone implements the limited initial provider build.
 
 The [Cryolite C ABI proposal](decisions/0028-cryolite-owned-c-abi.md) records the
 decision to own public definitions before the libc port. Its foundation layouts
@@ -73,7 +83,8 @@ and a complete pthread/libc integration remain unimplemented.
 The [private VM milestone](validation/2026-11-03-private-vm/README.md) adds
 reserve/commit/decommit/release to the native ABI. It separates reserved virtual
 pages from zeroed committed RAM, retains quota through failed retirement and
-verifies process-exit cleanup. A user allocator remains unimplemented.
+verifies process-exit cleanup. The later static mlibc milestone supplies the
+first fallible user allocator over this backing.
 
 The [static TLS milestone](validation/2026-11-03-static-tls/README.md) extends
 native startup with mapped ELF/PHDR metadata and C/C++/Rust local-exec TLS.
@@ -409,9 +420,10 @@ rotates three gates using one-millisecond waits. See
 [service validation](validation/2026-11-02-block-service/README.md).
 
 Native images already use ELF64 AMD64 static ET_EXEC. Current bootstrap Rust
-programs still use the soft-float bare-metal target and register-based startup;
-a general SysV hard-float user target, crt0/initial stack and std ports are not
-validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and ABI.
+services still use the soft-float bare-metal target and register-based startup.
+Separate v3 hard-float probes validate SysV startup; the static mlibc profile
+adds the first provider crt/TCB. General hosted ABI and standard-library ports
+remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and ABI.
 
 ## Limits
 
@@ -419,7 +431,7 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 - xAPIC only. Time requires an ACPI-described 64-bit HPET, bounded firmware tables, and BSP configuration ownership with shared registered-CPU reads. PIT/PM/TSC fallbacks, 32-bit counter extension, suspend/resume, and hardware clock/latency validation are pending. Calibration does not guarantee scheduling latency while kernel IRQs remain off.
 - Scalar entry traps FP; extended entry supports x87/SSE and optional AVX in a private 1,024-byte standard state area. XCR0 components beyond bits 0..2, AVX-512, AMX, and supervisor state are unsupported. Kernel code remains soft-float.
 - Legacy native tests use scalar Rust compilation and manual SIMD assembly. The optional v3 hard-float C/C++/Rust probe uses SysV startup, static ELF TLS and runtime-owned native thread creation. Complete libc/std, dynamic linking, dynamic TLS and pthread integration remain pending.
-- Initial executable policy is static little-endian AMD64 ET_EXEC only, at most 64 program headers/eight load segments/32 pages and a 1-MiB boot-module cap. The native C thread fixture requires 17 load pages in debug. Per-process mapping/table budgets still apply. This is not ICE execution or general ELF compatibility.
+- Initial executable policy is static little-endian AMD64 ET_EXEC only, at most 64 program headers/eight load segments and a 1-MiB boot-module cap. Legacy fixtures admit 32 load pages; SysV native boot images admit up to 4096, further bounded by their mapping account. Per-process mapping/table budgets still apply. This is not ICE execution or general ELF compatibility.
 - Normal metadata grows through fallible allocation within configured service accounts. Shared pages, handles, waits, live threads, explicit private VM pages and reserved virtual pages have persistent charges; VM mapping/table limits are per process. Exact kernel-metadata byte accounting, private-RAM accounting for ELF/stacks/legacy TLS and CPU-time budgets remain pending. These are account policy limits, not a fixed kernel-wide process/thread count. Endpoint RECEIVE and notification WAIT remain thread-bound. General process hierarchy, multi-receiver IPC, dynamic service inventory, supervisor recovery and WAIT delegation remain pending. The configured registry is scoped to one supervisor lifetime.
 - Frame metadata scales with the Usable RAM plan and has no fixed four-GiB or 128-GiB bitmap cap. Boot discovery still accepts at most 256 raw map entries and 288 normalized ranges, and metadata requires one contiguous Usable span. CPU physical-address width and canonical HHDM bounds remain enforced. The shared entry-stack branch has a one-GiB virtual-address budget, roughly 52,000 guarded cells; other resources can exhaust sooner. Private user VM metadata grows instead of retaining the earlier 16-mapping/64-table fixture limits.
 - Private mappings have unique backing; shared mappings retain the whole memory object and its shared-page charge. Native memory objects allow up to eight pages each, subject to the account total. Buffer loans, bulk queues, pin accounting and revocation remain pending.
@@ -430,11 +442,10 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 
 ## Next work
 
-Evaluate mlibc sysdeps against the native thread, memory and wait contracts.
-Complete the user allocator and TCB lifecycle before pthread integration.
-Mapped ELF
-metadata, static TLS and explicit private VM are available; a complete TCB/DTV,
-allocator and standard libraries remain separate work. Connect the initial
+Extend the validated static mlibc profile with real entropy, service-backed
+descriptors and completion-aware provider thread/TCB lifecycle. The initial
+TCB, static TLS and fallible Talc heap are implemented; pthreads, dynamic TLS
+and complete standard libraries remain separate work. Connect the initial
 block service to VFS, the native runtime and BetAFS. Add storage IRQ
 completion and general device assignment while retaining the private queue
 boundary. The current HPET grant remains a bootstrap device path. CPU-time

@@ -1,0 +1,11 @@
+--- a/meson.build
++++ b/meson.build
+@@ -331,6 +331,8 @@
+ 	internal_conf.set10('MLIBC_MAP_FILE_WINDOWS', true)
+ 	subdir('sysdeps/ethereal')
+ # ANCHOR: demo-sysdeps
++elif host_machine.system() == 'cryolite'
++	subdir('sysdeps/cryolite')
+ elif host_machine.system() == 'demo'
+ 	subdir('sysdeps/demo')
+ # ANCHOR_END: demo-sysdeps

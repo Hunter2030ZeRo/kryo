@@ -1,0 +1,6 @@
+    Checking scopeguard v1.2.0
+    Checking allocator-api2 v0.4.0
+    Checking lock_api v0.4.14
+    Checking talc v5.1.1
+    Checking cryolite-allocator v0.1.0 (/home/entity27th/kryo/userspace/libc/allocator)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 0.53s

@@ -1,0 +1,32 @@
+{
+  "mlibc": {
+    "repository": "https://github.com/managarm/mlibc",
+    "revision": "07cfd943977737b8147c1289922c23479feef53d",
+    "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+    "archive_bytes": 966764
+  },
+  "frigg": {
+    "repository": "https://github.com/managarm/frigg",
+    "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+    "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+    "archive_bytes": 91405
+  },
+  "freestanding-c-hdrs": {
+    "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+    "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+    "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+    "archive_bytes": 12647
+  },
+  "freestanding-cxx-hdrs": {
+    "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+    "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+    "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+    "archive_bytes": 325796
+  },
+  "libsmarter": {
+    "repository": "https://github.com/managarm/libsmarter",
+    "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+    "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+    "archive_bytes": 4039
+  }
+}

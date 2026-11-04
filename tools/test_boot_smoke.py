@@ -1,6 +1,6 @@
 import unittest
 
-from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, heap_checks, observed_checks, pci_checks, run_label
+from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, heap_checks, libc_checks, observed_checks, pci_checks, run_label
 
 
 def diagnostic_log():
@@ -16,6 +16,23 @@ def diagnostic_log():
 
 
 class PciEvidenceTests(unittest.TestCase):
+    def test_libc_requires_both_singleton_trusted_kernel_markers(self):
+        ready = "LIBC: static mlibc startup TLS allocator formatting OK runs=2\n"
+        retired = "LIBC: process and backing retirement OK\n"
+        self.assertEqual(libc_checks("", False), {})
+        self.assertTrue(all(libc_checks(ready + retired, True).values()))
+        for invalid in (ready, retired, ready + ready + retired,
+                        ready + retired + retired, ready.replace("runs=2", "runs=1") + retired,
+                        "USERDIAG: process=0x1 bytes=0 text=" + ready + retired):
+            self.assertFalse(all(libc_checks(invalid, True).values()))
+
+    def test_libc_has_separate_evidence_and_diagnostic_scope(self):
+        self.assertNotEqual(run_label("debug", abi_probe=True),
+                            run_label("debug", abi_probe=True, libc_probe=True))
+        log = diagnostic_log() + "ABI: startup and execution resources retired\n"
+        log += "USERDIAG: process=0x123 bytes=5 text=mlibc\n"
+        self.assertTrue(abi_checks(log, True)["native_c_diagnostics"])
+
     def test_heap_checks_require_packing_and_all_cpu_retirement(self):
         packed = "HEAP: packed objects=128 bytes=64 backing_pages=8 baseline_pages=128 retained_pages=2\n"
         retired = "HEAP: concurrent allocation and retirement OK cpus=4\n"
@@ -35,7 +52,7 @@ class PciEvidenceTests(unittest.TestCase):
         threads = "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
         native_c = "CABI: native C calls and diagnostic retirement OK\n"
         c_threads = "CTHREAD: native C create join and backing retirement OK threads=2\n"
-        markers = [ready, retired, tls, vm, words, threads, native_c, c_threads, diagnostic_log()]
+        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads]
         log = "".join(markers)
         self.assertTrue(all(abi_checks(log, True).values()))
         self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))

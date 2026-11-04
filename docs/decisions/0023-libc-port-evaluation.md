@@ -83,8 +83,10 @@ source or toolchain was installed by this evaluation.
 
 Unsupported operations must return defined errors. Do not use successful stubs
 or diagnostic event IDs as a working stdio/VFS implementation. Build-only and
-host libc tests are separate from actual Kryo execution evidence. No candidate
-libc has yet been built or executed on Kryo.
+host libc tests are separate from actual Kryo execution evidence. The later
+[static mlibc milestone](0034-static-mlibc.md) builds and executes a limited ANSI
+profile; descriptors, provider threads and a production hosted runtime remain
+unimplemented.
 
 ## Sources
 

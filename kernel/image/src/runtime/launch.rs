@@ -12,6 +12,7 @@ const USER_STACK: u64 = 0x80_0000;
 const STACK_PAGES: u64 = 4;
 const TLS: u64 = 0x90_0000;
 const MAX_IMAGE_PAGES: usize = 32;
+const MAX_NATIVE_IMAGE_PAGES: usize = 4096;
 
 pub(crate) struct NativeImage<'a> {
     pub(crate) bytes: &'a [u8],
@@ -163,13 +164,15 @@ fn prepare_image<'kernel, 'objects>(
             .map(|budget| budget.try_charge(Resource::Threads, 1))
             .transpose()
             .map_err(|_| Error::OutOfResources)?;
-        let image = ElfImage::<8>::parse(
-            request.bytes,
-            LoadLimits {
-                max_pages: MAX_IMAGE_PAGES,
-            },
-        )
-        .map_err(|_| Error::InvalidArgument)?;
+        let max_pages = if request.arguments.is_some() {
+            account.as_ref().map_or(MAX_NATIVE_IMAGE_PAGES, |budget| {
+                budget.limits().mappings.min(MAX_NATIVE_IMAGE_PAGES)
+            })
+        } else {
+            MAX_IMAGE_PAGES
+        };
+        let image = ElfImage::<8>::parse(request.bytes, LoadLimits { max_pages })
+            .map_err(|_| Error::InvalidArgument)?;
         for page in image.pages() {
             if super::threads::reserved_address(page.address()) {
                 return Err(Error::InvalidArgument);

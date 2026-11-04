@@ -1,0 +1,83 @@
+--- a/options/internal/include/mlibc/allocator.hpp
++++ b/options/internal/include/mlibc/allocator.hpp
+@@ -39,7 +39,21 @@
+ 	static constexpr bool support_overaligned = true;
+ };
+ 
+-#if !MLIBC_DEBUG_ALLOCATOR
++#if defined(__cryolite__)
++
++// Cryolite reuses upstream Talc through a fallible C boundary.
++struct MemoryAllocator {
++    void *allocate(size_t size);
++    void *allocate(size_t size, size_t alignment);
++    void free(void *ptr);
++    void deallocate(void *ptr, size_t size);
++    void *reallocate(void *ptr, size_t size);
++    size_t get_size(void *ptr);
++};
++
++MemoryAllocator &getAllocator();
++
++#elif !MLIBC_DEBUG_ALLOCATOR
+ 
+ using MemoryDomain = frg::sharded_slab::domain<ShardedSlabPolicy>;
+ using MemoryPool = frg::sharded_slab::pool<ShardedSlabPolicy>;
+--- a/options/internal/generic/allocator.cpp
++++ b/options/internal/generic/allocator.cpp
+@@ -54,7 +54,9 @@
+ 	__ensure(!mlibc::sysdep<AnonFree>(ptr, size));
+ }
+ 
+-#if !MLIBC_DEBUG_ALLOCATOR
++#if defined(__cryolite__)
++#include "cryolite-allocator.inc"
++#elif !MLIBC_DEBUG_ALLOCATOR
+ 
+ // --------------------------------------------------------
+ // Globals
+--- a/options/internal/generic/cryolite-allocator.inc
++++ b/options/internal/generic/cryolite-allocator.inc
+@@ -0,0 +1,42 @@
++#include <errno.h>
++#include <stddef.h>
++
++extern "C" void *__cryolite_allocate(size_t, size_t);
++extern "C" void __cryolite_deallocate(void *);
++extern "C" void *__cryolite_reallocate(void *, size_t);
++extern "C" size_t __cryolite_allocation_size(void *);
++
++MemoryAllocator &getAllocator() {
++    static constinit MemoryAllocator allocator;
++    return allocator;
++}
++
++void *MemoryAllocator::allocate(size_t size) {
++    return allocate(size, alignof(max_align_t));
++}
++
++void *MemoryAllocator::allocate(size_t size, size_t alignment) {
++    auto pointer = __cryolite_allocate(size, alignment);
++    if (!pointer)
++        errno = ENOMEM;
++    return pointer;
++}
++
++void MemoryAllocator::free(void *pointer) {
++    __cryolite_deallocate(pointer);
++}
++
++void MemoryAllocator::deallocate(void *pointer, size_t) {
++    free(pointer);
++}
++
++void *MemoryAllocator::reallocate(void *pointer, size_t size) {
++    auto replacement = __cryolite_reallocate(pointer, size);
++    if (!replacement && size)
++        errno = ENOMEM;
++    return replacement;
++}
++
++size_t MemoryAllocator::get_size(void *pointer) {
++    return __cryolite_allocation_size(pointer);
++}

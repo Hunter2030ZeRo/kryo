@@ -1,0 +1,38 @@
+--- a/options/internal/generic/sigset.cpp
++++ b/options/internal/generic/sigset.cpp
+@@ -54,6 +54,11 @@
+ }
+ 
+ int sigaddset(sigset_t *sigset, int sig) {
++	if (sig < 1 || sig > 64) {
++		errno = EINVAL;
++		return -1;
++	}
++
+ 	int signo = sig - 1;
+ 	if(signo < 0 || static_cast<unsigned int>(signo) >= (sizeof(sigset_t) * CHAR_BIT)) {
+ 		errno = EINVAL;
+@@ -67,6 +72,11 @@
+ }
+ 
+ int sigdelset(sigset_t *sigset, int sig) {
++	if (sig < 1 || sig > 64) {
++		errno = EINVAL;
++		return -1;
++	}
++
+ 	int signo = sig - 1;
+ 	if(signo < 0 || static_cast<unsigned int>(signo) >= (sizeof(sigset_t) * CHAR_BIT)) {
+ 		errno = EINVAL;
+@@ -80,6 +90,11 @@
+ }
+ 
+ int sigismember(const sigset_t *sigset, int sig) {
++	if (sig < 1 || sig > 64) {
++		errno = EINVAL;
++		return -1;
++	}
++
+ 	int signo = sig - 1;
+ 	if(signo < 0 || static_cast<unsigned int>(signo) >= (sizeof(sigset_t) * CHAR_BIT)) {
+ 		errno = EINVAL;

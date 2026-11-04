@@ -1,0 +1,13 @@
+--- a/options/internal/generic/threads.cpp
++++ b/options/internal/generic/threads.cpp
+@@ -96,6 +96,10 @@
+ }
+ 
+ int thread_create(struct __mlibc_thread_data **__restrict thread, const struct __mlibc_threadattr *__restrict attrp, void *entry, void *__restrict user_arg, bool returns_int) {
++	// An unsupported port must reject before allocating a TCB it cannot publish.
++	if constexpr (!IsImplemented<PrepareStack> || !IsImplemented<Clone>)
++		return ENOSYS;
++
+ 	auto new_tcb = __rtld_allocateTcb();
+ 	pid_t tid;
+ 	struct __mlibc_threadattr attr = {};
