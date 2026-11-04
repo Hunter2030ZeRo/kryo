@@ -1,0 +1,14 @@
+In file included from /home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:1:
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/include/cryolite/types.h:20:2: error: Cryolite C-v1 requires the selected 80-bit long double format.
+   20 | #error Cryolite C-v1 requires the selected 80-bit long double format.
+      |  ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:52:7: error: static assertion failed due to requirement '113 == 64': __LDBL_MANT_DIG__ == 64 && __LDBL_MAX_EXP__ == 16384
+   52 | CHECK(__LDBL_MANT_DIG__ == 64 && __LDBL_MAX_EXP__ == 16384);
+      | ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<built-in>:184:27: note: expanded from macro '__LDBL_MANT_DIG__'
+  184 | #define __LDBL_MANT_DIG__ 113
+      |                           ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+2 errors generated.

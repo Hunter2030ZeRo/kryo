@@ -2,6 +2,14 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [native C milestone](validation/2026-11-04-native-c/README.md) adds
+freestanding C call wrappers, experimental public C profile source headers and
+DebugWrite (62). The optional Ring 3 C fixture directly exercises native memory,
+clock, waits and diagnostics, including capability and bad-range failures.
+The bounded cold diagnostic path snapshots owned RAM before escaped output;
+it does not provide stdio or VFS streams. [ADR 0029](decisions/0029-native-c-and-diagnostics.md)
+records the mechanism and concrete pinned-provider integration gates.
+
 The [C ABI registry milestone](validation/2026-11-04-c-abi-registry/README.md)
 disables native MMX code generation in both the Rust target and C/C++ probe.
 Four QEMU TCG ABI runs pass at the Haswell v3 boundary and with four CPUs;

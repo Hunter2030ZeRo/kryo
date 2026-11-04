@@ -67,20 +67,20 @@ pub(crate) fn check(
         let debug = resources
             .process
             .handles
-            .insert(debug, Rights::WRITE)
+            .insert(debug, Rights::WRITE | Rights::DUP)
             .unwrap()
             .as_raw();
         let startup = super::startup::install_record(
             Metadata {
                 service: 50,
                 instance: 1,
-                argument: 0,
+                argument: 0xfedc_ba98_7654_3210,
             },
             &[Entry {
                 role: 1,
                 handle: debug,
                 kind: WireKind::DebugConsole,
-                rights: Rights::WRITE.bits(),
+                rights: (Rights::WRITE | Rights::DUP).bits(),
             }],
             &mut resources.process.handles,
             &objects,
@@ -99,6 +99,7 @@ pub(crate) fn check(
         let mut private_vm_checked = false;
         let mut words_checked = false;
         let mut native_threads_checked = false;
+        let mut c_checked = false;
         let mut words_halted = false;
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
@@ -125,6 +126,11 @@ pub(crate) fn check(
             }
             if calls.last_debug == Some((task, 94, 2)) {
                 tls_checked = true;
+            }
+            if calls.last_debug == Some((task, 98, 1)) && !c_checked {
+                assert_eq!(account.count(Resource::PrivatePages), 0);
+                assert_eq!(account.count(Resource::ReservedPages), 0);
+                c_checked = true;
             }
             if calls.last_debug == Some((task, 97, 1)) && !native_threads_checked {
                 assert_eq!(account.count(Resource::PrivatePages), 0);
@@ -163,6 +169,7 @@ pub(crate) fn check(
         assert!(private_vm_checked, "Missing private VM ownership proof");
         assert!(words_checked, "Missing atomic private wait proof");
         assert!(native_threads_checked, "Missing runtime-owned thread proof");
+        assert!(c_checked, "Missing native C call proof");
         assert!(
             words_halted,
             "Private wait deadline did not halt the idle CPU"
@@ -215,4 +222,5 @@ pub(crate) fn check(
         "WAIT: private atomic park wake retirement OK threads=11 halt=true\n",
     );
     kryo_hal::emergency_write_str("THREAD: runtime-owned stack TLS and rounding OK threads=2\n");
+    kryo_hal::emergency_write_str("CABI: native C calls and diagnostic retirement OK\n");
 }

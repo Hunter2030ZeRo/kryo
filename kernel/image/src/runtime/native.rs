@@ -223,6 +223,7 @@ pub(crate) fn dispatch<'objects>(
                 stats.last_debug = Some((caller, context.rsi, context.r8));
                 Ok(Some(0))
             }
+            Call::DebugWrite => debug_write(caller, &context, tasks).map(Some),
             Call::Yield => {
                 stats.yields += 1;
                 Ok(Some(0))
@@ -645,6 +646,46 @@ pub(crate) fn dispatch<'objects>(
     if tasks.state(caller) == Ok(TaskState::Blocked) {
         tasks.wake(caller).expect("Cannot wake completed call");
     }
+}
+
+#[cold]
+#[inline(never)]
+fn debug_write(
+    caller: TaskId,
+    context: &UserContext,
+    tasks: &mut Tasks<'_, '_>,
+) -> Result<u64, Error> {
+    lookup(
+        tasks,
+        caller,
+        Handle::from_raw(context.rdi),
+        ObjectKind::DebugConsole,
+        Rights::WRITE,
+    )?;
+    let mut bytes = [0; super::diagnostic::LIMIT];
+    let length = {
+        let resources = tasks.resources_mut(caller).unwrap();
+        super::diagnostic::snapshot(
+            context.rsi,
+            context.rdx,
+            &mut bytes,
+            |page, offset, output| resources.process.space.read_page(page, offset, output),
+        )
+        .map_err(|error| match error {
+            super::diagnostic::SnapshotError::InvalidRange => Error::InvalidArgument,
+            super::diagnostic::SnapshotError::Read(error) => map_vm_error(error),
+        })?
+    };
+    if length != 0 {
+        let process = tasks.process_for(caller).ok_or(Error::PeerClosed)?;
+        let _ = kryo_hal::print(format_args!(
+            "USERDIAG: process={:#x} bytes={} text={}\n",
+            process.as_raw(),
+            length,
+            super::diagnostic::Escaped(&bytes[..length]),
+        ));
+    }
+    Ok(length as u64)
 }
 
 fn wait_on<'objects>(

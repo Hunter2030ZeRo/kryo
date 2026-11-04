@@ -68,9 +68,44 @@ def cpu_checks(log, cpus):
     return {"cpu_baseline": sorted(map(int, admitted)) == list(range(cpus))}
 
 
+def kernel_log(log):
+    return "\n".join(line for line in log.splitlines() if not line.startswith("USERDIAG: "))
+
+
+def diagnostic_checks(log):
+    records = re.findall(r"(?m)^USERDIAG: process=(0x[0-9a-f]+) bytes=([0-9]+) text=(.*)$", log)
+    expected = [b"C native calls ready",
+                b"\nPANIC\r\x1b\\\0\x7f\x80ABC\nABI: startup and execution resources retired",
+                b"D" * 256, b"Rust diagnostic bridge ready"]
+    payloads = []
+    for _, length, text in records:
+        value = bytearray()
+        position = 0
+        while position < len(text):
+            if text[position:position + 2] == "\\\\":
+                value.append(92)
+                position += 2
+            elif re.match(r"\\x[0-9a-f]{2}", text[position:position + 4]):
+                value.append(int(text[position + 2:position + 4], 16))
+                position += 4
+            elif 0x20 <= ord(text[position]) <= 0x7e and text[position] != "\\":
+                value.append(ord(text[position]))
+                position += 1
+            else:
+                return {"native_c_diagnostics": False}
+        if len(value) != int(length) or len(value) > 256:
+            return {"native_c_diagnostics": False}
+        payloads.append(bytes(value))
+    return {"native_c_diagnostics": payloads == expected
+            and len({record[0] for record in records}) == 1
+            and len(records) == log.count("\nUSERDIAG: ") + int(log.startswith("USERDIAG: "))}
+
+
 def abi_checks(log, enabled):
     if not enabled:
         return {}
+    diagnostics = diagnostic_checks(log)
+    log = kernel_log(log)
     return {
         "native_abi": bool(re.search(r"(?m)^ABI: v3 SysV C C\+\+ Rust stack and state OK preemptions=[1-9][0-9]*$", log)),
         "native_abi_retired": "ABI: startup and execution resources retired" in log,
@@ -78,6 +113,8 @@ def abi_checks(log, enabled):
         "native_private_vm": "VM: private reserve commit retirement OK" in log,
         "native_atomic_wait": bool(re.search(r"(?m)^WAIT: private atomic park wake retirement OK threads=11 halt=true$", log)),
         "native_runtime_threads": bool(re.search(r"(?m)^THREAD: runtime-owned stack TLS and rounding OK threads=2$", log)),
+        "native_c_calls": bool(re.search(r"(?m)^CABI: native C calls and diagnostic retirement OK$", log)),
+        **diagnostics,
     }
 
 
@@ -212,6 +249,8 @@ def resident_memory(pid):
 
 
 def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_probe=False, block_readonly=False, abi_probe=False):
+    raw_log = log
+    log = kernel_log(log)
     budget_stages = {int(value) for value in re.findall(r"(?m)^USERLOG: process=0x[0-9a-f]+ event=12 value=(\d+)$", log)}
     budget_clients = all((service << 32) | stage in budget_stages for service in (20, 21) for stage in (1, 2, 3))
     if normal:
@@ -235,7 +274,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
         }
         checks.update(memory_checks(log, normal))
         checks.update(cpu_checks(log, cpus))
-        checks.update(abi_checks(log, abi_probe))
+        checks.update(abi_checks(raw_log, abi_probe))
         checks.update(pci_checks(log, pci_probe or block_probe))
         if block_probe:
             checks.update(block_checks(log, block_readonly, normal))
@@ -260,7 +299,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
     checks["breakpoint"] = bool(re.search(r"(?:^|\n)ABC\s*\Z", log))
     checks["avx_context"] = bool(re.search(r"(?m)^ELF: native execution OK .*xsave=true avx=true$", log))
     checks.update(cpu_checks(log, cpus))
-    checks.update(abi_checks(log, abi_probe))
+    checks.update(abi_checks(raw_log, abi_probe))
     checks.update(memory_checks(log, normal))
     checks.update(pci_checks(log, pci_probe or block_probe))
     if block_probe:

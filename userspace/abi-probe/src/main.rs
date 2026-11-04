@@ -176,6 +176,7 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     initialize_tls(0, template);
     check_initial_tls();
     store_tls(MAIN_TLS_VALUE);
+    check_native_c(debug, startup);
     sys::debug_log(debug, 94, 1).unwrap_or_else(|_| exit(207));
     check_thread_tls(debug);
     check_private_vm(debug);
@@ -231,6 +232,23 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     preempt_vector(debug);
     sys::debug_log(debug, 90, 2).unwrap_or_else(|_| exit(207));
     exit(0)
+}
+
+fn check_native_c(debug: Handle, startup: u64) {
+    unsafe extern "C" {
+        fn c_native_checks(debug: u64, startup: u64, no_write: u64) -> u64;
+    }
+    let no_write = sys::duplicate(debug, 0).unwrap_or_else(|_| exit(300));
+    let result = unsafe { c_native_checks(debug.raw(), startup, no_write.raw()) };
+    sys::close(no_write).unwrap_or_else(|_| exit(301));
+    if result != 0 {
+        exit(310 + result);
+    }
+    let message = b"Rust diagnostic bridge ready";
+    if sys::debug_write(debug, message) != Ok(message.len()) {
+        exit(302);
+    }
+    check_tls(MAIN_TLS_VALUE);
 }
 
 fn check_private_vm(debug: Handle) {
@@ -1044,13 +1062,13 @@ fn startup_debug(raw: u64) -> Handle {
     let startup = sys::startup(record).unwrap_or_else(|_| exit(220));
     if startup.service != 50
         || startup.instance != 1
-        || startup.argument != 0
+        || startup.argument != 0xfedc_ba98_7654_3210
         || startup.grants().count() != 1
     {
         exit(220);
     }
     let debug = startup.grant(1).unwrap_or_else(|| exit(220));
-    if debug.kind != ObjectKind::DebugConsole || debug.rights != sys::WRITE {
+    if debug.kind != ObjectKind::DebugConsole || debug.rights != (sys::WRITE | sys::DUP) {
         exit(220);
     }
     let info = sys::handle_info(debug.handle).unwrap_or_else(|_| exit(220));

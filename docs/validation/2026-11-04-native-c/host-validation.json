@@ -1,0 +1,158 @@
+{
+  "checks": [
+    {
+      "name": "kernel_format",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.566
+    },
+    {
+      "name": "userspace_format",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "userspace/Cargo.toml",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.625
+    },
+    {
+      "name": "probe_format",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "userspace/abi-probe/Cargo.toml",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.077
+    },
+    {
+      "name": "kernel_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--target-dir",
+        "../normal-kernel-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 1.818
+    },
+    {
+      "name": "kernel_all_features_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-features",
+        "--target-dir",
+        "../kernel-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 1.634
+    },
+    {
+      "name": "userspace_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "--manifest-path",
+        "userspace/Cargo.toml",
+        "--workspace",
+        "--target-dir",
+        "../user-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 0.516
+    },
+    {
+      "name": "probe_clippy",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "--manifest-path",
+        "userspace/abi-probe/Cargo.toml",
+        "--target",
+        "targets/x86_64-unknown-cryolite.json",
+        "--target-dir",
+        "../probe-clippy-target",
+        "-Zjson-target-spec",
+        "-Zbuild-std=core,compiler_builtins",
+        "-Zbuild-std-features=compiler-builtins-mem",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "seconds": 16.235
+    },
+    {
+      "name": "python",
+      "command": [
+        "rtk",
+        "proxy",
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools"
+      ],
+      "exit_code": 0,
+      "seconds": 0.15
+    }
+  ],
+  "rust_test_counts": {
+    "host-tests": 438,
+    "userspace-tests": 15,
+    "diagnostic-tests": 7
+  },
+  "python_tests": 23,
+  "header_checks": 24,
+  "source_manifest_sha256": "ae7e3fec98677a59d870ba3767be9d1227c21c50e851ceab748f7b16bdf62027",
+  "scope": "Rust host models, standalone diagnostic helpers, Python validators and target C/C++ headers; separate from QEMU execution and hardware performance"
+}

@@ -724,6 +724,32 @@ pub fn debug_log(debug: Handle, event: u64, value: u64) -> Result<(), Error> {
     check(status)
 }
 
+/// Writes one bounded, escaped diagnostic record through a debug capability.
+/// This is independent of file descriptors and stream I/O.
+pub fn debug_write(debug: Handle, bytes: &[u8]) -> Result<usize, Error> {
+    let status;
+    let written: u64;
+    unsafe {
+        asm!(
+            "int 0x80",
+            inlateout("rax") Call::DebugWrite as u64 => status,
+            in("rdi") debug.raw(),
+            in("rsi") bytes.as_ptr() as u64,
+            inlateout("rdx") bytes.len() as u64 => written,
+            lateout("r8") _,
+            lateout("r9") _,
+            lateout("r10") _,
+            lateout("r11") _,
+            options(nostack),
+        );
+    }
+    check(status)?;
+    if written != bytes.len() as u64 {
+        return Err(Error::InvalidResponse);
+    }
+    Ok(bytes.len())
+}
+
 pub fn exit(code: u64) -> ! {
     unsafe {
         asm!(

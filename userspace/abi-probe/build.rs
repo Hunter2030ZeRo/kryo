@@ -30,6 +30,7 @@ fn compile(directory: &Path, compiler: &str, source: &str, standard: &str) -> Pa
     if compiler == "clang++" {
         command.args(["-fno-exceptions", "-fno-rtti"]);
     }
+    command.arg("-I").arg(directory.join("../libsys/include"));
     let status = command
         .arg("-c")
         .arg(&source)
@@ -48,9 +49,16 @@ fn main() {
     for object in [
         compile(&directory, "clang", "src/peer.c", "-std=c11"),
         compile(&directory, "clang++", "src/peer.cpp", "-std=c++23"),
+        compile(&directory, "clang", "src/native.c", "-std=c11"),
     ] {
         println!("cargo::rustc-link-arg={}", object.display());
     }
+    println!(
+        "cargo::rerun-if-changed={}",
+        directory
+            .join("../libsys/include/cryolite/native.h")
+            .display()
+    );
     println!("cargo::rerun-if-changed={}", linker.display());
     println!("cargo::rustc-link-arg=-T{}", linker.display());
     println!("cargo::rustc-link-arg=--no-pie");

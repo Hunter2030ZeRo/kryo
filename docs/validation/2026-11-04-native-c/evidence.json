@@ -1,0 +1,33 @@
+{
+  "scope": "Six QEMU TCG runs, native C calls/diagnostic execution and resource retirement; no libc build, installed sysroot or hardware timing",
+  "status": "passed",
+  "runs": [
+    {
+      "label": "debug-Haswell-noTSX-abi",
+      "sha256": "be255c947c279a2bda67dc2638e364e6a35a270682d5a82a2eb5f8f1f672a095"
+    },
+    {
+      "label": "release-Haswell-noTSX-abi",
+      "sha256": "135488973e266f700fff228a50746d2747d7538de184fd73a4d7ab8cd3478071"
+    },
+    {
+      "label": "debug-normal-max-smp4-abi-block-rw",
+      "sha256": "ded09070e9f0a292c4640bb8852ec7b37b41bab75310bacd7155a795465a324d"
+    },
+    {
+      "label": "release-normal-max-smp4-abi-block-ro",
+      "sha256": "863218008a45989da1531f6e9f7e97b458c275d3cfe6ded8b4c49e09a88b3a4f"
+    },
+    {
+      "label": "debug-max-smp4",
+      "sha256": "5daac97760cc266ddf47c1a6a1740a2825702d9675ac290852f6bed5ac00612d"
+    },
+    {
+      "label": "release-normal-max-smp4",
+      "sha256": "2013b44bddad3ec44d5c55aa04e5a73e52b8626e5ec94f4073f2c16a2bc7b7a3"
+    }
+  ],
+  "source_manifest_sha256": "ae7e3fec98677a59d870ba3767be9d1227c21c50e851ceab748f7b16bdf62027",
+  "header_validation_sha256": "1a2e3f5042eb805a2db1d9da6f55b62c79bae89f43bf0eaa92dd042b7a9b5c43",
+  "host_validation_sha256": "86e4983efb42ef3377c0244ca3028598d69ac2009ec0c5d165eaf06d5006dfdf"
+}

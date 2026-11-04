@@ -65,6 +65,7 @@ The public service ABI is not stable. Experimental task calls are defined below;
 | 59 | ParkUntil | Private word VA | u32 expected | As Park; input RDX=absolute deadline |
 | 60 | Wake | Private word VA | Maximum waiters | Number detached |
 | 61 | ThreadCreateNative | Version, 1 | RX entry | New thread-control handle; input RDX=argument |
+| 62 | DebugWrite | Debug-console handle | User byte address | Snapshotted count; input RDX=length, at most 256 |
 
 TaskStatus requires INSPECT; TaskStop and CancelWait require CONTROL. They also accept process-control handles; a retained terminal result continues to report Exited after reaping, and stop/cancel cannot target a replacement generation. Duplicate requires DUP and a subset of the original rights. Rights bits are INSPECT=1, CONTROL=2, DUP=4, SEND=8, RECEIVE=16, WAIT=32, SIGNAL=64, READ=128, WRITE=256, MAP=512, TRANSFER=1024, EXECUTE=2048, CREATE=4096, ASSIGN=8192. Send/Call and their Caps variants require SEND, Receive/Reply require RECEIVE, and EndpointClose requires CONTROL. Wait and Signal require their matching rights. Handles are process-local and opaque; zero is invalid. Close removes one reference, not all authority to an object. A task-control object can outlive its task and report Exited without keeping its VM or stack alive.
 
@@ -144,6 +145,21 @@ retirement; in-place object reuse requires runtime synchronization. See
 Normal execution grows process, thread, handle, object, wait, and VM metadata with available memory. The previous two-process, two-thread-per-process, four-thread and four-wait fixture capacities are not normal runtime limits. Allocation, metadata exhaustion, and address-budget failures return OutOfResources and publish no partial owner. Resource discovery and per-service quotas remain pending. CPU registration currently supports 255 directed xAPIC processors, independently of thread count. The BSP serializes native calls between execution batches. Legacy endpoint RECEIVE and notification WAIT remain bound to the original owner thread; sibling handle access does not transfer ownership. [ADR 0009](decisions/0009-bsp-user-threads.md) defines cleanup, [ADR 0010](decisions/0010-smp-execution.md) defines SMP ownership, and [ADR 0012](decisions/0012-growing-registries.md) defines growth and failure.
 
 DebugLog requires WRITE on the early debug-console capability and copies two inline words to the existing kernel debug output. It dereferences no user pointer. Init receives WRITE|TRANSFER and delegates WRITE alone to its worker. This bootstrap diagnostic facility does not provide a terminal or a general console driver.
+
+DebugWrite requires the same kind and WRITE authority before inspecting the
+range. Zero length returns zero without reading the pointer or logging. A
+nonempty request admits at most 256 bytes in published owned user RAM; invalid,
+unmapped, supervisor and overflowing ranges fail without output. All user CPU
+leases have ended before the kernel snapshots at most two pages through the
+address-space backend. It does not dereference a supplied user address.
+
+Only a complete snapshot produces one `USERDIAG` record. Printable ASCII is
+retained, backslashes doubled and other bytes encoded as lowercase `\xHH`.
+The record names the actual process and original byte count. The successful
+RDX count describes this diagnostic snapshot, not stream or filesystem I/O.
+The cold helper owns its bounded buffer separately from common dispatch.
+The smoke parser excludes diagnostic records from kernel-marker matching.
+See [ADR 0029](decisions/0029-native-c-and-diagnostics.md).
 
 The initial native executable test ABI enters at a file-backed RX ELF entry with RSP aligned to 16, RDI holding instance identity, RSI a private TLS page address, and RDX bit0 indicating enabled AVX state. Its assembly entry calls Rust with the required call-stack alignment. This is a bootstrap convention, without argc/argv/envp/auxv or a public runtime ABI.
 

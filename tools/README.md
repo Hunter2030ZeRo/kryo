@@ -33,6 +33,12 @@ native-smoke.
 
 ## Native language ABI probe
 
+`python3 tools/check_c_headers.py --outputdir /tmp/kryo-c-headers` checks the
+experimental public C profile and native call header against the owned registry
+and Rust constants. It uses no host headers for target checks. Its separately
+labeled Linux-host executable tests only integer wait macros; it makes no
+native calls and does not establish a libc port.
+
 `make iso ABI_PROBE=1` additionally builds the mixed C/C++/Rust probe with the
 isolated x86-64-v3 hard-float target. `make abi` builds just that ELF. This path
 needs Clang/Clang++ and rust-src matching the validated Rust revision in
@@ -60,6 +66,15 @@ initialized/BSS values across yield/sleep/join. The final kernel check retires
 all three execution owners. See
 [static TLS](../docs/decisions/0025-static-tls-and-elf-metadata.md) for the aligned
 fixture, minimal TCB and legacy scratch-mapping limits.
+
+The C peer directly uses the [native SDK](../userspace/libsys/c/README.md) for
+memory, clocks, private waits and bounded diagnostics. The C ABI startup fixture
+now carries a high-bit argument and WRITE|DUP debug authority; its temporary
+zero-rights duplicate must fail diagnostic admission. The original supervisor
+and ordinary service grants are unchanged. Four escaped USERDIAG records and
+the final kernel CABI retirement marker are required; user payloads are excluded
+from trusted kernel-marker matching. The new output goes to the debug log,
+independently of the early framebuffer rectangle.
 
 Mapped ELF headers change the packaging comparison: only ELF64 section-table
 bookkeeping is normalized when checking this probe. Entry, program headers and

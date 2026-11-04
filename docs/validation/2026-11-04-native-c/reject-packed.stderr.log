@@ -1,0 +1,243 @@
+In file included from /home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:9:
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:175:19: error: static assertion failed due to requirement '_Alignof(struct draft_timespec) == 8': DRAFT_FILE_ALIGN(struct draft_timespec) == 8
+  175 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_timespec) == 8);
+      | ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:10:32: note: expanded from macro 'DRAFT_FILE_ALIGN'
+   10 | #define DRAFT_FILE_ALIGN(type) _Alignof(type)
+      |                                ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:175:59: note: expression evaluates to '1 == 8'
+  175 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_timespec) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:179:19: error: static assertion failed due to requirement '_Alignof(struct draft_stat) == 8': DRAFT_FILE_ALIGN(struct draft_stat) == 8
+  179 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_stat) == 8);
+      | ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:10:32: note: expanded from macro 'DRAFT_FILE_ALIGN'
+   10 | #define DRAFT_FILE_ALIGN(type) _Alignof(type)
+      |                                ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:179:55: note: expression evaluates to '1 == 8'
+  179 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_stat) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:196:19: error: static assertion failed due to requirement '_Alignof(struct draft_flock) == 8': DRAFT_FILE_ALIGN(struct draft_flock) == 8
+  196 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_flock) == 8);
+      | ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:10:32: note: expanded from macro 'DRAFT_FILE_ALIGN'
+   10 | #define DRAFT_FILE_ALIGN(type) _Alignof(type)
+      |                                ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:196:56: note: expression evaluates to '1 == 8'
+  196 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_flock) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:207:19: error: static assertion failed due to requirement '_Alignof(struct draft_pollfd) == 4': DRAFT_FILE_ALIGN(struct draft_pollfd) == 4
+  207 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_pollfd) == 4);
+      | ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:10:32: note: expanded from macro 'DRAFT_FILE_ALIGN'
+   10 | #define DRAFT_FILE_ALIGN(type) _Alignof(type)
+      |                                ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:207:57: note: expression evaluates to '1 == 4'
+  207 | DRAFT_FILE_ASSERT(DRAFT_FILE_ALIGN(struct draft_pollfd) == 4);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/files.h:9:53: note: expanded from macro 'DRAFT_FILE_ASSERT'
+    9 | #define DRAFT_FILE_ASSERT(condition) _Static_assert(condition, #condition)
+      |                                                     ^~~~~~~~~
+In file included from /home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:10:
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:157:14: error: static assertion failed due to requirement '_Alignof(draft_sigset) == 8': SIGNAL_ALIGN(draft_sigset) == 8
+  157 | SIGNAL_CHECK(SIGNAL_ALIGN(draft_sigset) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:157:41: note: expression evaluates to '1 == 8'
+  157 | SIGNAL_CHECK(SIGNAL_ALIGN(draft_sigset) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:160:14: error: static assertion failed due to requirement '_Alignof(union draft_sigval) == 8': SIGNAL_ALIGN(union draft_sigval) == 8
+  160 | SIGNAL_CHECK(SIGNAL_ALIGN(union draft_sigval) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:160:47: note: expression evaluates to '1 == 8'
+  160 | SIGNAL_CHECK(SIGNAL_ALIGN(union draft_sigval) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:162:14: error: static assertion failed due to requirement '_Alignof(struct draft_siginfo) == 8': SIGNAL_ALIGN(struct draft_siginfo) == 8
+  162 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_siginfo) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:162:49: note: expression evaluates to '1 == 8'
+  162 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_siginfo) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:177:14: error: static assertion failed due to requirement '_Alignof(struct draft_sigaction) == 8': SIGNAL_ALIGN(struct draft_sigaction) == 8
+  177 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_sigaction) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:177:51: note: expression evaluates to '1 == 8'
+  177 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_sigaction) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:183:14: error: static assertion failed due to requirement '_Alignof(struct draft_signal_stack) == 8': SIGNAL_ALIGN(struct draft_signal_stack) == 8
+  183 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_signal_stack) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:183:54: note: expression evaluates to '1 == 8'
+  183 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_signal_stack) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:189:14: error: static assertion failed due to requirement '_Alignof(struct draft_sigevent) == 8': SIGNAL_ALIGN(struct draft_sigevent) == 8
+  189 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_sigevent) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:189:50: note: expression evaluates to '1 == 8'
+  189 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_sigevent) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:196:14: error: static assertion failed due to requirement '_Alignof(struct draft_mcontext) == 8': SIGNAL_ALIGN(struct draft_mcontext) == 8
+  196 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_mcontext) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:196:50: note: expression evaluates to '1 == 8'
+  196 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_mcontext) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:211:14: error: static assertion failed due to requirement '_Alignof(struct draft_ucontext) == 8': SIGNAL_ALIGN(struct draft_ucontext) == 8
+  211 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_ucontext) == 8);
+      | ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:9:28: note: expanded from macro 'SIGNAL_ALIGN'
+    9 | #define SIGNAL_ALIGN(type) _Alignof(type)
+      |                            ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:211:50: note: expression evaluates to '1 == 8'
+  211 | SIGNAL_CHECK(SIGNAL_ALIGN(struct draft_ucontext) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/../../../../docs/validation/2026-11-04-c-abi-registry/signals.h:8:48: note: expanded from macro 'SIGNAL_CHECK'
+    8 | #define SIGNAL_CHECK(condition) _Static_assert(condition, #condition)
+      |                                                ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:57:39: error: static assertion failed due to requirement '_Alignof(struct timeval) == 8': sizeof(struct timeval) == 16 && ALIGN(struct timeval) == 8
+   57 | CHECK(sizeof(struct timeval) == 16 && ALIGN(struct timeval) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:27:21: note: expanded from macro 'ALIGN'
+   27 | #define ALIGN(type) _Alignof(type)
+      |                     ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:57:61: note: expression evaluates to '1 == 8'
+   57 | CHECK(sizeof(struct timeval) == 16 && ALIGN(struct timeval) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:59:42: error: static assertion failed due to requirement '_Alignof(struct itimerspec) == 8': sizeof(struct itimerspec) == 32 && ALIGN(struct itimerspec) == 8
+   59 | CHECK(sizeof(struct itimerspec) == 32 && ALIGN(struct itimerspec) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:27:21: note: expanded from macro 'ALIGN'
+   27 | #define ALIGN(type) _Alignof(type)
+      |                     ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:59:67: note: expression evaluates to '1 == 8'
+   59 | CHECK(sizeof(struct itimerspec) == 32 && ALIGN(struct itimerspec) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:61:41: error: static assertion failed due to requirement '_Alignof(struct itimerval) == 8': sizeof(struct itimerval) == 32 && ALIGN(struct itimerval) == 8
+   61 | CHECK(sizeof(struct itimerval) == 32 && ALIGN(struct itimerval) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:27:21: note: expanded from macro 'ALIGN'
+   27 | #define ALIGN(type) _Alignof(type)
+      |                     ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:61:65: note: expression evaluates to '1 == 8'
+   61 | CHECK(sizeof(struct itimerval) == 32 && ALIGN(struct itimerval) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:146:36: error: static assertion failed due to requirement '_Alignof(struct kryo_result) == 8': sizeof(kryo_result) == 16 && ALIGN(kryo_result) == 8
+  146 | CHECK(sizeof(kryo_result) == 16 && ALIGN(kryo_result) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:27:21: note: expanded from macro 'ALIGN'
+   27 | #define ALIGN(type) _Alignof(type)
+      |                     ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:146:55: note: expression evaluates to '1 == 8'
+  146 | CHECK(sizeof(kryo_result) == 16 && ALIGN(kryo_result) == 8);
+      | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:26:41: note: expanded from macro 'CHECK'
+   26 | #define CHECK(condition) _Static_assert(condition, #condition)
+      |                                         ^~~~~~~~~
+16 errors generated.

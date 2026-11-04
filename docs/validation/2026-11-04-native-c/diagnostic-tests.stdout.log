@@ -1,0 +1,12 @@
+
+running 7 tests
+test diagnostic::tests::empty_snapshot_does_not_read_the_pointer ... ok
+test diagnostic::tests::malformed_ranges_do_not_read_memory ... ok
+test diagnostic::tests::exact_page_end_needs_no_second_read ... ok
+test diagnostic::tests::text_cannot_inject_control_bytes_or_marker_lines ... ok
+test diagnostic::tests::maximum_escaped_output_is_bounded ... ok
+test diagnostic::tests::unaligned_snapshot_reads_at_most_two_pages ... ok
+test diagnostic::tests::unreadable_second_page_fails_the_whole_snapshot ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

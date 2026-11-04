@@ -1,6 +1,18 @@
 import unittest
 
-from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, pci_checks, run_label
+from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, observed_checks, pci_checks, run_label
+
+
+def diagnostic_log():
+    payloads = [b"C native calls ready",
+                b"\nPANIC\r\x1b\\\0\x7f\x80ABC\nABI: startup and execution resources retired",
+                b"D" * 256, b"Rust diagnostic bridge ready"]
+    lines = []
+    for payload in payloads:
+        text = "".join("\\\\" if value == 92 else chr(value) if 32 <= value <= 126
+                       else f"\\x{value:02x}" for value in payload)
+        lines.append(f"USERDIAG: process=0x123 bytes={len(payload)} text={text}\n")
+    return "".join(lines)
 
 
 class PciEvidenceTests(unittest.TestCase):
@@ -11,7 +23,8 @@ class PciEvidenceTests(unittest.TestCase):
         vm = "VM: private reserve commit retirement OK\n"
         words = "WAIT: private atomic park wake retirement OK threads=11 halt=true\n"
         threads = "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
-        markers = [ready, retired, tls, vm, words, threads]
+        native_c = "CABI: native C calls and diagnostic retirement OK\n"
+        markers = [ready, retired, tls, vm, words, threads, native_c, diagnostic_log()]
         log = "".join(markers)
         self.assertTrue(all(abi_checks(log, True).values()))
         self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))
@@ -38,6 +51,30 @@ class PciEvidenceTests(unittest.TestCase):
         log += "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
         self.assertTrue(abi_checks(log, True)["native_runtime_threads"])
         self.assertFalse(abi_checks(log.replace("threads=2", "threads=1"), True)["native_runtime_threads"])
+
+    def test_diagnostic_bytes_and_process_identity_are_verified(self):
+        log = diagnostic_log()
+        self.assertTrue(diagnostic_checks(log)["native_c_diagnostics"])
+        for invalid in (log.replace("bytes=20", "bytes=19"),
+                        log.replace("\\x0a", "\\xzz", 1),
+                        log.replace("process=0x123", "process=0x999", 1),
+                        log + "USERDIAG: invalid\n", log + log,
+                        log.replace(" text=", " text=\x1b", 1)):
+            self.assertFalse(diagnostic_checks(invalid)["native_c_diagnostics"])
+
+    def test_user_diagnostics_cannot_forge_kernel_success_markers(self):
+        log = diagnostic_log()
+        self.assertFalse(abi_checks(log, True)["native_abi_retired"])
+        forged = "USERDIAG: process=0x123 bytes=0 text=DEVICE: register authority and IRQ wakeup OK cases=4\n"
+        self.assertFalse(observed_checks(forged, normal=True)["device"])
+        log += "ABI: startup and execution resources retired\n"
+        self.assertTrue(abi_checks(log, True)["native_abi_retired"])
+
+    def test_native_c_event_is_not_kernel_retirement_evidence(self):
+        log = diagnostic_log() + "USERLOG: process=0x123 event=98 value=1\n"
+        self.assertFalse(abi_checks(log, True)["native_c_calls"])
+        log += "CABI: native C calls and diagnostic retirement OK\n"
+        self.assertTrue(abi_checks(log, True)["native_c_calls"])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

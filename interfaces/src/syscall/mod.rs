@@ -21,9 +21,12 @@
 //! ThreadCreateNative: RDI=version, RSI=entry, RDX=argument, R8/R9=stack base/bytes,
 //! R10/R11=TLS base/bytes, R12=FS base, R13=guard bytes, R14=flags (zero).
 //! Return RDX=thread-control handle. The runtime retains all supplied mappings.
+//! DebugWrite: RDI=debug capability, RSI=byte address, RDX=length (at most 256).
+//! Snapshot owned user RAM before escaped diagnostic output; return byte count.
 
 pub const ABI_VERSION: u32 = 0;
 pub const NATIVE_THREAD_VERSION: u64 = 1;
+pub const DEBUG_WRITE_MAX: usize = 256;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
@@ -90,6 +93,7 @@ pub enum Call {
     ParkUntil = 59,
     Wake = 60,
     ThreadCreateNative = 61,
+    DebugWrite = 62,
 }
 
 impl TryFrom<u64> for Call {
@@ -159,6 +163,7 @@ impl TryFrom<u64> for Call {
             59 => Ok(Self::ParkUntil),
             60 => Ok(Self::Wake),
             61 => Ok(Self::ThreadCreateNative),
+            62 => Ok(Self::DebugWrite),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -203,7 +208,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=61 {
+        for number in 0..=62 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

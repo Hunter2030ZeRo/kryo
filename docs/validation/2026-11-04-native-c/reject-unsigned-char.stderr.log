@@ -1,0 +1,5 @@
+In file included from /home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/tests/layout.c:1:
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/libc-port-work/kryo/userspace/libc/abi/include/cryolite/types.h:12:2: error: Cryolite C-v1 requires signed plain char and 32-bit signed wchar_t.
+   12 | #error Cryolite C-v1 requires signed plain char and 32-bit signed wchar_t.
+      |  ^
+1 error generated.

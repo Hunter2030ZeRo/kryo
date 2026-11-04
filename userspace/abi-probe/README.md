@@ -134,6 +134,16 @@ hardware requirement. Ordinary floating-point arithmetic remains SSE/AVX;
 80-bit long double and the explicit environment/state fixtures retain x87.
 The kernel's separate soft-float target is unchanged.
 
+The native C fixture includes the standalone Kryo call header. It checks a
+successful high-bit startup value, reduced-rights diagnostics denial, malformed
+calls/ranges, private zeroed VM backing and retirement, clocks and word waits.
+It emits three bounded diagnostic snapshots; the Rust wrapper emits a fourth.
+Raw control bytes, forged marker text and a maximum two-page snapshot test the
+diagnostic path and validator. A rejected second page must emit no partial line.
+The kernel CABI marker follows full resource retirement. None of this links a
+libc or implements POSIX streams. The fixture's startup argument and WRITE|DUP
+grant are isolated from ordinary service startup.
+
 The default build is offline. On a new Rust source installation, add
 `--fetch-dependencies` once to permit fetching its locked sysroot dependencies.
 
