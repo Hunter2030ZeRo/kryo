@@ -2,6 +2,14 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [security policy](../SECURITY.md) and [kernel SOF contract](decisions/0030-kernel-sof.md)
+record kernel-only ownership and two candidate-verification gates. Download
+verification failure rejects the update. Verification or technical failure
+during an authorized kernel SOF attempt requires reboot and blocks further
+attempts until reboot. These are requirements; no kernel verifier, reboot-state
+enforcement or live kernel replacement is implemented. Ring 3 service SOF
+belongs to a separate user-space manager.
+
 The [native C milestone](validation/2026-11-04-native-c/README.md) adds
 freestanding C call wrappers, experimental public C profile source headers and
 DebugWrite (62). The optional Ring 3 C fixture directly exercises native memory,

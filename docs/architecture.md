@@ -192,4 +192,10 @@ provide page-backing and synchronization boundaries through
 thread memory and completion ordering. Full POSIX attributes, floating-point
 environment and signal inheritance, cleanup handlers and destructors remain
 runtime work; the raw kernel mechanism does not implement pthreads.
-Kernel hot replacement is a separate research topic from user-space service replacement.
+SOF means Substitute-On-the-Fly across Cryolite. Kryo's security and SOF managers
+own only kernel admission and replacement; a separate Ring 3 manager owns
+service, driver and filesystem SOF. Kernel capability, VM, IPC and DMA lifetime
+enforcement still applies to those services. Kernel replacement requires two
+full admission checks and a versioned live-state handoff; it is not implemented.
+See the [security policy](../SECURITY.md) and
+[kernel SOF contract](decisions/0030-kernel-sof.md).
