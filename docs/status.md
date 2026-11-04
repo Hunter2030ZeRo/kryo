@@ -2,6 +2,15 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[Endpoint gates](decisions/0038-endpoint-gates.md) route distinct immutable
+authorities through one receiver and report final-authority closure. Event
+storage is reserved at mint; queued operations and grants retain gate ownership.
+Final process-handle destruction settles before idle, so closure can wake an
+unbounded receiver without polling. Closed-root stale handles retain their
+charge. C/Rust SDK routing and retirement are covered in the
+[validation record](validation/2026-11-04-gates/README.md). File protocols and
+server-side accepted-operation ownership remain separate work.
+
 The [stdio correction](decisions/0039-fallible-provider-stdio.md) makes FILE and
 buffer allocation fallible and preserves completed fread elements on error.
 A real quota-exhaustion probe checks buffer failure and recovery; a source-body

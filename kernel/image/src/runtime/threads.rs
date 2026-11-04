@@ -350,6 +350,7 @@ fn create_thread<'kernel, 'objects>(
             .map_err(|_| Error::OutOfResources)?;
         let thread_owner = control.try_clone().map_err(|_| Error::OutOfResources)?;
         let thread = ThreadResources {
+            gate_loan: None,
             process_id: None,
             context: initial,
             stack: pending.stack.take().unwrap(),

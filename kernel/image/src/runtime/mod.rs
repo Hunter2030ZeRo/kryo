@@ -77,6 +77,11 @@ pub(crate) enum KernelObject {
     )]
     TaskControl(TaskId),
     Endpoint(RefCell<Endpoint<2, 2>>),
+    EndpointGate {
+        registry: usize,
+        label: u64,
+        _lease: Option<kryo_core::ipc::ChannelLease>,
+    },
     Notification(RefCell<Notification>),
     ChannelFactory(kryo_core::ipc::ChannelBudget),
     ResourceBudget(Budget),
@@ -170,6 +175,7 @@ pub(crate) struct ThreadResources<'kernel, 'objects> {
     pub(crate) exit_code: u64,
     pub(crate) exit_reason: ExitReason,
     pub(crate) wait: Option<WaitId>,
+    pub(crate) gate_loan: Option<Object<'objects>>,
     pub(crate) receive_slots: Option<HandleReservation>,
     pub(crate) received_wait: Option<WaitId>,
     pub(crate) received_handles: [Option<Handle>; 2],
@@ -289,6 +295,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         (
             self.process,
             ThreadResources {
+                gate_loan: None,
                 process_id: None,
                 execution: self.execution,
                 context: self.context,

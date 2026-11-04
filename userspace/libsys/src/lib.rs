@@ -5,7 +5,7 @@
 use core::arch::asm;
 pub use kryo_interfaces::startup::ObjectKind;
 use kryo_interfaces::syscall::Call;
-pub use kryo_interfaces::syscall::TaskStatus;
+pub use kryo_interfaces::syscall::{ReceiveEvent, TaskStatus};
 pub use kryo_interfaces::virtio;
 
 pub const INSPECT: u64 = 1;
@@ -112,6 +112,8 @@ pub struct ReplyToken(u64);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Received {
+    pub label: u64,
+    pub event: ReceiveEvent,
     pub message: Message,
     pub reply: Option<ReplyToken>,
     pub handles: [Option<Handle>; 2],
@@ -420,6 +422,11 @@ pub fn startup(record: Handle) -> Result<Startup, Error> {
     read_startup(|index| startup_word(record, index))
 }
 
+/// Mint an immutable send authority. Labels remain reserved through closure delivery.
+pub fn endpoint_gate_create(endpoint: Handle, label: u64) -> Result<Handle, Error> {
+    handle_result(invoke(Call::EndpointGateCreate, endpoint.raw(), label)?)
+}
+
 pub fn create_endpoint(factory: Handle) -> Result<Handle, Error> {
     handle_result(invoke(Call::EndpointCreate, factory.raw(), 0)?)
 }
@@ -542,7 +549,7 @@ fn exchange(
 }
 
 fn exchange_result(result: IpcResult, capacity: usize) -> Result<Received, IpcError> {
-    if result.result != 0 {
+    if result.result != 0 || result.label != 0 || result.event != ReceiveEvent::Message as u64 {
         return Err(invalid_ipc(Error::InvalidResponse));
     }
     received_result(result, capacity)
@@ -903,6 +910,8 @@ fn handle_result(raw: u64) -> Result<Handle, Error> {
 }
 
 struct IpcResult {
+    label: u64,
+    event: u64,
     result: u64,
     message: Message,
     handles: [u64; 2],
@@ -950,7 +959,18 @@ fn receive_message(
 }
 
 fn received_result(result: IpcResult, capacity: usize) -> Result<Received, IpcError> {
-    if result.count > capacity as u64 {
+    let event =
+        ReceiveEvent::try_from(result.event).map_err(|_| invalid_ipc(Error::InvalidResponse))?;
+    if event == ReceiveEvent::GateClosed
+        && (result.label == 0
+            || result.result != 0
+            || result.count != 0
+            || result.message != [0; 4]
+            || result.handles != [0; 2])
+    {
+        return Err(invalid_ipc(Error::InvalidResponse));
+    }
+    if result.count > 2 || result.count > capacity as u64 {
         return Err(invalid_ipc(Error::InvalidResponse));
     }
     let mut handles = [None; 2];
@@ -958,6 +978,8 @@ fn received_result(result: IpcResult, capacity: usize) -> Result<Received, IpcEr
         *slot = Some(handle_result(result.handles[index]).map_err(invalid_ipc)?);
     }
     Ok(Received {
+        label: result.label,
+        event,
         message: result.message,
         reply: (result.result != 0).then_some(ReplyToken(result.result)),
         handles,
@@ -986,6 +1008,8 @@ fn ipc_exchange(
 ) -> Result<IpcResult, IpcError> {
     let status;
     let result;
+    let label;
+    let event;
     let [mut first, mut second, mut third, mut fourth] = message;
     let mut first_handle = grants.first().map_or(0, |grant| grant.handle.raw());
     let mut second_handle = grants.get(1).map_or(0, |grant| grant.handle.raw());
@@ -997,7 +1021,7 @@ fn ipc_exchange(
             inlateout("rax") call as u64 => status,
             in("rdi") endpoint.raw(),
             in("rsi") argument,
-            in("rcx") reply_capacity,
+            inlateout("rcx") reply_capacity => label,
             inlateout("rdx") deadline => result,
             inlateout("r8") first,
             inlateout("r9") second,
@@ -1006,7 +1030,7 @@ fn ipc_exchange(
             inlateout("r12") first_handle,
             inlateout("r13") second_handle,
             inlateout("r14") count,
-            inlateout("r15") second_rights => _,
+            inlateout("r15") second_rights => event,
             options(nostack),
         );
     }
@@ -1014,12 +1038,24 @@ fn ipc_exchange(
         error,
         accepted: result != 0,
     })?;
+    let (label, event) = receive_metadata(call, label, event);
     Ok(IpcResult {
+        label,
+        event,
         result,
         message: [first, second, third, fourth],
         handles: [first_handle, second_handle],
         count,
     })
+}
+
+// RCX/R15 are receive outputs only. Other calls retain legacy register inputs.
+fn receive_metadata(call: Call, label: u64, event: u64) -> (u64, u64) {
+    if matches!(call, Call::Receive | Call::ReceiveUntil | Call::ReceiveFor) {
+        (label, event)
+    } else {
+        (0, ReceiveEvent::Message as u64)
+    }
 }
 
 fn check(status: u64) -> Result<(), Error> {
@@ -1090,6 +1126,8 @@ mod tests {
     fn exchange_response_preserves_high_bit_handles_without_a_reply_token() {
         let result = exchange_result(
             IpcResult {
+                label: 0,
+                event: 0,
                 result: 0,
                 message: [0xfedc_ba98_7654_3210, 2, 3, 4],
                 handles: [0x8000_0000_0000_0001, u64::MAX],
@@ -1112,6 +1150,8 @@ mod tests {
             assert_eq!(
                 exchange_result(
                     IpcResult {
+                        label: 0,
+                        event: 0,
                         result: token,
                         message: [0; 4],
                         handles: [handle; 2],
@@ -1128,6 +1168,8 @@ mod tests {
     fn empty_exchange_response_has_no_grants_or_token() {
         let result = exchange_result(
             IpcResult {
+                label: 0,
+                event: 0,
                 result: 0,
                 message: [7; 4],
                 handles: [0; 2],
@@ -1139,11 +1181,115 @@ mod tests {
         assert_eq!(
             result,
             Received {
+                label: 0,
+                event: ReceiveEvent::Message,
                 message: [7; 4],
                 handles: [None; 2],
                 reply: None
             }
         );
+    }
+
+    #[test]
+    fn receive_distinguishes_authenticated_closure_from_message_words() {
+        let label = 0x8000_0000_0000_0042;
+        let closed = received_result(
+            IpcResult {
+                label,
+                event: 1,
+                result: 0,
+                message: [0; 4],
+                handles: [0; 2],
+                count: 0,
+            },
+            0,
+        )
+        .unwrap();
+        assert_eq!(closed.label, label);
+        assert_eq!(closed.event, ReceiveEvent::GateClosed);
+        assert_eq!(closed.reply, None);
+        let message = received_result(
+            IpcResult {
+                label: 0,
+                event: 0,
+                result: 0,
+                message: [1, label, 0, 0],
+                handles: [0; 2],
+                count: 0,
+            },
+            0,
+        )
+        .unwrap();
+        assert_eq!(message.event, ReceiveEvent::Message);
+        assert_eq!(message.label, 0);
+        for (label, event, token, word, handle, count) in [
+            (0, 1, 0, 0, 0, 0),
+            (label, 2, 0, 0, 0, 0),
+            (label, 1, 7, 0, 0, 0),
+            (label, 1, 0, 7, 0, 0),
+            (label, 1, 0, 0, 7, 0),
+            (label, 1, 0, 0, 7, 1),
+        ] {
+            assert_eq!(
+                received_result(
+                    IpcResult {
+                        label,
+                        event,
+                        result: token,
+                        message: [word; 4],
+                        handles: [handle; 2],
+                        count
+                    },
+                    2
+                ),
+                Err(invalid_ipc(Error::InvalidResponse))
+            );
+        }
+        for (label, event) in [(label, 0), (0, 1)] {
+            assert_eq!(
+                exchange_result(
+                    IpcResult {
+                        label,
+                        event,
+                        result: 0,
+                        message: [0; 4],
+                        handles: [0; 2],
+                        count: 0
+                    },
+                    0
+                ),
+                Err(invalid_ipc(Error::InvalidResponse))
+            );
+        }
+    }
+
+    #[test]
+    fn exchange_input_registers_are_not_received_metadata() {
+        let second_rights = READ | MAP;
+        for call in [Call::CallExchange, Call::CallExchangeUntil] {
+            let (label, event) = receive_metadata(call, 2, second_rights);
+            let reply = exchange_result(
+                IpcResult {
+                    label,
+                    event,
+                    result: 0,
+                    message: [42; 4],
+                    handles: [7, 8],
+                    count: 2,
+                },
+                2,
+            )
+            .unwrap();
+            assert_eq!(reply.label, 0);
+            assert_eq!(reply.event, ReceiveEvent::Message);
+            assert_eq!(reply.handles.map(|handle| handle.unwrap().raw()), [7, 8]);
+        }
+        for call in [Call::Receive, Call::ReceiveUntil, Call::ReceiveFor] {
+            assert_eq!(
+                receive_metadata(call, 0x8000_0000_0000_0042, 1),
+                (0x8000_0000_0000_0042, 1)
+            );
+        }
     }
 
     fn words() -> [u64; HEADER_WORDS + 2 * ENTRY_WORDS] {

@@ -60,6 +60,10 @@ MARKERS = {
     "private_untimed_idle": "WAIT: unbounded word idle preserves registration",
     "native_thread_rollback": "THREAD: runtime-owned admission rollback and lifetime OK",
     "reply_caps": "REPLYCAPS: atomic grants quota timeout and retirement OK cases=6",
+    "legacy_exchange_registers": "REPLYCAPS: legacy exchange register inputs preserved",
+    "endpoint_gates": "GATE: labels lifetime delegation quota and retirement OK",
+    "gate_loans": "GATE: queued send call and accepted timeout loans OK cases=3",
+    "gate_process_retirement": "GATE: final process handle retirement wakes receiver without polling",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
 
@@ -151,6 +155,7 @@ def abi_checks(log, enabled):
         "native_c_threads": bool(re.search(r"(?m)^CTHREAD: native C create join and backing retirement OK threads=2$", log)),
         "native_c_ipc": len(re.findall(r"(?m)^CIPC: C Rust capability and shared memory retirement OK$", log)) == 1,
         "native_c_reply_caps": len(re.findall(r"(?m)^CREPLY: C Rust capability reply retirement OK caps=2$", log)) == 1,
+        "native_c_gates": len(re.findall(r"(?m)^CGATE: C Rust labels closure and retirement OK$", log)) == 1,
         **diagnostics,
     }
 

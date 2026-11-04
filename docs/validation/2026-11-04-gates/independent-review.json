@@ -1,0 +1,42 @@
+{
+  "status": "CLEAR",
+  "source_bundle_sha256": "d3fe35d3876396505fcb971794328d9ae251d2abb0d257ce9f1bccc9a9aa2ee0",
+  "source_inputs_sha256": "62e1d48c56ddf3206d37336d7bd693734d05876aa57180ed163fc215af6f778d",
+  "checks": {
+    "independent_core_and_c_sdk_source_reviews": true,
+    "legacy_exchange_register_contract_preserved": true,
+    "last_process_handle_wakes_unbounded_receiver": true,
+    "final_four_combined_guests": true,
+    "actual_and_stage_1740_hashes": true,
+    "returned_gate_label_exercised_by_stop": true,
+    "layout_endpoint312_object328_preserved": true,
+    "all_required_legacy_checks": true
+  },
+  "cases": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "acf9ad2e6e51b0908153633be3d1bf39184e4d3e996b2997727cef229ab06607",
+      "build_sha256": "d7a6a5a6b1204d1296a8388a1e74df31b7e5626ef646191720de2b75ef4dc053",
+      "abi_build_sha256": "86aab44751d4fdc7e68e607bd771b248f6b3577de8b3f41e181bc14cec453ef8"
+    },
+    {
+      "label": "release-max-smp4-abi-libc-block-ro",
+      "evidence_sha256": "885d0294bd1930a81f62afed1c413c2966453e2ffeddd9ef944140fc7297895a",
+      "build_sha256": "e4fae7721a42784935f2e3032bd437268bb36f9695fb6e1659e1733b050084df",
+      "abi_build_sha256": "3c4ecfd3e47e0759ad01ce1209f8847d47fa08e1f28775158bfe1482b4c359f1"
+    },
+    {
+      "label": "debug-normal-max-smp4-abi-libc-block-rw",
+      "evidence_sha256": "9775b7c8bb9affe66cca18618340ba276ffb45ed2ce33ecfdeb8e707898b403e",
+      "build_sha256": "d7a6a5a6b1204d1296a8388a1e74df31b7e5626ef646191720de2b75ef4dc053",
+      "abi_build_sha256": "86aab44751d4fdc7e68e607bd771b248f6b3577de8b3f41e181bc14cec453ef8"
+    },
+    {
+      "label": "release-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "3a5a4a3c2848854bdde6b1190347023e74f77ac414d47c695ff5cac1a65bb5d8",
+      "build_sha256": "e4fae7721a42784935f2e3032bd437268bb36f9695fb6e1659e1733b050084df",
+      "abi_build_sha256": "3c4ecfd3e47e0759ad01ce1209f8847d47fa08e1f28775158bfe1482b4c359f1"
+    }
+  ],
+  "scope": "Independent core/lifetime and final C SDK source reviews are clear. The executor separately verified final combined guests and actual-source artifacts. Three kernel native interleavings inject source close through the fixture; one uses actual Ring 3 Exit/reap. C/Rust SDK traffic is separate. No file service or hardware performance claim."
+}

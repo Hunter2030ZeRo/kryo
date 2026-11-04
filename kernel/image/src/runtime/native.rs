@@ -289,6 +289,12 @@ pub(crate) fn dispatch<'objects>(
                     .map(|handle| Some(handle.as_raw()))
                     .map_err(map_error)
             }
+            Call::EndpointGateCreate => {
+                let root = lookup(tasks, caller, handle, ObjectKind::Endpoint, Rights::CONTROL)?;
+                let handles = &mut tasks.resources_mut(caller).unwrap().process.handles;
+                ipc.create_gate(caller, root, context.rsi, handles)
+                    .map(|handle| Some(handle.as_raw()))
+            }
             Call::EndpointCreate | Call::NotificationCreate => {
                 let handles = &mut tasks.resources_mut(caller).unwrap().process.handles;
                 super::channels::create(caller, handle, call, handles, ipc)
@@ -569,6 +575,23 @@ pub(crate) fn dispatch<'objects>(
                     Call::Wait => (ObjectKind::Notification, Rights::WAIT),
                     _ => (ObjectKind::Endpoint, Rights::SEND),
                 };
+                let kind = if rights == Rights::SEND {
+                    let actual = tasks
+                        .resources_mut(caller)
+                        .unwrap()
+                        .process
+                        .handles
+                        .describe(handle)
+                        .map_err(map_error)?
+                        .0;
+                    if actual == ObjectKind::EndpointGate {
+                        actual
+                    } else {
+                        kind
+                    }
+                } else {
+                    kind
+                };
                 let object = lookup(tasks, caller, handle, kind, rights)?;
                 if call == Call::ReceiveFor || deadline.is_some() {
                     let admitted = now();
@@ -701,6 +724,19 @@ fn wait_on<'objects>(
     tasks: &mut Tasks<'_, 'objects>,
     ipc: &mut IpcRuntime<'objects>,
 ) -> Result<Option<u64>, Error> {
+    let routed = if object.kind() == ObjectKind::EndpointGate {
+        Some(ipc.gate_target(object)?)
+    } else {
+        None
+    };
+    let loan = if routed.is_some() {
+        Some(object.try_clone().map_err(|_| Error::OutOfResources)?)
+    } else {
+        None
+    };
+    let (object, label) = routed
+        .as_ref()
+        .map_or((object, 0), |(root, label)| (root, *label));
     let mut resources = tasks.resources_mut(caller).unwrap();
     let exchange = call == Call::CallExchange;
     if exchange && (context.rsi > 2 || context.rcx > 2) {
@@ -747,55 +783,58 @@ fn wait_on<'objects>(
             return Err(Error::OutOfResources);
         }
     };
+    assert!(resources.gate_loan.is_none());
+    resources.gate_loan = loan;
     resources.wait = Some(wait);
     resources.receive_slots = reservation;
     if let Some(batch) = batch {
         ipc.hold_transfer(caller, wait, batch);
     }
-    let result =
-        object.with(|object| match (call, object) {
-            (Call::Send, KernelObject::Endpoint(endpoint)) => {
-                endpoint
-                    .borrow_mut()
-                    .send(caller, wait, message(context), &mut ipc.waits)
-            }
-            (Call::Call, KernelObject::Endpoint(endpoint)) => {
-                endpoint
-                    .borrow_mut()
-                    .call(caller, wait, message(context), &mut ipc.waits)
-            }
-            (Call::CallExchange, KernelObject::Endpoint(endpoint)) => {
-                endpoint.borrow_mut().call_exchange(
-                    caller,
-                    wait,
-                    message(context),
-                    context.rsi as usize,
-                    context.rcx as usize,
-                    &mut ipc.waits,
-                )
-            }
-            (Call::SendCaps, KernelObject::Endpoint(endpoint)) => endpoint.borrow_mut().send_caps(
+    let result = object.with(|object| match (call, object) {
+        (Call::Send | Call::SendCaps, KernelObject::Endpoint(endpoint)) => {
+            let count = if call == Call::SendCaps {
+                context.rsi as usize
+            } else {
+                0
+            };
+            endpoint.borrow_mut().send_labeled(
                 caller,
                 wait,
                 message(context),
-                context.rsi as usize,
+                label,
+                count,
                 &mut ipc.waits,
-            ),
-            (Call::CallCaps, KernelObject::Endpoint(endpoint)) => endpoint.borrow_mut().call_caps(
+            )
+        }
+        (Call::Call | Call::CallCaps | Call::CallExchange, KernelObject::Endpoint(endpoint)) => {
+            let count = if call == Call::Call {
+                0
+            } else {
+                context.rsi as usize
+            };
+            let capacity = (call == Call::CallExchange).then_some(context.rcx as usize);
+            endpoint.borrow_mut().call_labeled(
                 caller,
                 wait,
-                message(context),
-                context.rsi as usize,
+                kryo_core::ipc::LabeledMessage {
+                    message: message(context),
+                    label,
+                },
+                count,
+                capacity,
                 &mut ipc.waits,
-            ),
-            (Call::Receive, KernelObject::Endpoint(endpoint)) => endpoint
+            )
+        }
+        (Call::Receive, KernelObject::Endpoint(endpoint)) => {
+            endpoint
                 .borrow_mut()
-                .receive_caps(caller, wait, context.rsi as usize, &mut ipc.waits),
-            (Call::Wait, KernelObject::Notification(notification)) => {
-                notification.borrow_mut().wait(caller, wait, &mut ipc.waits)
-            }
-            _ => unreachable!("Capability kind and call disagree"),
-        });
+                .receive_caps(caller, wait, context.rsi as usize, &mut ipc.waits)
+        }
+        (Call::Wait, KernelObject::Notification(notification)) => {
+            notification.borrow_mut().wait(caller, wait, &mut ipc.waits)
+        }
+        _ => unreachable!("Capability kind and call disagree"),
+    });
     if let Err(error) = result {
         ipc.waits
             .complete(

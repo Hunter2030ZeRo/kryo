@@ -427,6 +427,7 @@ fn received(
 ) -> Option<ReplyToken> {
     match waits.take(wait).unwrap() {
         Completion::Received {
+            label: 0,
             message: actual_message,
             reply,
             sender: actual_sender,

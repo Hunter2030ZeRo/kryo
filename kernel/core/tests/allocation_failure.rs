@@ -571,3 +571,31 @@ fn execution_lease_metadata_oom_preserves_mappings_and_admitted_ranges() {
     space.close().unwrap();
     assert_eq!(pool.stats(), before);
 }
+
+#[test]
+fn gate_storage_oom_is_retryable_and_final_close_delivery_never_allocates() {
+    use kryo_core::ipc::GateKey;
+    let mut tasks = TaskTable::<(), 1>::new();
+    let owner = tasks.spawn(()).unwrap();
+    let mut endpoint = Endpoint::<0, 0>::growing(owner);
+    let key = GateKey {
+        registry: 0,
+        object: 99,
+    };
+    assert_eq!(
+        fail_allocations(|| endpoint.reserve_gate(owner, 42, key)),
+        Err(IpcError::Capacity)
+    );
+    let slot = endpoint.reserve_gate(owner, 42, key).unwrap();
+    let mut waits = WaitTable::<Completion, 1>::new();
+    let receive = waits.begin(owner).unwrap();
+    waits.park(receive).unwrap();
+    fail_allocations(|| {
+        endpoint.receive(owner, receive, &mut waits).unwrap();
+        endpoint.close_gate(slot, key, &mut waits);
+    });
+    assert_eq!(
+        waits.take(receive),
+        Ok(Completion::GateClosed { label: 42, key })
+    );
+}

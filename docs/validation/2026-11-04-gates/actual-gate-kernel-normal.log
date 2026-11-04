@@ -1,0 +1,4 @@
+   Compiling kryo-interfaces v0.1.0 (/home/entity27th/kryo/interfaces)
+   Compiling kryo-core v0.1.0 (/home/entity27th/kryo/kernel/core)
+   Compiling kryo v0.1.0 (/home/entity27th/kryo/kernel/image)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.43s

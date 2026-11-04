@@ -306,6 +306,7 @@ pub(crate) const fn wire_kind(kind: ObjectKind) -> WireKind {
         ObjectKind::TaskControl => WireKind::TaskControl,
         ObjectKind::Memory => WireKind::Memory,
         ObjectKind::Endpoint => WireKind::Endpoint,
+        ObjectKind::EndpointGate => WireKind::EndpointGate,
         ObjectKind::Notification => WireKind::Notification,
         ObjectKind::ProcessControl => WireKind::ProcessControl,
         ObjectKind::ThreadControl => WireKind::ThreadControl,

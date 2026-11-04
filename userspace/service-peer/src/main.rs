@@ -14,6 +14,8 @@ const MEMORY_VIEW: u64 = 0x200_0000;
 const MEMORY_PATTERN: u64 = 0xfedc_ba98_7654_3210;
 const REPLY_VIEW: u64 = 0x210_0000;
 const REPLY_PATTERN: u64 = 0x1357_9bdf_2468_ace0;
+const GATE_A: u64 = 0xfedc_ba98_1234_0001;
+const GATE_B: u64 = 0xfedc_ba98_1234_0002;
 
 global_asm!(
     r#"
@@ -33,7 +35,7 @@ _start:
 extern "C" fn peer_main(bootstrap: u64, factory: u64, _features: u64, mode: u64) -> ! {
     let bootstrap = Handle::from_raw(bootstrap).unwrap_or_else(|| sys::exit(200));
     let factory = Handle::from_raw(factory).unwrap_or_else(|| sys::exit(201));
-    if mode > 2 {
+    if mode > 3 {
         sys::exit(216);
     }
     match serve(bootstrap, factory, mode) {
@@ -58,18 +60,43 @@ fn serve(bootstrap: Handle, factory: Handle, mode: u64) -> Result<(), u64> {
     if failure.error != Error::Kernel(-3) || failure.accepted {
         return Err(204);
     }
+    let gates = if mode == 3 {
+        Some([
+            sys::endpoint_gate_create(endpoint, GATE_A).map_err(|_| 230u64)?,
+            sys::endpoint_gate_create(endpoint, GATE_B).map_err(|_| 231u64)?,
+        ])
+    } else {
+        None
+    };
+    let mut grants = [Grant {
+        handle: endpoint,
+        rights: sys::SEND,
+    }; 2];
+    let grant_count = if let Some([gate_a, gate_b]) = gates {
+        grants[0] = Grant {
+            handle: gate_a,
+            rights: sys::SEND | sys::DUP | sys::TRANSFER,
+        };
+        grants[1] = Grant {
+            handle: gate_b,
+            rights: sys::SEND,
+        };
+        2
+    } else {
+        1
+    };
     sys::send_caps_until(
         bootstrap,
         [HELLO, 0, 0, 0],
-        &[Grant {
-            handle: endpoint,
-            rights: sys::SEND,
-        }],
+        &grants[..grant_count],
         deadline()?,
     )
     .map_err(|_| 205u64)?;
     let capacity = usize::from(mode != 0);
     let request = sys::receive_until(endpoint, capacity, deadline()?).map_err(|_| 206u64)?;
+    if mode == 3 && (request.label != GATE_A || request.event != sys::ReceiveEvent::Message) {
+        return Err(232);
+    }
     let [kind, instance, value, reserved] = request.message;
     if kind != REQUEST || !(1..=2).contains(&instance) || value != 41 || reserved != 0 {
         return Err(207);
@@ -82,14 +109,34 @@ fn serve(bootstrap: Handle, factory: Handle, mode: u64) -> Result<(), u64> {
         check_memory(memory)?;
     }
     let response = [RESPONSE, instance, value + 1, 0];
-    if mode == 2 {
-        reply_with_memory(endpoint, reply, response)?;
+    if mode >= 2 {
+        let outgoing = gates.map_or(endpoint, |[gate_a, _]| gate_a);
+        reply_with_memory(endpoint, outgoing, reply, response)?;
     } else {
         sys::reply(endpoint, reply, response).map_err(|_| 209u64)?;
     }
+    if let Some([gate_a, gate_b]) = gates {
+        sys::close(gate_a).map_err(|_| 234u64)?;
+        sys::close(gate_b).map_err(|_| 235u64)?;
+    }
     let stop = sys::receive_until(endpoint, 0, deadline()?).map_err(|_| 210u64)?;
+    if mode == 3 && (stop.label != GATE_A || stop.event != sys::ReceiveEvent::Message) {
+        return Err(233);
+    }
     if stop.message != [STOP, instance, 0, 0] || stop.reply.is_some() {
         return Err(211);
+    }
+    if mode == 3 {
+        let closed = sys::receive_until(endpoint, 0, deadline()?).map_err(|_| 236u64)?;
+        if closed.label != GATE_A
+            || closed.event != sys::ReceiveEvent::GateClosed
+            || closed.message != [0; 4]
+            || closed.reply.is_some()
+            || closed.handles != [None; 2]
+        {
+            return Err(237);
+        }
+        // Last gate-reference closure does not prove asynchronous work completion.
     }
     // Owner death, rather than explicit endpoint close, invalidates the client.
     sys::close(bootstrap).map_err(|_| 212u64)?;
@@ -124,6 +171,7 @@ fn check_memory(memory: Handle) -> Result<(), u64> {
 
 fn reply_with_memory(
     endpoint: Handle,
+    outgoing: Handle,
     reply: sys::ReplyToken,
     message: sys::Message,
 ) -> Result<(), u64> {
@@ -149,7 +197,7 @@ fn reply_with_memory(
                 rights: sys::READ | sys::MAP,
             },
             Grant {
-                handle: endpoint,
+                handle: outgoing,
                 rights: sys::SEND,
             },
         ],

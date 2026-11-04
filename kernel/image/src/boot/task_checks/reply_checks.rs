@@ -43,6 +43,7 @@ pub(super) fn run(
     kryo_hal::emergency_write_str(
         "REPLYCAPS: atomic grants quota timeout and retirement OK cases=6\n",
     );
+    kryo_hal::emergency_write_str("REPLYCAPS: legacy exchange register inputs preserved\n");
 }
 
 fn run_case(
@@ -215,7 +216,8 @@ fn caller_program(case: Case) -> Program {
         code.call(Call::MemoryCreate, 1, 0);
         code.expect_status(0);
         code.emit(&[0x48, 0x89, 0x13]); // retain request source at DATA
-        code.emit(&[0x49, 0x89, 0xd4]); // r12=source
+        code.emit(&[0x49, 0x89, 0xd4]); // r12=first source
+        code.emit(&[0x49, 0x89, 0xd5]); // r13=second source, delegated independently
     }
     if matches!(case, Case::HandleQuota | Case::Expired) {
         exchange(&mut code, case == Case::Expired, 0, 2);
@@ -240,7 +242,7 @@ fn caller_program(case: Case) -> Program {
     exchange(
         &mut code,
         case == Case::AcceptedTimeout,
-        usize::from(case == Case::RoundTrip),
+        if case == Case::RoundTrip { 2 } else { 0 },
         capacity,
     );
     if case == Case::AcceptedTimeout {
@@ -249,6 +251,13 @@ fn caller_program(case: Case) -> Program {
     } else {
         code.expect_status(0);
         code.expect_value(0);
+        if case == Case::RoundTrip {
+            // Old libsys declares RCX input-only; the kernel must preserve it.
+            code.immediate(&[0x48, 0xb8], 2);
+            code.emit(&[0x48, 0x39, 0xc1]); // cmp rcx,rax
+            code.failure_jump();
+            compare(&mut code, 15, (Rights::READ | Rights::MAP).bits());
+        }
         compare_message(&mut code, RESPONSE);
         code.emit(&[0x49, 0x81, 0xfe]);
         code.emit(&(capacity as u32).to_le_bytes());
@@ -296,14 +305,16 @@ fn caller_program(case: Case) -> Program {
 
 fn server_program(case: Case) -> Program {
     let mut code = Program::new();
-    code.immediate(&[0x48, 0xbe], u64::from(case == Case::RoundTrip));
+    code.immediate(&[0x48, 0xbe], if case == Case::RoundTrip { 2 } else { 0 });
     endpoint_call(&mut code, Call::Receive);
     code.expect_status(0);
     compare_message(&mut code, REQUEST);
     code.emit(&[0x49, 0x89, 0xd7]); // r15=reply token
     if case == Case::RoundTrip {
-        saved(&mut code, Call::Close, 12);
-        code.expect_status(0);
+        for register in [12, 13] {
+            saved(&mut code, Call::Close, register);
+            code.expect_status(0);
+        }
     }
     for register in [12, 13] {
         code.call(Call::MemoryCreate, 1, 0);
@@ -383,7 +394,14 @@ fn exchange(code: &mut Program, timed: bool, requests: usize, capacity: usize) {
     code.immediate(&[0x48, 0xb9], capacity as u64);
     message(code, REQUEST);
     code.immediate(&[0x49, 0xbe], Rights::READ.bits());
-    code.immediate(&[0x49, 0xbf], 0);
+    code.immediate(
+        &[0x49, 0xbf],
+        if requests == 2 {
+            (Rights::READ | Rights::MAP).bits()
+        } else {
+            0
+        },
+    );
     endpoint_call(
         code,
         if timed {

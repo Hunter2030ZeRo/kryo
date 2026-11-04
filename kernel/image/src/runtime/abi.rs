@@ -76,7 +76,7 @@ pub(crate) fn check(
             .spawn_suspended(resources)
             .unwrap_or_else(|_| panic!("Cannot prepare native ABI task"));
         let owner = tasks.process_for(task).unwrap();
-        let channels = ChannelBudget::new(4);
+        let channels = ChannelBudget::new(7);
         let bootstrap = objects
             .create(
                 ObjectKind::Endpoint,
@@ -126,7 +126,7 @@ pub(crate) fn check(
             )
             .unwrap()
             .as_raw();
-        peer.context.rcx = 2;
+        peer.context.rcx = 3;
         let peer = tasks
             .spawn_suspended(peer)
             .unwrap_or_else(|_| panic!("Cannot publish C IPC Rust peer"));
@@ -198,6 +198,7 @@ pub(crate) fn check(
         let mut c_threads_checked = false;
         let mut c_ipc_checked = false;
         let mut c_reply_checked = false;
+        let mut c_gate_checked = false;
         let mut peer_status = None;
         let mut words_halted = false;
         let mut retired = 0;
@@ -246,6 +247,10 @@ pub(crate) fn check(
                 assert_eq!(account.count(Resource::SharedPages), 0);
                 c_reply_checked = true;
             }
+            if calls.last_debug == Some((task, 102, 1)) && !c_gate_checked {
+                assert_eq!(account.count(Resource::SharedPages), 0);
+                c_gate_checked = true;
+            }
             if peer_status.is_none() {
                 peer_status = tasks.terminal(peer_owner);
             }
@@ -293,6 +298,7 @@ pub(crate) fn check(
             c_reply_checked,
             "Missing C capability reply ownership proof"
         );
+        assert!(c_gate_checked, "Missing C gate lifetime proof");
         assert_eq!(
             peer_status,
             Some(ExitStatus {
@@ -360,4 +366,5 @@ pub(crate) fn check(
     );
     kryo_hal::emergency_write_str("CIPC: C Rust capability and shared memory retirement OK\n");
     kryo_hal::emergency_write_str("CREPLY: C Rust capability reply retirement OK caps=2\n");
+    kryo_hal::emergency_write_str("CGATE: C Rust labels closure and retirement OK\n");
 }

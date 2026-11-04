@@ -1,4 +1,5 @@
 use crate::storage::Slots;
+use core::sync::atomic::{AtomicU64, Ordering};
 use spin::Mutex;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -10,6 +11,7 @@ pub enum ObjectKind {
     TaskControl,
     Memory,
     Endpoint,
+    EndpointGate,
     Notification,
     ProcessControl,
     ThreadControl,
@@ -64,6 +66,7 @@ struct Slot<T> {
 /// Arena locking requires callers to exclude same-CPU IRQ reentry; NMI use is unsupported.
 pub struct ObjectTable<T, const OBJECTS: usize> {
     slots: Mutex<Slots<Slot<T>, OBJECTS>>,
+    gate_epoch: AtomicU64,
 }
 
 impl<T, const OBJECTS: usize> Drop for ObjectTable<T, OBJECTS> {
@@ -87,6 +90,7 @@ impl<T, const OBJECTS: usize> Default for ObjectTable<T, OBJECTS> {
 impl<T, const OBJECTS: usize> ObjectTable<T, OBJECTS> {
     pub const fn new() -> Self {
         Self {
+            gate_epoch: AtomicU64::new(0),
             slots: Mutex::new(Slots::new(
                 [const {
                     Slot {
@@ -107,8 +111,14 @@ impl<T, const OBJECTS: usize> ObjectTable<T, OBJECTS> {
 
     pub const fn limited(limit: usize) -> Self {
         Self {
+            gate_epoch: AtomicU64::new(0),
             slots: Mutex::new(Slots::limited(limit)),
         }
+    }
+
+    /// Last-external-reference changes only. Saturation stays permanently dirty.
+    pub fn gate_epoch(&self) -> u64 {
+        self.gate_epoch.load(Ordering::Relaxed)
     }
 
     pub fn create(
@@ -225,6 +235,12 @@ impl<T, const OBJECTS: usize> Drop for ObjectRef<'_, T, OBJECTS> {
             assert_eq!(slot.generation, generation, "Object generation invariant");
             assert!(slot.references > 0, "Object reference invariant");
             slot.references -= 1;
+            if slot.kind == ObjectKind::EndpointGate && slot.references == 1 {
+                let epoch = self.table.gate_epoch.load(Ordering::Relaxed);
+                self.table
+                    .gate_epoch
+                    .store(epoch.saturating_add(1), Ordering::Relaxed);
+            }
             if slot.references != 0 {
                 return;
             }
@@ -260,6 +276,26 @@ mod tests {
             ObjectError::Capacity
         );
         assert_eq!(id.as_raw() >> 32, u64::from(u32::MAX));
+    }
+
+    #[test]
+    fn gate_epoch_tracks_only_last_external_reference_and_saturates() {
+        let objects = ObjectTable::<(), 2>::new();
+        let registry = objects.create(ObjectKind::EndpointGate, ()).unwrap();
+        let handle = registry.try_clone().unwrap();
+        let loan = registry.try_clone().unwrap();
+        drop(loan);
+        assert_eq!(objects.gate_epoch(), 0);
+        drop(handle);
+        assert_eq!(objects.gate_epoch(), 1);
+        let handle = registry.try_clone().unwrap();
+        objects.gate_epoch.store(u64::MAX - 1, Ordering::Relaxed);
+        drop(handle);
+        assert_eq!(objects.gate_epoch(), u64::MAX);
+        drop(registry.try_clone().unwrap());
+        assert_eq!(objects.gate_epoch(), u64::MAX);
+        drop(registry);
+        assert_eq!(objects.live_count(), 0);
     }
 
     #[test]

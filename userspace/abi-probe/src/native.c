@@ -100,10 +100,16 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
         || kryo_wait_notification_until(waiter.value, 0).status != KRYO_STATUS_TIMED_OUT)
         return 3;
     kryo_message empty = {{0, 0, 0, 0}};
+    kryo_result local_gate = kryo_endpoint_gate_create(endpoint.value, high);
+    if (local_gate.status != KRYO_STATUS_OK)
+        return 19;
     if (!completed(kryo_endpoint_close(endpoint.value), 0))
         return 4;
     kryo_ipc_result closed = kryo_ipc_send(sender.value, empty);
+    kryo_ipc_result closed_gate = kryo_ipc_send(local_gate.value, empty);
     if (closed.status != KRYO_STATUS_PEER_CLOSED || kryo_ipc_accepted(closed)
+        || closed_gate.status != KRYO_STATUS_PEER_CLOSED || kryo_ipc_accepted(closed_gate)
+        || !completed(kryo_close(local_gate.value), 0)
         || !completed(kryo_close(sender.value), 0)
         || !completed(kryo_close(endpoint.value), 0)
         || !completed(kryo_close(waiter.value), 0)
@@ -111,16 +117,28 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
         return 5;
 
     kryo_ipc_result hello = kryo_ipc_receive_until(bootstrap, 2, ipc_deadline());
-    if (hello.status != KRYO_STATUS_OK || hello.count != 1 || hello.value != 0
+    if (hello.status != KRYO_STATUS_OK || hello.count != 2 || hello.value != 0
+        || hello.label != 0 || hello.event != KRYO_EVENT_MESSAGE
         || hello.message.words[0] != 1 || hello.message.words[1] != 0
         || hello.message.words[2] != 0 || hello.message.words[3] != 0)
         return 6;
-    kryo_handle server = hello.handles[0];
+    kryo_handle_info_result initial = kryo_handle_info(hello.handles[0]);
+    kryo_handle_info_result stale = kryo_handle_info(hello.handles[1]);
+    if (initial.status != KRYO_STATUS_OK || initial.kind != KRYO_OBJECT_ENDPOINT_GATE
+        || initial.rights != (KRYO_RIGHT_SEND | KRYO_RIGHT_DUP | KRYO_RIGHT_TRANSFER)
+        || stale.status != KRYO_STATUS_OK || stale.kind != KRYO_OBJECT_ENDPOINT_GATE
+        || stale.rights != KRYO_RIGHT_SEND)
+        return 20;
+    kryo_result alias = kryo_duplicate(hello.handles[0], KRYO_RIGHT_SEND);
+    if (alias.status != KRYO_STATUS_OK || !completed(kryo_close(hello.handles[0]), 0))
+        return 21;
+    kryo_handle server = alias.value;
     kryo_handle_info_result info = kryo_handle_info(server);
-    if (info.status != KRYO_STATUS_OK || info.kind != KRYO_OBJECT_ENDPOINT
+    if (info.status != KRYO_STATUS_OK || info.kind != KRYO_OBJECT_ENDPOINT_GATE
         || info.rights != KRYO_RIGHT_SEND
-        || kryo_ipc_receive_until(server, 0, ipc_deadline()).status != KRYO_STATUS_PERMISSION_DENIED
-        || kryo_endpoint_close(server).status != KRYO_STATUS_PERMISSION_DENIED)
+        || kryo_ipc_receive_until(server, 0, ipc_deadline()).status != KRYO_STATUS_WRONG_TYPE
+        || kryo_endpoint_close(server).status != KRYO_STATUS_WRONG_TYPE
+        || kryo_endpoint_gate_create(server, 1).status != KRYO_STATUS_WRONG_TYPE)
         return 7;
 
     kryo_result memory = kryo_memory_create(1);
@@ -144,6 +162,7 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
     kryo_ipc_result response = kryo_ipc_call_exchange_until(server, request, &grant, 1, 2,
                                                           ipc_deadline());
     if (response.status != KRYO_STATUS_OK || response.value != 0 || response.count != 2
+        || response.label != 0 || response.event != KRYO_EVENT_MESSAGE
         || response.message.words[0] != 3 || response.message.words[1] != 1
         || response.message.words[2] != 42 || response.message.words[3] != 0)
         return 12;
@@ -151,7 +170,7 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
     kryo_handle_info_result reply_endpoint = kryo_handle_info(response.handles[1]);
     if (reply_memory.status != KRYO_STATUS_OK || reply_memory.kind != KRYO_OBJECT_MEMORY
         || reply_memory.rights != (KRYO_RIGHT_READ | KRYO_RIGHT_MAP)
-        || reply_endpoint.status != KRYO_STATUS_OK || reply_endpoint.kind != KRYO_OBJECT_ENDPOINT
+        || reply_endpoint.status != KRYO_STATUS_OK || reply_endpoint.kind != KRYO_OBJECT_ENDPOINT_GATE
         || reply_endpoint.rights != KRYO_RIGHT_SEND)
         return 15;
     const kryo_u64 reply_address = 0x2100000;
@@ -166,7 +185,7 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
             return 17;
     if (!completed(kryo_memory_unmap(reply_address), 0)
         || !completed(kryo_close(response.handles[0]), 0)
-        || !completed(kryo_close(response.handles[1]), 0))
+        || !completed(kryo_close(server), 0))
         return 18;
     // The peer acknowledges only after unmapping and closing its read-only loan.
     if (!completed(kryo_memory_unmap(address), 0)
@@ -174,11 +193,13 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
         || !completed(kryo_close(memory.value), 0))
         return 13;
     kryo_message stop = {{4, 1, 0, 0}};
-    if (kryo_ipc_send_until(server, stop, ipc_deadline()).status != KRYO_STATUS_OK
+    // The peer validates the stamp on this returned authority as well as the duplicate.
+    if (kryo_ipc_send_until(response.handles[1], stop, ipc_deadline()).status != KRYO_STATUS_OK
+        || !completed(kryo_close(response.handles[1]), 0)
         || !completed(kryo_close(bootstrap), 0)
         || !completed(kryo_close(factory), 0))
         return 14;
-    *server_out = server;
+    *server_out = hello.handles[1];
     return 0;
 }
 

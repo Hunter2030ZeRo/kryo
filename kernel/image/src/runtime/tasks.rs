@@ -418,7 +418,7 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
             .ok_or(ReapError::Task(TaskError::InvalidId))?;
         let final_member = self.processes.thread_count(process) == Ok(1)
             && self.processes.state(process) == Ok(ProcessState::Exiting);
-        {
+        let cleaned = {
             let mut resources = self.resources_mut(task).map_err(ReapError::Task)?;
             resources.final_member = final_member;
             assert!(resources.wait.is_none(), "Retiring thread wait invariant");
@@ -430,7 +430,12 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
                     ipc.invalidate_words(space, page, page + 4096);
                 }
             }
-            cleanup(&mut resources).map_err(ReapError::Cleanup)?;
+            cleanup(&mut resources)
+        };
+        if let Err(error) = cleaned {
+            // Partial cleanup can retire unpublished capability owners too.
+            ipc.settle(self);
+            return Err(ReapError::Cleanup(error));
         }
         let mut thread = self.threads.reap(task, |_| Ok::<_, E>(()))?;
         self.processes
@@ -446,6 +451,9 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
                 })
                 .expect("Final process retirement invariant");
             drop(owner);
+            // Final process handles may publish authority closure. Settle before
+            // the caller decides that no task or external event can wake it.
+            ipc.settle(self);
         }
         Ok(thread)
     }

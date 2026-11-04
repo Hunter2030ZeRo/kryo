@@ -138,3 +138,22 @@ The reply-capability variant additionally returns a read-only memory object and
 a SEND endpoint grant. C validates both grants and reads the new page after the
 server has removed its writable view. This supplies native service communication,
 not libc file or terminal semantics.
+
+## Endpoint gates
+
+`kryo_endpoint_gate_create` requires CONTROL on a root Endpoint and its exact
+receiving thread. It creates a separate EndpointGate with a nonzero immutable
+label and SEND|DUP|TRANSFER rights. Copies and IPC grants preserve that label;
+send-only holders cannot mint another gate or receive on the root.
+
+Successful Receive exposes `label` and `event`. Ordinary messages carry label
+zero; gated messages carry their kernel-stamped label with KRYO_EVENT_MESSAGE.
+KRYO_EVENT_GATE_CLOSED carries the label with zero message words, no handles and
+no reply token. The 88-byte C result is a local SDK aggregate, not a memory wire
+layout. Non-receive wrappers synthesize label zero and Message, preserving the
+existing CallExchange register contract. Error outputs are not authority.
+
+GateClosed reports the end of external capabilities and kernel wait/transfer
+owners. Accepted asynchronous service work and buffer loans need separate
+service-side ownership. Root closure discards pending events and makes retained
+gate handles return PeerClosed; those stale handles remain charged until closed.

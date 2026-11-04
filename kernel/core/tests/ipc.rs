@@ -21,6 +21,7 @@ fn multiple_queued_senders_are_received_in_fifo_order() {
         assert_eq!(
             waits.take(receive),
             Ok(Completion::Received {
+                label: 0,
                 message: Message([index as u64; 4]),
                 reply: None,
                 sender: senders[index],
@@ -45,7 +46,9 @@ fn accepted_caller_death_revokes_reply_without_closing_the_endpoint() {
         .unwrap();
     let token = match waits.take(receive).unwrap() {
         Completion::Received {
-            reply: Some(token), ..
+            label: 0,
+            reply: Some(token),
+            ..
         } => token,
         _ => panic!("missing token"),
     };
@@ -70,7 +73,9 @@ fn accepted_caller_death_revokes_reply_without_closing_the_endpoint() {
     endpoint.receive(owner, receiver, &mut waits).unwrap();
     let fresh = match waits.take(receiver).unwrap() {
         Completion::Received {
-            reply: Some(token), ..
+            label: 0,
+            reply: Some(token),
+            ..
         } => token,
         _ => panic!("missing fresh token"),
     };
@@ -103,6 +108,7 @@ fn zero_reply_capacity_rejects_calls_but_accepts_plain_rendezvous() {
     assert_eq!(
         waits.take(receive),
         Ok(Completion::Received {
+            label: 0,
             message: Message([1; 4]),
             reply: None,
             sender,
@@ -127,7 +133,9 @@ fn malformed_reply_tokens_do_not_change_a_valid_call() {
         .unwrap();
     let valid = match waits.take(receive).unwrap() {
         Completion::Received {
-            reply: Some(token), ..
+            label: 0,
+            reply: Some(token),
+            ..
         } => token,
         _ => panic!("missing token"),
     };
@@ -182,6 +190,7 @@ fn rendezvous_transfers_inline_data_and_completes_each_wait_once() {
     assert_eq!(
         waits.take(receive),
         Ok(Completion::Received {
+            label: 0,
             message: Message([1, 2, 3, 4]),
             reply: None,
             sender,
@@ -238,6 +247,7 @@ fn queued_senders_keep_fifo_order_and_capacity_failure_does_not_register_a_wait(
     assert_eq!(
         waits.take(receive),
         Ok(Completion::Received {
+            label: 0,
             message: Message([11; 4]),
             reply: None,
             sender: first,
@@ -287,6 +297,7 @@ fn call_waits_for_a_single_reply_from_the_bound_receiver() {
     endpoint.receive(owner, receive, &mut waits).unwrap();
     let token = match waits.take(receive).unwrap() {
         Completion::Received {
+            label: 0,
             message: Message([9, 9, 9, 9]),
             reply: Some(token),
             ..
@@ -344,6 +355,7 @@ fn cancelling_before_acceptance_prevents_delivery() {
     assert_eq!(
         waits.take(receive),
         Ok(Completion::Received {
+            label: 0,
             message: Message([2; 4]),
             reply: None,
             sender: caller,
@@ -367,7 +379,9 @@ fn accepted_call_cancellation_reports_uncertainty_and_rejects_late_reply() {
         .unwrap();
     let token = match waits.take(receive).unwrap() {
         Completion::Received {
-            reply: Some(token), ..
+            label: 0,
+            reply: Some(token),
+            ..
         } => token,
         _ => panic!("missing reply token"),
     };
@@ -388,7 +402,9 @@ fn accepted_call_cancellation_reports_uncertainty_and_rejects_late_reply() {
     endpoint.receive(owner, fresh_receive, &mut waits).unwrap();
     let fresh_token = match waits.take(fresh_receive).unwrap() {
         Completion::Received {
-            reply: Some(token), ..
+            label: 0,
+            reply: Some(token),
+            ..
         } => token,
         _ => panic!("missing fresh token"),
     };
@@ -420,7 +436,9 @@ fn endpoint_close_drains_receiver_queued_call_and_accepted_call_once() {
         .unwrap();
     let token = match waits.take(receive).unwrap() {
         Completion::Received {
-            reply: Some(token), ..
+            label: 0,
+            reply: Some(token),
+            ..
         } => token,
         _ => panic!("missing token"),
     };
@@ -515,6 +533,7 @@ fn completed_and_reused_wait_slots_cannot_receive_stale_queued_messages() {
     assert_eq!(
         waits.take(receive),
         Ok(Completion::Received {
+            label: 0,
             message: Message([2; 4]),
             reply: None,
             sender: caller,

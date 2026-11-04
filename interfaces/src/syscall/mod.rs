@@ -103,6 +103,7 @@ pub enum Call {
     CallExchange = 63,
     CallExchangeUntil = 64,
     ReplyCaps = 65,
+    EndpointGateCreate = 66,
 }
 
 impl TryFrom<u64> for Call {
@@ -176,6 +177,7 @@ impl TryFrom<u64> for Call {
             63 => Ok(Self::CallExchange),
             64 => Ok(Self::CallExchangeUntil),
             65 => Ok(Self::ReplyCaps),
+            66 => Ok(Self::EndpointGateCreate),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -224,5 +226,24 @@ mod tests {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);
+    }
+}
+
+/// Kernel-authenticated receive metadata, separate from user message words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u64)]
+pub enum ReceiveEvent {
+    Message = 0,
+    GateClosed = 1,
+}
+
+impl TryFrom<u64> for ReceiveEvent {
+    type Error = ();
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Message),
+            1 => Ok(Self::GateClosed),
+            _ => Err(()),
+        }
     }
 }

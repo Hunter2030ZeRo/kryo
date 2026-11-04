@@ -279,6 +279,7 @@ fn check_c_ipc(debug: Handle, startup: u64) {
     }
     sys::debug_log(debug, 100, 1).unwrap_or_else(|_| exit(374));
     sys::debug_log(debug, 101, 2).unwrap_or_else(|_| exit(375));
+    sys::debug_log(debug, 102, 1).unwrap_or_else(|_| exit(376));
     check_tls(MAIN_TLS_VALUE);
 }
 

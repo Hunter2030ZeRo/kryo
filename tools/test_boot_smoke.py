@@ -65,7 +65,8 @@ class PciEvidenceTests(unittest.TestCase):
         c_threads = "CTHREAD: native C create join and backing retirement OK threads=2\n"
         c_ipc = "CIPC: C Rust capability and shared memory retirement OK\n"
         c_reply = "CREPLY: C Rust capability reply retirement OK caps=2\n"
-        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads, c_ipc, c_reply]
+        c_gate = "CGATE: C Rust labels closure and retirement OK\n"
+        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads, c_ipc, c_reply, c_gate]
         log = "".join(markers)
         self.assertTrue(all(abi_checks(log, True).values()))
         self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))
@@ -143,6 +144,24 @@ class PciEvidenceTests(unittest.TestCase):
         core = "REPLYCAPS: atomic grants quota timeout and retirement OK cases=6\n"
         self.assertFalse(observed_checks("USERDIAG: process=0x123 bytes=0 text=" + core)["reply_caps"])
         self.assertTrue(observed_checks(core)["reply_caps"])
+        legacy = "REPLYCAPS: legacy exchange register inputs preserved\n"
+        self.assertTrue(observed_checks(legacy)["legacy_exchange_registers"])
+        self.assertFalse(observed_checks("USERDIAG: process=0x1 bytes=0 text=" + legacy)["legacy_exchange_registers"])
+
+    def test_gate_evidence_requires_kernel_markers(self):
+        c_gate = "CGATE: C Rust labels closure and retirement OK\n"
+        for invalid in ("USERLOG: process=0x1 event=102 value=1\n",
+                        "USERDIAG: process=0x1 bytes=0 text=" + c_gate, c_gate + c_gate):
+            self.assertFalse(abi_checks(invalid, True)["native_c_gates"])
+        self.assertTrue(abi_checks(c_gate, True)["native_c_gates"])
+        markers = {
+            "endpoint_gates": "GATE: labels lifetime delegation quota and retirement OK\n",
+            "gate_loans": "GATE: queued send call and accepted timeout loans OK cases=3\n",
+            "gate_process_retirement": "GATE: final process handle retirement wakes receiver without polling\n",
+        }
+        for key, marker in markers.items():
+            self.assertTrue(observed_checks(marker)[key])
+            self.assertFalse(observed_checks("USERDIAG: process=0x1 bytes=0 text=" + marker)[key])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

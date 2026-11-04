@@ -10,16 +10,24 @@ use crate::task::TaskId;
 
 mod budget;
 mod endpoint;
+mod gates;
 mod notification;
 
 pub use budget::{ChannelBudget, ChannelLease};
 pub use endpoint::Endpoint;
+pub use gates::GateKey;
 pub use notification::Notification;
 
 pub const MAX_CAPABILITIES: usize = 2;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Message(pub [u64; 4]);
+
+#[derive(Clone, Copy)]
+pub struct LabeledMessage {
+    pub message: Message,
+    pub label: u64,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Delivery {
@@ -67,11 +75,16 @@ impl ReplyToken {
 pub enum Completion {
     Sent,
     Received {
+        label: u64,
         message: Message,
         reply: Option<ReplyToken>,
         sender: TaskId,
         sender_wait: WaitId,
         capabilities: usize,
+    },
+    GateClosed {
+        label: u64,
+        key: GateKey,
     },
     Replied(Message),
     RepliedCaps {

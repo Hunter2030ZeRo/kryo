@@ -53,6 +53,15 @@ pub struct ChannelLease {
     budget: Arc<Budget>,
 }
 
+impl ChannelLease {
+    pub(super) fn try_reserve(&self) -> Result<Self, IpcError> {
+        ChannelBudget {
+            budget: Arc::clone(&self.budget),
+        }
+        .try_reserve()
+    }
+}
+
 impl Drop for ChannelLease {
     fn drop(&mut self) {
         let previous = self.budget.live.fetch_sub(1, Ordering::Relaxed);

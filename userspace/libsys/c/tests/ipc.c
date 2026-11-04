@@ -18,12 +18,14 @@ CHECK(sizeof(kryo_message) == 32 && ALIGN(kryo_message) == 8);
 CHECK(sizeof(kryo_grant) == 16 && ALIGN(kryo_grant) == 8);
 CHECK(__builtin_offsetof(kryo_grant, handle) == 0);
 CHECK(__builtin_offsetof(kryo_grant, rights) == 8);
-CHECK(sizeof(kryo_ipc_result) == 72 && ALIGN(kryo_ipc_result) == 8);
+CHECK(sizeof(kryo_ipc_result) == 88 && ALIGN(kryo_ipc_result) == 8);
 CHECK(__builtin_offsetof(kryo_ipc_result, status) == 0);
 CHECK(__builtin_offsetof(kryo_ipc_result, value) == 8);
 CHECK(__builtin_offsetof(kryo_ipc_result, message) == 16);
 CHECK(__builtin_offsetof(kryo_ipc_result, handles) == 48);
 CHECK(__builtin_offsetof(kryo_ipc_result, count) == 64);
+CHECK(__builtin_offsetof(kryo_ipc_result, label) == 72);
+CHECK(__builtin_offsetof(kryo_ipc_result, event) == 80);
 CHECK(sizeof(kryo_handle_info_result) == 24 && ALIGN(kryo_handle_info_result) == 8);
 CHECK(__builtin_offsetof(kryo_handle_info_result, status) == 0);
 CHECK(__builtin_offsetof(kryo_handle_info_result, kind) == 8);
@@ -69,6 +71,7 @@ __attribute__((noinline)) kryo_result exercise_scalar(
     case 7: return kryo_memory_create(first);
     case 8: return kryo_memory_map(handle, first, second, KRYO_MEMORY_READ_WRITE);
     case 9: return kryo_memory_unmap(first);
+    case 10: return kryo_endpoint_gate_create(handle, first);
     default: return kryo_ipc_reply(handle, first, message);
     }
 }
@@ -89,7 +92,8 @@ kryo_u64 preserve_ipc_registers(kryo_handle endpoint, kryo_message message,
     __asm__ volatile("" : "+r"(first), "+r"(second), "+r"(third), "+r"(fourth));
     return first ^ second ^ third ^ fourth ^ (kryo_u64)result.status ^ result.value
         ^ result.message.words[0] ^ result.message.words[1] ^ result.message.words[2]
-        ^ result.message.words[3] ^ result.handles[0] ^ result.handles[1] ^ result.count;
+        ^ result.message.words[3] ^ result.handles[0] ^ result.handles[1] ^ result.count
+        ^ result.label ^ result.event;
 }
 
 #ifdef KRYO_HOST_CHECK
@@ -97,7 +101,8 @@ static int invalid(kryo_ipc_result result) {
     return result.status == KRYO_STATUS_INVALID_ARGUMENT && result.value == 0
         && result.message.words[0] == 0 && result.message.words[1] == 0
         && result.message.words[2] == 0 && result.message.words[3] == 0
-        && result.handles[0] == 0 && result.handles[1] == 0 && result.count == 0;
+        && result.handles[0] == 0 && result.handles[1] == 0 && result.count == 0
+        && result.label == 0 && result.event == KRYO_EVENT_MESSAGE;
 }
 
 int main(void) {

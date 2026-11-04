@@ -450,6 +450,7 @@ fn received(
 ) -> ReplyToken {
     match waits.take(wait).unwrap() {
         Completion::Received {
+            label: 0,
             message,
             reply: Some(token),
             sender,

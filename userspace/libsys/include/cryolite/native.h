@@ -32,7 +32,14 @@ typedef struct kryo_ipc_result {
     kryo_message message;
     kryo_handle handles[2];
     kryo_u64 count;
+    kryo_u64 label;
+    kryo_u64 event;
 } kryo_ipc_result;
+
+enum kryo_receive_event {
+    KRYO_EVENT_MESSAGE = 0,
+    KRYO_EVENT_GATE_CLOSED = 1
+};
 
 typedef struct kryo_handle_info_result {
     kryo_status status;
@@ -122,7 +129,8 @@ enum kryo_call {
     KRYO_CALL_DEBUG_WRITE = 62,
     KRYO_CALL_CALL_EXCHANGE = 63,
     KRYO_CALL_CALL_EXCHANGE_UNTIL = 64,
-    KRYO_CALL_REPLY_CAPS = 65
+    KRYO_CALL_REPLY_CAPS = 65,
+    KRYO_CALL_ENDPOINT_GATE_CREATE = 66
 };
 
 enum {
@@ -165,7 +173,8 @@ enum {
     KRYO_OBJECT_CHANNEL_FACTORY = 10,
     KRYO_OBJECT_LAUNCH_MANIFEST = 11,
     KRYO_OBJECT_STARTUP_RECORD = 12,
-    KRYO_OBJECT_RESOURCE_BUDGET = 13
+    KRYO_OBJECT_RESOURCE_BUDGET = 13,
+    KRYO_OBJECT_ENDPOINT_GATE = 14
 };
 
 #define KRYO_STARTUP_MAGIC ((kryo_u64)0x545254534f59524bULL)
@@ -221,6 +230,11 @@ static inline kryo_handle_info_result kryo_handle_info(kryo_handle handle) {
 
 static inline kryo_result kryo_endpoint_create(kryo_handle factory) {
     return kryo_call3(KRYO_CALL_ENDPOINT_CREATE, factory, 0, 0);
+}
+
+static inline kryo_result kryo_endpoint_gate_create(kryo_handle endpoint,
+                                                     kryo_u64 label) {
+    return kryo_call3(KRYO_CALL_ENDPOINT_GATE_CREATE, endpoint, label, 0);
 }
 
 static inline kryo_result kryo_notification_create(kryo_handle factory) {
@@ -281,6 +295,8 @@ static inline kryo_ipc_result kryo_ipc_invalid(void) {
     result.handles[0] = 0;
     result.handles[1] = 0;
     result.count = 0;
+    result.label = 0;
+    result.event = KRYO_EVENT_MESSAGE;
     return result;
 }
 
@@ -297,6 +313,8 @@ static inline kryo_ipc_result kryo_ipc_invoke_capacity(kryo_u64 call, kryo_handl
     if (count > KRYO_IPC_CAPS || reply_capacity > KRYO_IPC_CAPS
         || (count != 0 && grants == 0))
         return kryo_ipc_invalid();
+    int receiving = call == KRYO_CALL_RECEIVE || call == KRYO_CALL_RECEIVE_UNTIL
+        || call == KRYO_CALL_RECEIVE_FOR;
     register kryo_u64 first __asm__("r8") = message.words[0];
     register kryo_u64 second __asm__("r9") = message.words[1];
     register kryo_u64 third __asm__("r10") = message.words[2];
@@ -323,6 +341,8 @@ static inline kryo_ipc_result kryo_ipc_invoke_capacity(kryo_u64 call, kryo_handl
     result.handles[0] = first_handle;
     result.handles[1] = second_handle;
     result.count = first_rights;
+    result.label = receiving ? reply_capacity : 0;
+    result.event = receiving ? second_rights : KRYO_EVENT_MESSAGE;
     return result;
 }
 

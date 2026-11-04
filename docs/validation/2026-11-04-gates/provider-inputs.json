@@ -1,0 +1,46 @@
+{
+  "source_inputs_sha256": "62e1d48c56ddf3206d37336d7bd693734d05876aa57180ed163fc215af6f778d",
+  "cached_archives": [
+    {
+      "name": "mlibc",
+      "revision": "07cfd943977737b8147c1289922c23479feef53d",
+      "sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+      "bytes": 966764
+    },
+    {
+      "name": "frigg",
+      "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+      "sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+      "bytes": 91405
+    },
+    {
+      "name": "freestanding-c-hdrs",
+      "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+      "sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+      "bytes": 12647
+    },
+    {
+      "name": "freestanding-cxx-hdrs",
+      "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+      "sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+      "bytes": 325796
+    },
+    {
+      "name": "libsmarter",
+      "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+      "sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+      "bytes": 4039
+    }
+  ],
+  "patches": {
+    "userspace/libc/mlibc/patches/0001-cryolite-sysdeps.patch": "dfa1c27cbf711f85aacef26da53b554d8725d73baf49cc287bb8d648fe4b6b60",
+    "userspace/libc/mlibc/patches/0002-fallible-talc-allocator.patch": "d771e4f0650c2d60c1f4f6cd8eb4443f6b028c6739515afd5340e7bee5340bbf",
+    "userspace/libc/mlibc/patches/0003-signal-number-validation.patch": "005365be2950092c2dd6c68e44b247d7ca5d8c50a1904c20baf73447b14d42b6",
+    "userspace/libc/mlibc/patches/0004-v3-string-dispatch.patch": "97b0d88cf8894912891ab283965124def237c3b851f87787fd29e8faf099a2b6",
+    "userspace/libc/mlibc/patches/0005-ansi-internal-declarations.patch": "d422e6b3d3ed679303617e0deb48d4e9331be9e888231ef6d48034d462d80cd4",
+    "userspace/libc/mlibc/patches/0006-reject-unsupported-threads-before-allocation.patch": "9ae0491f0da2ef98343a26a623cbdaebe09e3467b35b844bcf59d562cd7c5561",
+    "userspace/libc/mlibc/patches/0007-runtime-owned-static-tcb-storage.patch": "a5627a98aaf5120cac1eb9ec96863e8857eed4cc8470270cf15e8f9d324bd058",
+    "userspace/libc/mlibc/patches/0008-native-thread-completion-and-detach.patch": "017d42be709f0a77873c15ba191b7e9a4187990177c3b8313766f3cf3e579093",
+    "userspace/libc/mlibc/patches/0009-fallible-stdio-storage.patch": "4ec24178a767fe9688f6501bda7860a009fe0cdd7bc68a430258175968963d9f"
+  }
+}

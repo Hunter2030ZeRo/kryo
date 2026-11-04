@@ -1,0 +1,108 @@
+{
+  "source_manifest_sha256": "aff23810aa10eae3f341fe28907121a51117a2c528e17e7fb53967002ac32f34",
+  "matching_final_code_files": {
+    "interfaces/src/startup.rs": "ebb70510d971a7904204cfba6a1005758288a646bbadbc26688f9f29a20e2539",
+    "interfaces/src/syscall/mod.rs": "32a2d04c2a5476002795feb2c5273dd933e3f72a82438fc0ca249e34263f43b4",
+    "kernel/core/src/ipc/budget.rs": "a2d272eaf87b4fb21771a5c0b3d16267caca0fe647407a578b2fb83dba306c1e",
+    "kernel/core/src/ipc/endpoint.rs": "38f7d4eeda886674439d9e4e79dcbda4f5faeaa3bd8c59cf7204e043b34f6c47",
+    "kernel/core/src/ipc/gates.rs": "0b1e8af4db67521b881d8f6d4938c3e54d81842a08dd6b370032cbfad418caf3",
+    "kernel/core/src/ipc/mod.rs": "a5ae2bc83ce04f3c14d08fb5dcc25eadb3c65388c17ffff9eeaefd68c0de6a69",
+    "kernel/core/src/object/mod.rs": "f70ab8ea752286ddb3dfd5fac140168da73ef6f0c1656f1c0cde62c3580bff96",
+    "kernel/core/tests/allocation_failure.rs": "86ceedb76c0a281646edb9577757f9b4bb23d4d96915fbfa8d116cb0e634f2b7",
+    "kernel/core/tests/gates.rs": "82c1249b2fa5679be2c867385ab57820f25b8de441a8e7a41931ad7a6b63fefc",
+    "kernel/core/tests/ipc.rs": "99edfc70060e671075bc77441b8e3446fbdb7baec384f2f1c37cd925effb273d",
+    "kernel/core/tests/ipc_caps.rs": "b863598104d73251d0d38e4b299fb65fce16c743062e2ad79103e2e1a4f88fde",
+    "kernel/core/tests/reply_caps.rs": "dfe6a6052b5c6b58f31895511f2f3243562c35cd3908ed6d54f83373637c3828",
+    "kernel/core/tests/transfer_ipc.rs": "377b72c29500e3095be22c7e9338d5fdebcd537a47caf2804662206a1b80c482",
+    "kernel/image/src/boot/task_checks/gate_checks.rs": "fb7cfef82ef92f2bea734251a854986531482f320616a9711e8773a965c232db",
+    "kernel/image/src/boot/task_checks/mod.rs": "6e280f227e51f2f4b24276479027a699f5fa7f1497222ed15683c448c1cfdf6f",
+    "kernel/image/src/boot/task_checks/reply_checks.rs": "58f5c866b0968fa4f12540fc7a378061b5d69a8faecd6feae7c3af62b1371bfb",
+    "kernel/image/src/boot/task_checks/smp_checks.rs": "6de2fc53485e5f3d05ef6810241f789fc888c59c1667d6a4706fbbcd94216d75",
+    "kernel/image/src/runtime/ipc_runtime.rs": "9f16a759cc913a74ea2b1fe25855ccfc9025a17f6b1fccb974894a37f732d29c",
+    "kernel/image/src/runtime/ipc_runtime/gates.rs": "2f3e3402d70cac488b9cfbb3c756f84d38120885917c3f3e10bf0d67a2516d10",
+    "kernel/image/src/runtime/ipc_runtime/gates/checks.rs": "bcda65991de9955f2ffb16b5fe85b5c57860ed4176486ffdc83a9a8f832821ab",
+    "kernel/image/src/runtime/mod.rs": "f786cc2e47b6e05825083456cb81b73075adca194d4b0f77a7d6715f1c7e20d6",
+    "kernel/image/src/runtime/native.rs": "dc677ba82855aaec2dc96f129553df6b4d4f5ea83b79f9929b8aba2ccc17f749",
+    "kernel/image/src/runtime/startup.rs": "2d7cdbcadd1231ee6f635a7180b6acef4e7a3cf5d421f8674ca60b50eca874a6",
+    "kernel/image/src/runtime/tasks.rs": "04e042efafbf030fc82a545f0d7c8dd4a4a522ceb2ab783787a65469aff89171",
+    "kernel/image/src/runtime/threads.rs": "c26dac232890a6282fe21aaec53dd84c3ce93663e373ea41a0bde5475e20c918",
+    "userspace/libsys/src/lib.rs": "cb5f2c3e6704b2edd1fec60934eeb15379c66a7df10b842483d070f9e2482aff"
+  },
+  "input_record_sha256": "9118a8a172c403feaecb7a6adc2c2686760ca0f78fe72d972ed347888a73585f",
+  "host_tests": {
+    "host": 456,
+    "libsys": 9
+  },
+  "logs": {
+    "host": {
+      "log": "core-host.log",
+      "sha256": "527b9b807b7e94d7d0b36b7334849053c51b8742ff9fcacc81f27debcbca750b"
+    },
+    "libsys": {
+      "log": "core-libsys.log",
+      "sha256": "68670b9b845774d893c589e5c959c2da0c57a04b629c3f831574dee9f322e555"
+    },
+    "clippy-boot": {
+      "log": "core-clippy-boot.log",
+      "sha256": "6d77f64dfc8c5325b90fdbe05d8be367bdd578bcccec24f275c5ffee7d03dd6e"
+    },
+    "clippy-normal": {
+      "log": "core-clippy-normal.log",
+      "sha256": "ff14a2ac634ce228c7569b270161faa02acb1b094dea72ca43b7b28364bde906"
+    },
+    "fmt": {
+      "log": "core-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "qemu": {
+    "label": "gate-kernel-compatible-debug-max-smp4",
+    "passed": true,
+    "evidence_sha256": "370edfdc6e057eacc9f99427e28ce1df214580cc1c14da43c1d577cdd139a5f2",
+    "debug_log_sha256": "636f52886d17c56430f36873a91b06d5712bba701c6a944ffd909ce40d1874e6",
+    "native_gate_cases": 4,
+    "trusted_source_handle_close_cases": 3,
+    "actual_ring3_exit_and_reap_cases": 1,
+    "receiver_wake_without_deadline_or_polling": true,
+    "legacy_exchange_register_preservation": true
+  },
+  "layout": {
+    "endpoint_before": 312,
+    "endpoint_after": 312,
+    "kernel_object_before": 328,
+    "kernel_object_after": 328,
+    "completion_before": 72,
+    "completion_after": 80,
+    "gate_payload_fields": 24,
+    "gate_record": 72,
+    "gate_events": 32
+  },
+  "type_size_evidence": {
+    "before": {
+      "log_sha256": "af64333462e174fd9151ed085b27149e8b22f969bf9ad483f08e3f917534c6c4",
+      "Endpoint<2,2>": 312,
+      "KernelObject": 328,
+      "Completion": 72
+    },
+    "after": {
+      "log_sha256": "386a02bb3c0423396a353a33676e950547ab3c493d0fe62ae7e222f71c0f6713",
+      "Endpoint<2,2>": 312,
+      "KernelObject": 328,
+      "Completion": 80
+    }
+  },
+  "compatibility": {
+    "kernel_receive_outputs_only": [
+      "Receive",
+      "ReceiveUntil",
+      "ReceiveFor"
+    ],
+    "exchange_registers_preserved": [
+      "RCX reply capacity",
+      "R15 second request grant rights"
+    ],
+    "native_regression": "RoundTrip sends two request grants and admits two reply capabilities; raw RCX=2 and R15=READ|MAP=640 checked immediately after int80 response",
+    "sdk": "Only receive calls interpret label/event registers; non-receive results synthesize 0/Message"
+  },
+  "scope": "kernel-only preintegration proof; 26 code files match final sources; trusted source-close injection differs from the actual process-exit case; counts are separate from final combined checks"
+}

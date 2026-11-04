@@ -13,6 +13,8 @@ use kryo_interfaces::syscall::Error;
 #[cfg(feature = "boot-tests")]
 pub(crate) mod checks;
 
+pub(crate) mod gates;
+
 struct PendingTransfer<'objects> {
     sender: TaskId,
     wait: WaitId,
@@ -26,6 +28,11 @@ pub(crate) struct IpcRuntime<'objects> {
     pub(crate) device_signal: Option<Object<'objects>>,
     pub(crate) transport: Option<super::transport::Transport<'objects>>,
     channels: Slots<Option<Object<'objects>>, 4>,
+    gates: Slots<Option<gates::GateRecord<'objects>>, 4>,
+    gate_epoch: u64,
+    gates_dirty: bool,
+    #[cfg(feature = "boot-tests")]
+    pub(crate) gate_scans: usize,
     transfers: Slots<Option<PendingTransfer<'objects>>, 4>,
     sleepers: Slots<Option<WaitId>, 4>,
     observations: Slots<Option<(WaitId, Object<'objects>)>, 4>,
@@ -44,6 +51,11 @@ impl<'objects> IpcRuntime<'objects> {
             device_signal: None,
             transport: None,
             channels: Slots::new([const { None }; 4]),
+            gates: Slots::new([const { None }; 4]),
+            gate_epoch: 0,
+            gates_dirty: false,
+            #[cfg(feature = "boot-tests")]
+            gate_scans: 0,
             transfers: Slots::new([const { None }; 4]),
             sleepers: Slots::new([None; 4]),
             observations: Slots::new([const { None }; 4]),
@@ -65,6 +77,7 @@ impl<'objects> IpcRuntime<'objects> {
             waits: WaitTable::growing(),
             arena: Some(arena),
             channels: Slots::growing(),
+            gates: Slots::growing(),
             transfers: Slots::growing(),
             sleepers: Slots::growing(),
             observations: Slots::growing(),
@@ -436,9 +449,14 @@ impl<'objects> IpcRuntime<'objects> {
                 self.words.remove(wait);
                 self.remove_sleeper(wait);
                 self.remove_observation(wait);
-                self.waits.abandon(wait).expect("Missing dying task wait");
+                if let Some(Completion::GateClosed { key, .. }) =
+                    self.waits.abandon(wait).expect("Missing dying task wait")
+                {
+                    self.retire_gate_event(key);
+                }
                 drop(self.take_transfer(wait));
             }
+            drop(resources.gate_loan.take());
             if let Some(reservation) = resources.receive_slots.take() {
                 resources
                     .process
@@ -467,6 +485,7 @@ impl<'objects> IpcRuntime<'objects> {
                         .release_reservation(reservation)
                         .unwrap_or_else(|_| panic!("Failed receive reservation invariant"));
                 }
+                drop(resources.gate_loan.take());
                 let thread = &mut resources.thread;
                 let context = &mut thread.context;
                 context.rax = 0;
@@ -499,7 +518,20 @@ impl<'objects> IpcRuntime<'objects> {
                         context.r13 =
                             thread.received_handles[1].map_or(0, |handle| handle.as_raw());
                         context.r14 = capabilities as u64;
+                        if let Completion::Received { label, .. } = completion {
+                            context.rcx = label;
+                            context.r15 = kryo_interfaces::syscall::ReceiveEvent::Message as u64;
+                        }
                         thread.received_handles = [None; 2];
+                    }
+                    Completion::GateClosed { label, key } => {
+                        self.retire_gate_event(key);
+                        [context.r8, context.r9, context.r10, context.r11] = [0; 4];
+                        context.r12 = 0;
+                        context.r13 = 0;
+                        context.r14 = 0;
+                        context.rcx = label;
+                        context.r15 = kryo_interfaces::syscall::ReceiveEvent::GateClosed as u64;
                     }
                     Completion::Replied(message) => {
                         [context.r8, context.r9, context.r10, context.r11] = message.0;
@@ -512,7 +544,9 @@ impl<'objects> IpcRuntime<'objects> {
                 }
                 tasks.wake(id).expect("Cannot wake IPC completion");
             }
-            if !self.retire_channels() {
+            let channels_retired = self.retire_channels();
+            let gates_changed = self.settle_gates();
+            if !channels_retired && !gates_changed {
                 break;
             }
         }
@@ -550,6 +584,7 @@ impl<'objects> IpcRuntime<'objects> {
                 _ => false,
             });
             if closed {
+                self.gates_dirty = true;
                 // Never drop a final payload owner under ObjectRef::with.
                 // A stale external grant keeps the closed payload charged.
                 *slot = None;

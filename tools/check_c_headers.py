@@ -131,7 +131,7 @@ def main():
     syscall, startup, libsys, native = (path.read_text() for path in (syscall_path, startup_path, libsys_path, NATIVE))
     calls = {"KRYO_CALL_" + screaming(name): value for name, value in enum_values(syscall, "pub enum Call").items()}
     exposed = enum_values(native, "enum kryo_call")
-    assert len(exposed) == 46 and exposed.keys() <= calls.keys()
+    assert len(exposed) == 47 and exposed.keys() <= calls.keys()
     native_expected = {name: calls[name] for name in exposed}
     statuses = {"KRYO_STATUS_" + screaming(name): -value for name, value in enum_values(syscall, "pub enum Error").items()}
     statuses["KRYO_STATUS_OK"] = 0
@@ -151,6 +151,10 @@ def main():
         native_expected["KRYO_RIGHT_" + name] = rust_constant(libsys, name)
     for name, value in enum_values(startup, "pub enum ObjectKind").items():
         native_expected["KRYO_OBJECT_" + screaming(name)] = value
+    events = enum_values(syscall, "pub enum ReceiveEvent")
+    assert events == {"Message": 0, "GateClosed": 1}
+    for name, value in events.items():
+        native_expected["KRYO_EVENT_" + screaming(name)] = value
     native_expected["KRYO_IPC_WORDS"] = int(re.search(r"pub type Message = \[u64;\s*(\d+)\]", libsys)[1])
     received = re.search(r"pub struct Received\s*\{([^}]+)\}", libsys)[1]
     native_expected["KRYO_IPC_CAPS"] = int(re.search(r"handles: \[Option<Handle>;\s*(\d+)\]", received)[1])

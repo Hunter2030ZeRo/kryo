@@ -37,6 +37,7 @@ pub enum ObjectKind {
     LaunchManifest = 11,
     StartupRecord = 12,
     ResourceBudget = 13,
+    EndpointGate = 14,
 }
 
 impl ObjectKind {
@@ -59,6 +60,7 @@ impl ObjectKind {
         match self {
             Self::TaskControl => INSPECT | CONTROL | DUP | TRANSFER,
             Self::Memory => READ | WRITE | MAP | DUP | TRANSFER,
+            Self::EndpointGate => SEND | DUP | TRANSFER,
             Self::Endpoint => SEND | RECEIVE | CONTROL | DUP | TRANSFER,
             Self::Notification => WAIT | SIGNAL | DUP | TRANSFER,
             Self::ProcessControl | Self::ThreadControl => INSPECT | CONTROL | WAIT | DUP | TRANSFER,
@@ -91,6 +93,7 @@ impl TryFrom<u64> for ObjectKind {
             11 => Ok(Self::LaunchManifest),
             12 => Ok(Self::StartupRecord),
             13 => Ok(Self::ResourceBudget),
+            14 => Ok(Self::EndpointGate),
             _ => Err(()),
         }
     }
@@ -109,7 +112,7 @@ mod tests {
             assert_eq!(kind.allowed_rights() & !16383, 0);
         }
         assert!(ObjectKind::try_from(0).is_err());
-        assert!(ObjectKind::try_from(14).is_err());
+        assert!(ObjectKind::try_from(15).is_err());
         assert_eq!(HEADER_WORDS + MAX_GRANTS * ENTRY_WORDS, 135);
         assert_eq!(ObjectKind::LaunchManifest.allowed_rights(), 128 | 256);
         assert_eq!(ObjectKind::StartupRecord.allowed_rights(), 128);

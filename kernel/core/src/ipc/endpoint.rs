@@ -13,7 +13,8 @@ struct Pending {
     message: Message,
     call: bool,
     cap_count: usize,
-    reply_capacity: Option<usize>,
+    reply_capacity: Option<u8>,
+    label: u64,
 }
 
 #[derive(Clone, Copy)]
@@ -27,7 +28,7 @@ struct Reply {
     receiver: TaskId,
     caller: TaskId,
     wait: WaitId,
-    reply_capacity: Option<usize>,
+    reply_capacity: Option<u8>,
 }
 
 struct ReplySlot {
@@ -46,12 +47,16 @@ pub struct Endpoint<const QUEUE: usize, const REPLIES: usize> {
     senders: Slots<Option<Pending>, QUEUE>,
     queued: usize,
     replies: Slots<ReplySlot, REPLIES>,
+    gates: super::gates::GateEvents,
+    prefer_gate: bool,
 }
 
 impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
     pub const fn new(owner: TaskId) -> Self {
         Self {
             _lease: None,
+            gates: super::gates::GateEvents::new(),
+            prefer_gate: true,
             owner,
             closed: None,
             receiver: None,
@@ -72,6 +77,8 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
     pub const fn growing(owner: TaskId) -> Self {
         Self {
             _lease: None,
+            gates: super::gates::GateEvents::new(),
+            prefer_gate: true,
             owner,
             closed: None,
             receiver: None,
@@ -89,6 +96,49 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
 
     pub const fn is_closed(&self) -> bool {
         self.closed.is_some()
+    }
+
+    pub fn check_gate_owner(&self, owner: TaskId) -> Result<(), IpcError> {
+        if owner != self.owner {
+            return Err(IpcError::PermissionDenied);
+        }
+        self.check_open()
+    }
+
+    pub fn gate_lease(&self, owner: TaskId) -> Result<Option<ChannelLease>, IpcError> {
+        self.check_gate_owner(owner)?;
+        self._lease
+            .as_ref()
+            .map(ChannelLease::try_reserve)
+            .transpose()
+    }
+
+    pub fn reserve_gate(
+        &mut self,
+        owner: TaskId,
+        label: u64,
+        key: super::GateKey,
+    ) -> Result<usize, IpcError> {
+        self.check_gate_owner(owner)?;
+        self.gates.reserve(label, key)
+    }
+
+    pub fn discard_gate(&mut self, slot: usize, key: super::GateKey) {
+        self.gates.discard(slot, key);
+    }
+
+    pub fn close_gate<const WAITS: usize>(
+        &mut self,
+        slot: usize,
+        key: super::GateKey,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) {
+        if self.is_closed() {
+            return;
+        }
+        self.gates.close(slot, key);
+        self.prune(waits);
+        self.pump(waits);
     }
 
     pub fn send<const WAITS: usize>(
@@ -114,6 +164,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 sender,
                 wait,
                 message,
+                label: 0,
                 call: false,
                 cap_count,
                 reply_capacity: None,
@@ -145,6 +196,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 sender,
                 wait,
                 message,
+                label: 0,
                 call: true,
                 cap_count,
                 reply_capacity: None,
@@ -163,14 +215,72 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         reply_capacity: usize,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        if reply_capacity > MAX_CAPABILITIES {
+            return Err(IpcError::Capacity);
+        }
         self.submit(
             Pending {
                 sender,
                 wait,
                 message,
+                label: 0,
                 call: true,
                 cap_count,
-                reply_capacity: Some(reply_capacity),
+                reply_capacity: Some(u8::try_from(reply_capacity).map_err(|_| IpcError::Capacity)?),
+            },
+            waits,
+        )
+    }
+
+    /// The native runtime supplies the authenticated gate label and retains its loan.
+    pub fn send_labeled<const WAITS: usize>(
+        &mut self,
+        sender: TaskId,
+        wait: WaitId,
+        message: Message,
+        label: u64,
+        cap_count: usize,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
+        self.submit(
+            Pending {
+                sender,
+                wait,
+                message,
+                label,
+                call: false,
+                cap_count,
+                reply_capacity: None,
+            },
+            waits,
+        )
+    }
+
+    pub fn call_labeled<const WAITS: usize>(
+        &mut self,
+        sender: TaskId,
+        wait: WaitId,
+        message: super::LabeledMessage,
+        cap_count: usize,
+        reply_capacity: Option<usize>,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
+        if reply_capacity.is_some_and(|capacity| capacity > MAX_CAPABILITIES) {
+            return Err(IpcError::Capacity);
+        }
+        let reply_capacity = reply_capacity
+            .map(u8::try_from)
+            .transpose()
+            .map_err(|_| IpcError::Capacity)?;
+        self.submit(
+            Pending {
+                sender,
+                wait,
+                message: message.message,
+                label: message.label,
+                call: true,
+                cap_count,
+                reply_capacity,
             },
             waits,
         )
@@ -285,7 +395,9 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         if !valid_wait(waits, reply.caller, reply.wait) {
             return Err(IpcError::InvalidReply);
         }
-        if cap_count > MAX_CAPABILITIES || cap_count > reply.reply_capacity.unwrap_or(0) {
+        if cap_count > MAX_CAPABILITIES
+            || cap_count > usize::from(reply.reply_capacity.unwrap_or(0))
+        {
             return Err(IpcError::Capacity);
         }
         Ok((index, reply))
@@ -405,7 +517,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         if request.cap_count > MAX_CAPABILITIES
             || request
                 .reply_capacity
-                .is_some_and(|capacity| capacity > MAX_CAPABILITIES)
+                .is_some_and(|capacity| usize::from(capacity) > MAX_CAPABILITIES)
         {
             return Err(IpcError::Capacity);
         }
@@ -442,7 +554,12 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
     }
 
     fn pump<const WAITS: usize>(&mut self, waits: &mut WaitTable<Completion, WAITS>) {
-        while self.receiver.is_some() && self.queued > 0 {
+        while self.receiver.is_some() && (self.queued > 0 || self.gates.has_pending()) {
+            if self.gates.has_pending() && (self.prefer_gate || self.queued == 0) {
+                self.deliver_gate(waits);
+                continue;
+            }
+            self.prefer_gate = true;
             let request = self.senders[0].unwrap();
             if request.cap_count > self.receiver.unwrap().cap_capacity {
                 self.remove_sender(0);
@@ -465,6 +582,10 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                     );
                     continue;
                 }
+                if self.gates.has_pending() {
+                    self.deliver_gate(waits);
+                    continue;
+                }
                 break;
             }
             self.remove_sender(0);
@@ -478,6 +599,13 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 );
             }
         }
+    }
+
+    fn deliver_gate<const WAITS: usize>(&mut self, waits: &mut WaitTable<Completion, WAITS>) {
+        let (label, key) = self.gates.pop().expect("Pending gate event invariant");
+        let receiver = self.receiver.take().expect("Gate receiver invariant");
+        let _ = waits.complete(receiver.wait, Completion::GateClosed { label, key });
+        self.prefer_gate = false;
     }
 
     fn deliver<const WAITS: usize>(
@@ -507,6 +635,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         let _ = waits.complete(
             receiver.wait,
             Completion::Received {
+                label: request.label,
                 message: request.message,
                 reply,
                 sender: request.sender,
@@ -615,6 +744,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
             return;
         }
         self.closed = Some(error);
+        self.gates.clear();
         if let Some(receiver) = self.receiver.take() {
             fail(waits, receiver.wait, error, Delivery::NotDelivered);
         }
