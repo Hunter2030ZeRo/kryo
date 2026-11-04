@@ -59,6 +59,7 @@ MARKERS = {
     "private_expiry_admission": "WAIT: expired word precedes wake admission",
     "private_untimed_idle": "WAIT: unbounded word idle preserves registration",
     "native_thread_rollback": "THREAD: runtime-owned admission rollback and lifetime OK",
+    "reply_caps": "REPLYCAPS: atomic grants quota timeout and retirement OK cases=6",
 }
 FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
 
@@ -147,6 +148,7 @@ def abi_checks(log, enabled):
         "native_c_calls": bool(re.search(r"(?m)^CABI: native C calls and diagnostic retirement OK$", log)),
         "native_c_threads": bool(re.search(r"(?m)^CTHREAD: native C create join and backing retirement OK threads=2$", log)),
         "native_c_ipc": len(re.findall(r"(?m)^CIPC: C Rust capability and shared memory retirement OK$", log)) == 1,
+        "native_c_reply_caps": len(re.findall(r"(?m)^CREPLY: C Rust capability reply retirement OK caps=2$", log)) == 1,
         **diagnostics,
     }
 

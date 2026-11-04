@@ -3,6 +3,7 @@ mod ipc_checks;
 mod ipc_programs;
 mod launch_checks;
 mod programs;
+mod reply_checks;
 mod shared_checks;
 mod shared_programs;
 mod smp_checks;
@@ -47,6 +48,7 @@ pub(super) fn run(
     check_invalid_resume(pool, direct, kernel, region);
     ipc_checks::run(pool, direct, kernel, region);
     shared_checks::run(pool, direct, kernel, region);
+    reply_checks::run(pool, direct, kernel, region);
     exec_checks::run(pool, direct, kernel, region);
     time_checks::run(pool, direct, kernel, region);
     launch_checks::run(pool, direct, kernel, region);

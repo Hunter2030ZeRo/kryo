@@ -1,0 +1,42 @@
+{
+  "status": "CLEAR",
+  "source_bundle_sha256": "992811d3d3f1ea4b72a04b16aa93e59189efe79deb9b02998c82fbf46270e491",
+  "source_inputs_sha256": "f9ef4527308dbcd552eb5d0095634036896fce9e57997e5dacd74020d5d2b00a",
+  "checks": {
+    "independent_core_lifetime_review": true,
+    "independent_c_sdk_ownership_review": true,
+    "final_four_guests": true,
+    "all_required_legacy_checks": true,
+    "single_c_reply_event_and_kernel_marker": true,
+    "six_case_core_marker_on_boot_tests": true,
+    "packaged_image_hashes": true,
+    "actual_checkout_matches_stage": true
+  },
+  "cases": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "373c59a33a9f8807a0c5d4adbf65826f2aa38a1956e75f5bdc740826e85fd8bd",
+      "build_sha256": "d592f6c754420e4b2485cf22840c3ad2e89d8abf5d8f004cd396e64d0c394143",
+      "abi_build_sha256": "e80dea5f9183fd5319671eddccd676e58c1c4656464b14ca197d44c43fd855e9"
+    },
+    {
+      "label": "release-max-smp4-abi-libc-block-ro",
+      "evidence_sha256": "7590bf52ddc4341efd8ffe9e16424d562ac6d5a1411d18a316ebfeb3af2c2949",
+      "build_sha256": "c8967649f6ccf1de23b4ce96cdcdc18ca98493e5be62b94f4b8b7b1334f43554",
+      "abi_build_sha256": "172efbf0309e416e52f74b93839c48df2c2e1b540b18e3ee761bc47a43b10859"
+    },
+    {
+      "label": "debug-normal-max-smp4-abi-libc-block-rw",
+      "evidence_sha256": "e8124327a1232fcb4cacb876e075516bf229e0cdf0cad257fa503971b15b8299",
+      "build_sha256": "d592f6c754420e4b2485cf22840c3ad2e89d8abf5d8f004cd396e64d0c394143",
+      "abi_build_sha256": "e80dea5f9183fd5319671eddccd676e58c1c4656464b14ca197d44c43fd855e9"
+    },
+    {
+      "label": "release-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "06e573814effa57e64d5c38aed953e6bdf98fcbef53d47c13c1894f973aa98ee",
+      "build_sha256": "c8967649f6ccf1de23b4ce96cdcdc18ca98493e5be62b94f4b8b7b1334f43554",
+      "abi_build_sha256": "172efbf0309e416e52f74b93839c48df2c2e1b540b18e3ee761bc47a43b10859"
+    }
+  ],
+  "scope": "Independent read-only core and C integration source reviews found no blockers. Final combined matrix and actual-source artifacts checked separately by the executor. Kernel policy remains serialized; no filesystem or hardware performance claim."
+}

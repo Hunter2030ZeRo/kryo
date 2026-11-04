@@ -119,7 +119,10 @@ enum kryo_call {
     KRYO_CALL_PARK_UNTIL = 59,
     KRYO_CALL_WAKE = 60,
     KRYO_CALL_THREAD_CREATE_NATIVE = 61,
-    KRYO_CALL_DEBUG_WRITE = 62
+    KRYO_CALL_DEBUG_WRITE = 62,
+    KRYO_CALL_CALL_EXCHANGE = 63,
+    KRYO_CALL_CALL_EXCHANGE_UNTIL = 64,
+    KRYO_CALL_REPLY_CAPS = 65
 };
 
 enum {
@@ -283,13 +286,16 @@ static inline kryo_ipc_result kryo_ipc_invalid(void) {
 
 /* Inputs are copied into registers before entry; no user pointer crosses IPC.
  * Message data is meaningful after successful Call/Receive. Handles/count are
- * receive-only. On failure value is delivery state, not an owned buffer release. */
-static inline kryo_ipc_result kryo_ipc_invoke(kryo_u64 call, kryo_handle endpoint,
+ * valid for Receive/CallExchange only. Failure value is delivery state; other
+ * outputs never authorize handle use or backing release after an error. */
+static inline kryo_ipc_result kryo_ipc_invoke_capacity(kryo_u64 call, kryo_handle endpoint,
                                               kryo_u64 argument, kryo_u64 deadline,
                                               kryo_message message,
                                               const kryo_grant *grants,
-                                              kryo_size count) {
-    if (count > KRYO_IPC_CAPS || (count != 0 && grants == 0))
+                                              kryo_size count,
+                                              kryo_size reply_capacity) {
+    if (count > KRYO_IPC_CAPS || reply_capacity > KRYO_IPC_CAPS
+        || (count != 0 && grants == 0))
         return kryo_ipc_invalid();
     register kryo_u64 first __asm__("r8") = message.words[0];
     register kryo_u64 second __asm__("r9") = message.words[1];
@@ -301,6 +307,7 @@ static inline kryo_ipc_result kryo_ipc_invoke(kryo_u64 call, kryo_handle endpoin
     register kryo_u64 second_rights __asm__("r15") = count > 1 ? grants[1].rights : 0;
     __asm__ volatile("int $0x80"
                      : "+a"(call), "+D"(endpoint), "+S"(argument), "+d"(deadline),
+                       "+c"(reply_capacity),
                        "+r"(first), "+r"(second), "+r"(third), "+r"(fourth),
                        "+r"(first_handle), "+r"(second_handle),
                        "+r"(first_rights), "+r"(second_rights)
@@ -317,6 +324,15 @@ static inline kryo_ipc_result kryo_ipc_invoke(kryo_u64 call, kryo_handle endpoin
     result.handles[1] = second_handle;
     result.count = first_rights;
     return result;
+}
+
+static inline kryo_ipc_result kryo_ipc_invoke(kryo_u64 call, kryo_handle endpoint,
+                                              kryo_u64 argument, kryo_u64 deadline,
+                                              kryo_message message,
+                                              const kryo_grant *grants,
+                                              kryo_size count) {
+    return kryo_ipc_invoke_capacity(call, endpoint, argument, deadline,
+                                   message, grants, count, 0);
 }
 
 /* An accepted failure can follow service-side effects; retry may repeat them. */
@@ -382,6 +398,26 @@ static inline kryo_ipc_result kryo_ipc_call_caps_until(kryo_handle endpoint,
     return kryo_ipc_invoke(KRYO_CALL_CALL_CAPS_UNTIL, endpoint, count, deadline, message, grants, count);
 }
 
+/* Reserve reply handles before request publication; zero request grants are valid. */
+static inline kryo_ipc_result kryo_ipc_call_exchange(kryo_handle endpoint,
+                                                      kryo_message message,
+                                                      const kryo_grant *grants,
+                                                      kryo_size count,
+                                                      kryo_size reply_capacity) {
+    return kryo_ipc_invoke_capacity(KRYO_CALL_CALL_EXCHANGE, endpoint, count, 0,
+                                   message, grants, count, reply_capacity);
+}
+
+static inline kryo_ipc_result kryo_ipc_call_exchange_until(kryo_handle endpoint,
+                                                            kryo_message message,
+                                                            const kryo_grant *grants,
+                                                            kryo_size count,
+                                                            kryo_size reply_capacity,
+                                                            kryo_u64 deadline) {
+    return kryo_ipc_invoke_capacity(KRYO_CALL_CALL_EXCHANGE_UNTIL, endpoint, count,
+                                   deadline, message, grants, count, reply_capacity);
+}
+
 /* Capacity is reserved before acceptance; zero requests inline data alone. */
 static inline kryo_ipc_result kryo_ipc_receive(kryo_handle endpoint,
                                                kryo_size capacity) {
@@ -426,6 +462,24 @@ static inline kryo_ipc_result kryo_ipc_receive_for(kryo_handle endpoint,
 static inline kryo_result kryo_ipc_reply(kryo_handle endpoint, kryo_u64 token,
                                          kryo_message message) {
     kryo_ipc_result reply = kryo_ipc_invoke(KRYO_CALL_REPLY, endpoint, token, 0, message, 0, 0);
+    kryo_result result;
+    result.status = reply.status;
+    result.value = reply.value;
+    return result;
+}
+
+static inline kryo_result kryo_ipc_reply_caps(kryo_handle endpoint, kryo_u64 token,
+                                              kryo_message message,
+                                              const kryo_grant *grants,
+                                              kryo_size count) {
+    if (count == 0 || count > KRYO_IPC_CAPS || grants == 0) {
+        kryo_result invalid;
+        invalid.status = KRYO_STATUS_INVALID_ARGUMENT;
+        invalid.value = 0;
+        return invalid;
+    }
+    kryo_ipc_result reply = kryo_ipc_invoke(KRYO_CALL_REPLY_CAPS, endpoint, token,
+                                          count, message, grants, count);
     kryo_result result;
     result.status = reply.status;
     result.value = reply.value;

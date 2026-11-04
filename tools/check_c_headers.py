@@ -131,7 +131,7 @@ def main():
     syscall, startup, libsys, native = (path.read_text() for path in (syscall_path, startup_path, libsys_path, NATIVE))
     calls = {"KRYO_CALL_" + screaming(name): value for name, value in enum_values(syscall, "pub enum Call").items()}
     exposed = enum_values(native, "enum kryo_call")
-    assert len(exposed) == 43 and exposed.keys() <= calls.keys()
+    assert len(exposed) == 46 and exposed.keys() <= calls.keys()
     native_expected = {name: calls[name] for name in exposed}
     statuses = {"KRYO_STATUS_" + screaming(name): -value for name, value in enum_values(syscall, "pub enum Error").items()}
     statuses["KRYO_STATUS_OK"] = 0

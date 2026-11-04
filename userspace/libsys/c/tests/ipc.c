@@ -43,8 +43,16 @@ __attribute__((noinline)) kryo_ipc_result exercise_ipc(
     case 7: return kryo_ipc_call_caps_until(endpoint, message, grants, count, deadline);
     case 8: return kryo_ipc_receive(endpoint, count);
     case 9: return kryo_ipc_receive_until(endpoint, count, deadline);
+    case 11: return kryo_ipc_call_exchange(endpoint, message, grants, count, 2);
+    case 12: return kryo_ipc_call_exchange_until(endpoint, message, grants, count, 2, deadline);
     default: return kryo_ipc_receive_for(endpoint, count, deadline);
     }
+}
+
+kryo_result exercise_reply_caps(kryo_handle endpoint, kryo_u64 token,
+                               kryo_message message, const kryo_grant *grants,
+                               kryo_size count) {
+    return kryo_ipc_reply_caps(endpoint, token, message, grants, count);
 }
 
 __attribute__((noinline)) kryo_result exercise_scalar(
@@ -77,7 +85,7 @@ kryo_u64 preserve_ipc_registers(kryo_handle endpoint, kryo_message message,
     register kryo_u64 third __asm__("r14") = 0x5555555555555555ULL;
     register kryo_u64 fourth __asm__("r15") = 0xaaaaaaaaaaaaaaaaULL;
     __asm__ volatile("" : "+r"(first), "+r"(second), "+r"(third), "+r"(fourth));
-    kryo_ipc_result result = kryo_ipc_call_caps(endpoint, message, grants, count);
+    kryo_ipc_result result = kryo_ipc_call_exchange(endpoint, message, grants, count, 2);
     __asm__ volatile("" : "+r"(first), "+r"(second), "+r"(third), "+r"(fourth));
     return first ^ second ^ third ^ fourth ^ (kryo_u64)result.status ^ result.value
         ^ result.message.words[0] ^ result.message.words[1] ^ result.message.words[2]
@@ -102,8 +110,13 @@ int main(void) {
         || !invalid(kryo_ipc_receive(0, 3))
         || !invalid(kryo_ipc_receive_until(0, (kryo_size)-1, 0))
         || !invalid(kryo_ipc_receive_for(0, 3, 0))
+        || !invalid(kryo_ipc_call_exchange(0, message, &grant, 1, 3))
+        || !invalid(kryo_ipc_call_exchange_until(0, message, 0, 1, 2, 0))
         || !invalid(kryo_ipc_invoke(KRYO_CALL_SEND_CAPS, 0, 3, 0, message, &grant, 3)))
         return 1;
+    kryo_result reply = kryo_ipc_reply_caps(0, 0, message, &grant, 0);
+    if (reply.status != KRYO_STATUS_INVALID_ARGUMENT || reply.value != 0)
+        return 5;
     kryo_ipc_result result = kryo_ipc_invalid();
     result.status = KRYO_STATUS_OK;
     result.value = 0xfedcba9876543210ULL;

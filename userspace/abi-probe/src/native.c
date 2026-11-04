@@ -141,11 +141,33 @@ kryo_u64 c_ipc_checks(kryo_handle bootstrap, kryo_handle factory,
     if (denied.status != KRYO_STATUS_PERMISSION_DENIED || kryo_ipc_accepted(denied))
         return 11;
     grant.handle = memory.value;
-    kryo_ipc_result response = kryo_ipc_call_caps_until(server, request, &grant, 1, ipc_deadline());
-    if (response.status != KRYO_STATUS_OK
+    kryo_ipc_result response = kryo_ipc_call_exchange_until(server, request, &grant, 1, 2,
+                                                          ipc_deadline());
+    if (response.status != KRYO_STATUS_OK || response.value != 0 || response.count != 2
         || response.message.words[0] != 3 || response.message.words[1] != 1
         || response.message.words[2] != 42 || response.message.words[3] != 0)
         return 12;
+    kryo_handle_info_result reply_memory = kryo_handle_info(response.handles[0]);
+    kryo_handle_info_result reply_endpoint = kryo_handle_info(response.handles[1]);
+    if (reply_memory.status != KRYO_STATUS_OK || reply_memory.kind != KRYO_OBJECT_MEMORY
+        || reply_memory.rights != (KRYO_RIGHT_READ | KRYO_RIGHT_MAP)
+        || reply_endpoint.status != KRYO_STATUS_OK || reply_endpoint.kind != KRYO_OBJECT_ENDPOINT
+        || reply_endpoint.rights != KRYO_RIGHT_SEND)
+        return 15;
+    const kryo_u64 reply_address = 0x2100000;
+    if (kryo_memory_map(response.handles[0], reply_address, 0,
+                        KRYO_MEMORY_READ_WRITE).status != KRYO_STATUS_PERMISSION_DENIED
+        || !completed(kryo_memory_map(response.handles[0], reply_address, 0,
+                                      KRYO_MEMORY_READ_ONLY), 0))
+        return 16;
+    volatile const kryo_u64 *reply_words = (volatile const kryo_u64 *)reply_address;
+    for (kryo_size index = 0; index < 512; ++index)
+        if (reply_words[index] != (0x13579bdf2468ace0ULL ^ index))
+            return 17;
+    if (!completed(kryo_memory_unmap(reply_address), 0)
+        || !completed(kryo_close(response.handles[0]), 0)
+        || !completed(kryo_close(response.handles[1]), 0))
+        return 18;
     // The peer acknowledges only after unmapping and closing its read-only loan.
     if (!completed(kryo_memory_unmap(address), 0)
         || !completed(kryo_close(restricted.value), 0)

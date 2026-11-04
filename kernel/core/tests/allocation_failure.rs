@@ -183,6 +183,60 @@ fn wait_and_endpoint_oom_do_not_register_or_accept_a_partial_request() {
     ));
 }
 
+#[test]
+fn exchange_oom_preserves_the_request_and_reply_commit_does_not_allocate() {
+    let mut tasks = TaskTable::<(), 2>::new();
+    let owner = tasks.spawn(()).unwrap();
+    let caller = tasks.spawn(()).unwrap();
+    let mut waits = WaitTable::<Completion, 2>::new();
+    let receive = waits.begin(owner).unwrap();
+    waits.park(receive).unwrap();
+    let call = waits.begin(caller).unwrap();
+    waits.park(call).unwrap();
+    let mut endpoint = Endpoint::<0, 0>::growing(owner);
+    endpoint.receive(owner, receive, &mut waits).unwrap();
+    assert_eq!(
+        fail_allocations(|| endpoint.call_exchange(
+            caller,
+            call,
+            Message::default(),
+            0,
+            2,
+            &mut waits
+        )),
+        Err(IpcError::Capacity),
+    );
+    assert!(waits.is_pending(receive));
+    assert!(waits.is_pending(call));
+    endpoint
+        .call_exchange(caller, call, Message::default(), 0, 2, &mut waits)
+        .unwrap();
+    let token = match waits.take(receive).unwrap() {
+        Completion::Received {
+            reply: Some(token), ..
+        } => token,
+        other => panic!("Missing accepted exchange: {other:?}"),
+    };
+    assert_eq!(
+        fail_allocations(|| endpoint.reply_target(owner, token, 3, &waits)),
+        Err(IpcError::Capacity),
+    );
+    assert_eq!(
+        fail_allocations(|| endpoint.reply_target(owner, token, 2, &waits)),
+        Ok((caller, call)),
+    );
+    fail_allocations(|| endpoint.reply_caps(owner, token, Message([42; 4]), 2, &mut waits))
+        .unwrap();
+    assert_eq!(
+        waits.take(call),
+        Ok(Completion::RepliedCaps {
+            message: Message([42; 4]),
+            sender: owner,
+            capabilities: 2
+        }),
+    );
+}
+
 struct FixedVm {
     root: u64,
     mappings: [Option<(u64, u64)>; 32],

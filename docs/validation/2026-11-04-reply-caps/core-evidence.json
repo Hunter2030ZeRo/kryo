@@ -1,0 +1,208 @@
+{
+  "base_commit": "e04e99e5a7d23f61e12c9acc7b281e2e9e048b17",
+  "source_bundle_sha256": "47607b34348da1521edff779680c717aae9df4a0d24918b749c0a00079d9849c",
+  "matching_final_code_files": {
+    "interfaces/src/syscall/mod.rs": "896de742591f6d00b87ecc5bf55380821d6047406c34f222a46337d1e528c350",
+    "kernel/core/src/ipc/endpoint.rs": "06afd612612bac207d64d885cd74b254be0916475e179153b7386496687d30ac",
+    "kernel/core/src/ipc/mod.rs": "4edd7b4dcf8f9d2a5522e265a7f8cf7f9562d9e23448796fe4e2b21c6cac0be4",
+    "kernel/core/tests/allocation_failure.rs": "56a5c14695948e057383ec01e4d095a62eca3649fb5f017b483209fb95a6638d",
+    "kernel/core/tests/reply_caps.rs": "62e7ec8b94d0d941cab89208bd69c7dbe55566e746f03c4af13c40b0a8a2a8b5",
+    "kernel/image/src/boot/task_checks/mod.rs": "ee81d77d1f33f70c4d81bbd9d00f060fd2368c37a00db2e71de39ee4036e970e",
+    "kernel/image/src/boot/task_checks/reply_checks.rs": "b01ea79f399be6879c0f89ff4d068f145455005bc3d2ea6c174b34d0d2c6e1e4",
+    "kernel/image/src/runtime/ipc_runtime.rs": "e4c9175650b30dcfa8fddd7d24b80cda54b3a2bb62410f6d3bbe3fffedd366f0",
+    "kernel/image/src/runtime/native.rs": "63723939a4005c120e3b1df201e08c7a0c69b8060fa9b7eb3846d7d30d366bf4",
+    "userspace/libsys/src/lib.rs": "520d52773b21d0441f202980281a079f8e5446d8eb45ece8b167723d9284642e"
+  },
+  "checks": [
+    {
+      "name": "host",
+      "command": [
+        "cargo",
+        "test",
+        "-p",
+        "kryo-core",
+        "-p",
+        "kryo-hal",
+        "-p",
+        "kryo-interfaces",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/reply-caps/host-target",
+        "--locked",
+        "--offline",
+        "--quiet"
+      ],
+      "exit_code": 0,
+      "log_sha256": "3df7fab8142c2cfedaacdcf2f71d9874d18d7e41e9b6a6cf30dac2268fee7d42",
+      "log": "core-host.log",
+      "rust_tests": 448
+    },
+    {
+      "name": "userspace-host",
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "userspace/Cargo.toml",
+        "-p",
+        "kryo-libsys",
+        "-p",
+        "kryo-services",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/reply-caps/userspace-host",
+        "--locked",
+        "--offline",
+        "--quiet"
+      ],
+      "exit_code": 0,
+      "log_sha256": "bf158315c6f298bd2f1e7b4ed6c159390fa9879c158796b3a4dcf0a191b74bfb",
+      "log": "core-userspace-host.log",
+      "rust_tests": 18
+    },
+    {
+      "name": "normal-kernel",
+      "command": [
+        "cargo",
+        "build",
+        "-p",
+        "kryo",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/reply-caps/normal-target",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "log_sha256": "95adbf41e0fb10e3abd2f2874e1b1fbca4d57c5f4cec4984a9bb3474d4f917ae",
+      "log": "core-normal-kernel.log"
+    },
+    {
+      "name": "all-kernel",
+      "command": [
+        "cargo",
+        "build",
+        "-p",
+        "kryo",
+        "--all-features",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/reply-caps/kernel-target",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "log_sha256": "9c43ec14a65bf915e211af216b5c50bc8d305b9a35bff366fafc2e27caac9bc8",
+      "log": "core-all-kernel.log"
+    },
+    {
+      "name": "kernel-clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-features",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/reply-caps/kernel-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log_sha256": "1702ca589c6051de2832aef9519e64d13104333a6ed18a0b38eda0bebad7bdf2",
+      "log": "core-kernel-clippy.log"
+    },
+    {
+      "name": "userspace-clippy",
+      "command": [
+        "cargo",
+        "clippy",
+        "--manifest-path",
+        "userspace/Cargo.toml",
+        "-p",
+        "kryo-libsys",
+        "-p",
+        "kryo-services",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/reply-caps/userspace-host",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log_sha256": "f32c26977c6b630ef1f078345c9edeb7c26ff52292d7e8a4a7b4b0f40b752575",
+      "log": "core-userspace-clippy.log"
+    },
+    {
+      "name": "fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log": "core-fmt.log"
+    },
+    {
+      "name": "userspace-fmt",
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "userspace/Cargo.toml",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log": "core-userspace-fmt.log"
+    },
+    {
+      "name": "python",
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools"
+      ],
+      "exit_code": 0,
+      "log_sha256": "33cf8b9ee15739d6924666cae7311ba8560653bc4482329fe9f68a1bc720b011",
+      "log": "core-python.log"
+    }
+  ],
+  "qemu": [
+    {
+      "label": "debug-max-smp4",
+      "passed": true,
+      "reply_caps_cases": 6,
+      "evidence": "core-debug-max-smp4-evidence.json",
+      "evidence_sha256": "e6df370a05c3c71259c335321a1e090d07c8441237ba44fe8e8f10bed8da2fa9",
+      "debug_log": "core-debug-max-smp4-debug.log",
+      "debug_log_sha256": "6e7a0e4cdb38ed1327b8ca5d35dd86f1cf8a07810a2463ebe77f5fb443fc4372"
+    },
+    {
+      "label": "release-Haswell-noTSX",
+      "passed": true,
+      "reply_caps_cases": 6,
+      "evidence": "core-release-Haswell-noTSX-evidence.json",
+      "evidence_sha256": "a11b7e55a36b63b16b207db1172b772358facad8c5d0744febb22ffeafd338a6",
+      "debug_log": "core-release-Haswell-noTSX-debug.log",
+      "debug_log_sha256": "00b948199aa4a8bab92f9aebb69cd951bbae3d8a6256a1fd7a3fd48eb631a97d"
+    }
+  ],
+  "rust_tests": 466,
+  "python_tests": 32,
+  "scope": "preintegration mechanism snapshot; ten code files match final sources; counts are separate from the final combined checks"
+}

@@ -59,7 +59,8 @@ class PciEvidenceTests(unittest.TestCase):
         native_c = "CABI: native C calls and diagnostic retirement OK\n"
         c_threads = "CTHREAD: native C create join and backing retirement OK threads=2\n"
         c_ipc = "CIPC: C Rust capability and shared memory retirement OK\n"
-        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads, c_ipc]
+        c_reply = "CREPLY: C Rust capability reply retirement OK caps=2\n"
+        markers = [diagnostic_log(), ready, retired, tls, vm, words, threads, native_c, c_threads, c_ipc, c_reply]
         log = "".join(markers)
         self.assertTrue(all(abi_checks(log, True).values()))
         self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))
@@ -126,6 +127,17 @@ class PciEvidenceTests(unittest.TestCase):
                         marker + marker):
             self.assertFalse(abi_checks(invalid, True)["native_c_ipc"])
         self.assertTrue(abi_checks(marker, True)["native_c_ipc"])
+
+    def test_reply_caps_requires_kernel_retirement_proof(self):
+        marker = "CREPLY: C Rust capability reply retirement OK caps=2\n"
+        for invalid in ("USERLOG: process=0x123 event=101 value=2\n",
+                        "USERDIAG: process=0x123 bytes=0 text=" + marker,
+                        marker + marker, marker.replace("caps=2", "caps=1")):
+            self.assertFalse(abi_checks(invalid, True)["native_c_reply_caps"])
+        self.assertTrue(abi_checks(marker, True)["native_c_reply_caps"])
+        core = "REPLYCAPS: atomic grants quota timeout and retirement OK cases=6\n"
+        self.assertFalse(observed_checks("USERDIAG: process=0x123 bytes=0 text=" + core)["reply_caps"])
+        self.assertTrue(observed_checks(core)["reply_caps"])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

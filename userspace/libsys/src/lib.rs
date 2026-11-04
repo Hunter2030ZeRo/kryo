@@ -483,6 +483,71 @@ pub fn call_caps_until(
         .map(|result| result.message)
 }
 
+/// Calls with optional request grants and reserved reply-handle capacity.
+/// The response has no reply token: `Received.reply` is always `None`.
+pub fn call_exchange(
+    endpoint: Handle,
+    message: Message,
+    grants: &[Grant],
+    reply_capacity: usize,
+) -> Result<Received, IpcError> {
+    exchange(
+        Call::CallExchange,
+        endpoint,
+        message,
+        grants,
+        reply_capacity,
+        0,
+    )
+}
+
+pub fn call_exchange_until(
+    endpoint: Handle,
+    message: Message,
+    grants: &[Grant],
+    reply_capacity: usize,
+    deadline: u64,
+) -> Result<Received, IpcError> {
+    exchange(
+        Call::CallExchangeUntil,
+        endpoint,
+        message,
+        grants,
+        reply_capacity,
+        deadline,
+    )
+}
+
+fn exchange(
+    call: Call,
+    endpoint: Handle,
+    message: Message,
+    grants: &[Grant],
+    reply_capacity: usize,
+    deadline: u64,
+) -> Result<Received, IpcError> {
+    if grants.len() > 2 || reply_capacity > 2 {
+        return Err(invalid_ipc(Error::InvalidArgument));
+    }
+    let result = ipc_exchange(
+        call,
+        endpoint,
+        grants.len() as u64,
+        deadline,
+        message,
+        grants,
+        reply_capacity as u64,
+    )?;
+    exchange_result(result, reply_capacity)
+}
+
+fn exchange_result(result: IpcResult, capacity: usize) -> Result<Received, IpcError> {
+    if result.result != 0 {
+        return Err(invalid_ipc(Error::InvalidResponse));
+    }
+    received_result(result, capacity)
+}
+
 pub fn receive(endpoint: Handle, capacity: usize) -> Result<Received, IpcError> {
     receive_message(Call::Receive, endpoint, capacity, 0)
 }
@@ -508,6 +573,29 @@ pub fn reply(endpoint: Handle, token: ReplyToken, message: Message) -> Result<()
     ipc(Call::Reply, endpoint, token.0, 0, message, &[])
         .map(|_| ())
         .map_err(|failure| failure.error)
+}
+
+/// Replies atomically with inline data and one or two reduced-rights grants.
+/// A rejected preflight leaves a still-live token available for another reply.
+pub fn reply_caps(
+    endpoint: Handle,
+    token: ReplyToken,
+    message: Message,
+    grants: &[Grant],
+) -> Result<(), Error> {
+    if !(1..=2).contains(&grants.len()) {
+        return Err(Error::InvalidArgument);
+    }
+    ipc(
+        Call::ReplyCaps,
+        endpoint,
+        token.0,
+        grants.len() as u64,
+        message,
+        grants,
+    )
+    .map(|_| ())
+    .map_err(|failure| failure.error)
 }
 
 pub fn yield_now() -> Result<(), Error> {
@@ -858,6 +946,10 @@ fn receive_message(
         return Err(invalid_ipc(Error::InvalidArgument));
     }
     let result = ipc(call, endpoint, capacity as u64, deadline, [0; 4], &[])?;
+    received_result(result, capacity)
+}
+
+fn received_result(result: IpcResult, capacity: usize) -> Result<Received, IpcError> {
     if result.count > capacity as u64 {
         return Err(invalid_ipc(Error::InvalidResponse));
     }
@@ -880,6 +972,18 @@ fn ipc(
     message: Message,
     grants: &[Grant],
 ) -> Result<IpcResult, IpcError> {
+    ipc_exchange(call, endpoint, argument, deadline, message, grants, 0)
+}
+
+fn ipc_exchange(
+    call: Call,
+    endpoint: Handle,
+    argument: u64,
+    deadline: u64,
+    message: Message,
+    grants: &[Grant],
+    reply_capacity: u64,
+) -> Result<IpcResult, IpcError> {
     let status;
     let result;
     let [mut first, mut second, mut third, mut fourth] = message;
@@ -893,6 +997,7 @@ fn ipc(
             inlateout("rax") call as u64 => status,
             in("rdi") endpoint.raw(),
             in("rsi") argument,
+            in("rcx") reply_capacity,
             inlateout("rdx") deadline => result,
             inlateout("r8") first,
             inlateout("r9") second,
@@ -980,6 +1085,66 @@ fn read_startup(mut read: impl FnMut(usize) -> Result<u64, Error>) -> Result<Sta
 mod tests {
     use super::*;
     use kryo_interfaces::startup::{ENTRY_WORDS, HEADER_WORDS, MAGIC, MAX_GRANTS, VERSION};
+
+    #[test]
+    fn exchange_response_preserves_high_bit_handles_without_a_reply_token() {
+        let result = exchange_result(
+            IpcResult {
+                result: 0,
+                message: [0xfedc_ba98_7654_3210, 2, 3, 4],
+                handles: [0x8000_0000_0000_0001, u64::MAX],
+                count: 2,
+            },
+            2,
+        )
+        .unwrap();
+        assert_eq!(result.reply, None);
+        assert_eq!(result.message[0], 0xfedc_ba98_7654_3210);
+        assert_eq!(
+            result.handles.map(|handle| handle.unwrap().raw()),
+            [0x8000_0000_0000_0001, u64::MAX]
+        );
+    }
+
+    #[test]
+    fn exchange_response_rejects_tokens_surplus_grants_and_zero_handles() {
+        for (token, count, handle, capacity) in [(1, 0, 0, 0), (0, 2, 7, 1), (0, 1, 0, 1)] {
+            assert_eq!(
+                exchange_result(
+                    IpcResult {
+                        result: token,
+                        message: [0; 4],
+                        handles: [handle; 2],
+                        count,
+                    },
+                    capacity
+                ),
+                Err(invalid_ipc(Error::InvalidResponse))
+            );
+        }
+    }
+
+    #[test]
+    fn empty_exchange_response_has_no_grants_or_token() {
+        let result = exchange_result(
+            IpcResult {
+                result: 0,
+                message: [7; 4],
+                handles: [0; 2],
+                count: 0,
+            },
+            0,
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            Received {
+                message: [7; 4],
+                handles: [None; 2],
+                reply: None
+            }
+        );
+    }
 
     fn words() -> [u64; HEADER_WORDS + 2 * ENTRY_WORDS] {
         [

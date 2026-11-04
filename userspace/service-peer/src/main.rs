@@ -12,6 +12,8 @@ const STOP: u64 = 4;
 const WAIT_NS: u64 = 1_000_000_000;
 const MEMORY_VIEW: u64 = 0x200_0000;
 const MEMORY_PATTERN: u64 = 0xfedc_ba98_7654_3210;
+const REPLY_VIEW: u64 = 0x210_0000;
+const REPLY_PATTERN: u64 = 0x1357_9bdf_2468_ace0;
 
 global_asm!(
     r#"
@@ -31,7 +33,7 @@ _start:
 extern "C" fn peer_main(bootstrap: u64, factory: u64, _features: u64, mode: u64) -> ! {
     let bootstrap = Handle::from_raw(bootstrap).unwrap_or_else(|| sys::exit(200));
     let factory = Handle::from_raw(factory).unwrap_or_else(|| sys::exit(201));
-    if mode > 1 {
+    if mode > 2 {
         sys::exit(216);
     }
     match serve(bootstrap, factory, mode) {
@@ -66,20 +68,25 @@ fn serve(bootstrap: Handle, factory: Handle, mode: u64) -> Result<(), u64> {
         deadline()?,
     )
     .map_err(|_| 205u64)?;
-    let capacity = usize::from(mode == 1);
+    let capacity = usize::from(mode != 0);
     let request = sys::receive_until(endpoint, capacity, deadline()?).map_err(|_| 206u64)?;
     let [kind, instance, value, reserved] = request.message;
     if kind != REQUEST || !(1..=2).contains(&instance) || value != 41 || reserved != 0 {
         return Err(207);
     }
     let reply = request.reply.ok_or(208u64)?;
-    if mode == 1 {
+    if mode != 0 {
         let [Some(memory), None] = request.handles else {
             return Err(217);
         };
         check_memory(memory)?;
     }
-    sys::reply(endpoint, reply, [RESPONSE, instance, value + 1, 0]).map_err(|_| 209u64)?;
+    let response = [RESPONSE, instance, value + 1, 0];
+    if mode == 2 {
+        reply_with_memory(endpoint, reply, response)?;
+    } else {
+        sys::reply(endpoint, reply, response).map_err(|_| 209u64)?;
+    }
     let stop = sys::receive_until(endpoint, 0, deadline()?).map_err(|_| 210u64)?;
     if stop.message != [STOP, instance, 0, 0] || stop.reply.is_some() {
         return Err(211);
@@ -112,6 +119,43 @@ fn check_memory(memory: Handle) -> Result<(), u64> {
     // All raw reads have ended before the mapping and received handle retire.
     unsafe { sys::memory_unmap(MEMORY_VIEW) }.map_err(|_| 223u64)?;
     sys::close(memory).map_err(|_| 224u64)?;
+    Ok(())
+}
+
+fn reply_with_memory(
+    endpoint: Handle,
+    reply: sys::ReplyToken,
+    message: sys::Message,
+) -> Result<(), u64> {
+    let memory = sys::memory_create(1).map_err(|_| 225u64)?;
+    // The fixture owns this vacant view and all access to the fresh object.
+    unsafe { sys::memory_map(memory, REPLY_VIEW, 0, true) }.map_err(|_| 226u64)?;
+    for index in 0..512 {
+        unsafe {
+            (REPLY_VIEW as *mut u64)
+                .add(index)
+                .write_volatile(REPLY_PATTERN ^ index as u64);
+        }
+    }
+    // End writes and remove the mapping before publishing either reply grant.
+    unsafe { sys::memory_unmap(REPLY_VIEW) }.map_err(|_| 227u64)?;
+    sys::reply_caps(
+        endpoint,
+        reply,
+        message,
+        &[
+            Grant {
+                handle: memory,
+                rights: sys::READ | sys::MAP,
+            },
+            Grant {
+                handle: endpoint,
+                rights: sys::SEND,
+            },
+        ],
+    )
+    .map_err(|_| 228u64)?;
+    sys::close(memory).map_err(|_| 229u64)?;
     Ok(())
 }
 

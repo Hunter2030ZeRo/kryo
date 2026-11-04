@@ -23,6 +23,12 @@
 //! Return RDX=thread-control handle. The runtime retains all supplied mappings.
 //! DebugWrite: RDI=debug capability, RSI=byte address, RDX=length (at most 256).
 //! Snapshot owned user RAM before escaped diagnostic output; return byte count.
+//! CallExchange/Until: RSI=request grant count (0..2), RCX=reply capacity (0..2).
+//! Grant registers match CallCaps; timed RDX is an absolute deadline. A reply
+//! returns RDX=0, R8..R11=message, R12/R13=handles and R14=received count.
+//! ReplyCaps: RDI=endpoint, RSI=reply token, RDX=grant count (1..2).
+//! R8..R15 carry message/source grants as for CallCaps. Preflight failure
+//! preserves a live token; successful inline data and grants commit together.
 
 pub const ABI_VERSION: u32 = 0;
 pub const NATIVE_THREAD_VERSION: u64 = 1;
@@ -94,6 +100,9 @@ pub enum Call {
     Wake = 60,
     ThreadCreateNative = 61,
     DebugWrite = 62,
+    CallExchange = 63,
+    CallExchangeUntil = 64,
+    ReplyCaps = 65,
 }
 
 impl TryFrom<u64> for Call {
@@ -164,6 +173,9 @@ impl TryFrom<u64> for Call {
             60 => Ok(Self::Wake),
             61 => Ok(Self::ThreadCreateNative),
             62 => Ok(Self::DebugWrite),
+            63 => Ok(Self::CallExchange),
+            64 => Ok(Self::CallExchangeUntil),
+            65 => Ok(Self::ReplyCaps),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -208,7 +220,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=62 {
+        for number in 0..=65 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

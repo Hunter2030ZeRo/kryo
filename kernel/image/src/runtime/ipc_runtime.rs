@@ -331,21 +331,28 @@ impl<'objects> IpcRuntime<'objects> {
     fn commit_received(&mut self, tasks: &mut Tasks<'_, 'objects>) {
         loop {
             let next = self.waits.ready().find_map(|(wait, task, completion)| {
-                (matches!(completion, Completion::Received { .. })
-                    && tasks.resources_mut(task).unwrap().received_wait != Some(wait))
+                (matches!(
+                    completion,
+                    Completion::Received { .. } | Completion::RepliedCaps { .. }
+                ) && tasks.resources_mut(task).unwrap().received_wait != Some(wait))
                 .then_some((wait, task, *completion))
             });
             let Some((wait, receiver, completion)) = next else {
                 break;
             };
-            let Completion::Received {
-                sender,
-                sender_wait,
-                capabilities,
-                ..
-            } = completion
-            else {
-                unreachable!()
+            let (sender, sender_wait, capabilities) = match completion {
+                Completion::Received {
+                    sender,
+                    sender_wait,
+                    capabilities,
+                    ..
+                } => (sender, sender_wait, capabilities),
+                Completion::RepliedCaps {
+                    sender,
+                    capabilities,
+                    ..
+                } => (sender, wait, capabilities),
+                _ => unreachable!(),
             };
             let transfer = self.take_transfer(sender_wait);
             let mut resources = tasks.resources_mut(receiver).unwrap();
@@ -472,11 +479,19 @@ impl<'objects> IpcRuntime<'objects> {
                     }
                     Completion::Received {
                         message,
-                        reply,
+                        capabilities,
+                        ..
+                    }
+                    | Completion::RepliedCaps {
+                        message,
                         capabilities,
                         ..
                     } => {
                         assert_eq!(thread.received_wait.take(), Some(wait));
+                        let reply = match completion {
+                            Completion::Received { reply, .. } => reply,
+                            _ => None,
+                        };
                         context.rdx = reply.map_or(0, |reply| reply.as_raw());
                         [context.r8, context.r9, context.r10, context.r11] = message.0;
                         context.r12 =

@@ -13,6 +13,7 @@ struct Pending {
     message: Message,
     call: bool,
     cap_count: usize,
+    reply_capacity: Option<usize>,
 }
 
 #[derive(Clone, Copy)]
@@ -26,6 +27,7 @@ struct Reply {
     receiver: TaskId,
     caller: TaskId,
     wait: WaitId,
+    reply_capacity: Option<usize>,
 }
 
 struct ReplySlot {
@@ -114,6 +116,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 message,
                 call: false,
                 cap_count,
+                reply_capacity: None,
             },
             waits,
         )
@@ -144,6 +147,30 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 message,
                 call: true,
                 cap_count,
+                reply_capacity: None,
+            },
+            waits,
+        )
+    }
+
+    /// The runtime reserves reply handles before publishing the caller's wait.
+    pub fn call_exchange<const WAITS: usize>(
+        &mut self,
+        sender: TaskId,
+        wait: WaitId,
+        message: Message,
+        cap_count: usize,
+        reply_capacity: usize,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
+        self.submit(
+            Pending {
+                sender,
+                wait,
+                message,
+                call: true,
+                cap_count,
+                reply_capacity: Some(reply_capacity),
             },
             waits,
         )
@@ -190,6 +217,57 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         message: Message,
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
+        self.reply_caps(receiver, token, message, 0, waits)
+    }
+
+    /// Preflight a reply without consuming a valid token. The runtime retains
+    /// serialized endpoint/wait ownership while it prepares capability owners.
+    pub fn reply_target<const WAITS: usize>(
+        &mut self,
+        receiver: TaskId,
+        token: ReplyToken,
+        cap_count: usize,
+        waits: &WaitTable<Completion, WAITS>,
+    ) -> Result<(TaskId, WaitId), IpcError> {
+        let (_, reply) = self.check_reply(receiver, token, cap_count, waits)?;
+        Ok((reply.caller, reply.wait))
+    }
+
+    pub fn reply_caps<const WAITS: usize>(
+        &mut self,
+        receiver: TaskId,
+        token: ReplyToken,
+        message: Message,
+        cap_count: usize,
+        waits: &mut WaitTable<Completion, WAITS>,
+    ) -> Result<(), IpcError> {
+        let (index, reply) = self.check_reply(receiver, token, cap_count, waits)?;
+        let completion = if reply.reply_capacity.is_some() {
+            Completion::RepliedCaps {
+                message,
+                sender: receiver,
+                capabilities: cap_count,
+            }
+        } else {
+            Completion::Replied(message)
+        };
+        self.retire_reply(index);
+        let completed = waits.complete(reply.wait, completion).is_ok();
+        self.pump(waits);
+        if completed {
+            Ok(())
+        } else {
+            Err(IpcError::InvalidReply)
+        }
+    }
+
+    fn check_reply<const WAITS: usize>(
+        &mut self,
+        receiver: TaskId,
+        token: ReplyToken,
+        cap_count: usize,
+        waits: &WaitTable<Completion, WAITS>,
+    ) -> Result<(usize, Reply), IpcError> {
         if receiver != self.owner {
             return Err(IpcError::PermissionDenied);
         }
@@ -204,20 +282,13 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         if reply.receiver != receiver {
             return Err(IpcError::PermissionDenied);
         }
-        let pending = valid_wait(waits, reply.caller, reply.wait);
-        self.retire_reply(index);
-        if !pending {
+        if !valid_wait(waits, reply.caller, reply.wait) {
             return Err(IpcError::InvalidReply);
         }
-        let completed = waits
-            .complete(reply.wait, Completion::Replied(message))
-            .is_ok();
-        self.pump(waits);
-        if completed {
-            Ok(())
-        } else {
-            Err(IpcError::InvalidReply)
+        if cap_count > MAX_CAPABILITIES || cap_count > reply.reply_capacity.unwrap_or(0) {
+            return Err(IpcError::Capacity);
         }
+        Ok((index, reply))
     }
 
     /// Cancel through the object before completing or abandoning its wait elsewhere.
@@ -331,7 +402,11 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
         waits: &mut WaitTable<Completion, WAITS>,
     ) -> Result<(), IpcError> {
         self.check_open()?;
-        if request.cap_count > MAX_CAPABILITIES {
+        if request.cap_count > MAX_CAPABILITIES
+            || request
+                .reply_capacity
+                .is_some_and(|capacity| capacity > MAX_CAPABILITIES)
+        {
             return Err(IpcError::Capacity);
         }
         self.prune(waits);
@@ -422,6 +497,7 @@ impl<const QUEUE: usize, const REPLIES: usize> Endpoint<QUEUE, REPLIES> {
                 receiver: self.owner,
                 caller: request.sender,
                 wait: request.wait,
+                reply_capacity: request.reply_capacity,
             });
             Some(token)
         } else {

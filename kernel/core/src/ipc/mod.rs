@@ -1,8 +1,8 @@
 //! Use one persistent WaitTable per runtime and bind each pending wait to at most
 //! one object. Detach waits before abandoning them. Reply tokens are endpoint-local.
 //! Schedule wakeups only after serialized object and wait mutations return.
-//! Capability owners stay in runtime batches. Commit a Received batch into reserved
-//! handles before waking the receiver or releasing the sender batch.
+//! Capability owners stay in runtime batches. Commit Received/RepliedCaps batches
+//! into reserved handles before waking the recipient or releasing their owners.
 
 use crate::process::ExitStatus;
 use crate::sync::wait::WaitId;
@@ -74,6 +74,11 @@ pub enum Completion {
         capabilities: usize,
     },
     Replied(Message),
+    RepliedCaps {
+        message: Message,
+        sender: TaskId,
+        capabilities: usize,
+    },
     Notified,
     Slept,
     ProcessExited(ExitStatus),

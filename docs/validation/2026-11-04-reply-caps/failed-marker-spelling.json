@@ -1,0 +1,9 @@
+{
+  "status": "failed",
+  "included_in_passing_counts": false,
+  "false_check": "reply_caps",
+  "actual_kernel_marker_count": 1,
+  "evidence_sha256": "a4a51572123e741dea96817a9c4d124774c07e58340a0fa81244bbcfc9ed0e2a",
+  "debug_log_sha256": "b3ccb20986b25a17c2ee783fc8a46eaabe79384d6e526e646d66e7bd8b624033",
+  "reason": "the checker expected different marker wording; the expected marker was corrected"
+}

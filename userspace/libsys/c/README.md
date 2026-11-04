@@ -109,6 +109,14 @@ has no message output. On failure, `kryo_ipc_accepted` reports whether delivery
 already happened. Retrying an accepted operation may repeat service effects.
 Neither timeout nor acceptance alone proves a shared-memory loan has ended.
 
+`kryo_ipc_call_exchange` and its absolute timed form accept zero to two request
+grants and reserve zero to two reply handles before request publication. On
+success `value` is zero, the message and received handles/count are valid, and
+there is no response token. `kryo_ipc_reply_caps` atomically returns one or two
+reduced-rights grants with its message. Rejected rights/source/capacity checks
+preserve a still-live token for retry; timeout, cancellation or peer death may
+invalidate it. Use ordinary Reply for a response without grants.
+
 Duplicate reduces rights and requires DUP. Transferring a grant requires
 TRANSFER on its source and cannot increase rights. A reply token is local to
 its endpoint, bound to the caller and single-use. The absolute timed wrappers
@@ -126,4 +134,7 @@ address space. The peer checks exact reduced rights, rejects a writable map,
 reads the payload and releases its mapping/handle before replying. C then
 releases its owners, stops the peer, observes process completion and checks
 PeerClosed. Kernel teardown checks channel, object, quota and frame retirement.
-This supplies native service communication, not libc file or terminal semantics.
+The reply-capability variant additionally returns a read-only memory object and
+a SEND endpoint grant. C validates both grants and reads the new page after the
+server has removed its writable view. This supplies native service communication,
+not libc file or terminal semantics.

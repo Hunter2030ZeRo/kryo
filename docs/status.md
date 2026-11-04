@@ -2,6 +2,14 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[Capability-bearing replies](decisions/0037-capability-bearing-replies.md)
+add explicit caller reply capacity and atomic message/grant delivery while
+preserving existing Call/Reply. Preflight failures preserve a live token for
+retry, and caller handle reservations are committed before wake or retirement.
+Rust and C wrappers expose the extension. See the
+[validation record](validation/2026-11-04-reply-caps/README.md). File service
+objects and descriptor lifetimes remain a separate contract.
+
 The [C service-call SDK](decisions/0036-c-service-calls.md) exposes existing
 IPC, capability, notification and shared-memory calls without changing native
 call numbers. The ABI fixture connects C to a Rust peer in another address
@@ -454,7 +462,7 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 - Frame metadata scales with the Usable RAM plan and has no fixed four-GiB or 128-GiB bitmap cap. Boot discovery still accepts at most 256 raw map entries and 288 normalized ranges, and metadata requires one contiguous Usable span. CPU physical-address width and canonical HHDM bounds remain enforced. The shared entry-stack branch has a one-GiB virtual-address budget, roughly 52,000 guarded cells; other resources can exhaust sooner. Private user VM metadata grows instead of retaining the earlier 16-mapping/64-table fixture limits.
 - Private mappings have unique backing; shared mappings retain the whole memory object and its shared-page charge. Native memory objects allow up to eight pages each, subject to the account total. Buffer loans, bulk queues, pin accounting and revocation remain pending.
 - HHDM split tables and their growable ownership metadata remain kernel-owned, without coalescing. Bootloader-reclaimable/ACPI memory and active boot tables remain reserved.
-- Small heap objects share Talc arenas over physically contiguous backing runs. Fragmentation can still cause large backing requests to fail despite free RAM. The heap uses one IRQ-excluded mutex; CPU-local caches, virtually contiguous backing, stable calls, multi-object waits and DMA isolation remain pending. IPC carries inline data and up to two copied capabilities; linear move, reply-capability transfer, and receiver-owner migration are unsupported. Wait/object changes retain serialized BSP ownership of one persistent wait table between execution batches.
+- Small heap objects share Talc arenas over physically contiguous backing runs. Fragmentation can still cause large backing requests to fail despite free RAM. The heap uses one IRQ-excluded mutex; CPU-local caches, virtually contiguous backing, stable calls, multi-object waits and DMA isolation remain pending. IPC carries inline data and up to two copied capabilities; linear move and receiver-owner migration are unsupported. Wait/object changes retain serialized BSP ownership of one persistent wait table between execution batches.
 - Task, membership, object, handle, and deadline selection use linear scans. Capacity growth does not provide scalable scheduling or parallel kernel policy. Deadline selection scans the growing wait table. Timer scheduling is connected by the shared normal/test runtime. Device IRQ routing, NMI work scheduling, suspend/resume, general C-state policy, and physical power measurements remain pending. HPET counter wrap, reset, or nanosecond exhaustion returns an error.
 - ICE execution, BetAFS I/O, terminal/Velocity, and KDE integration remain unimplemented.
 

@@ -1,5 +1,5 @@
 use super::ipc_runtime::{IpcRuntime, map_error as map_ipc_error};
-use super::{Batch, CallStats, KernelObject, Memory, Object, SharedLease, Tasks};
+use super::{Batch, CallStats, Handles, KernelObject, Memory, Object, SharedLease, Tasks};
 use crate::runtime::KernelRegion;
 use kryo_core::capability::{CapabilityError, Handle, Rights, TransferSpec};
 use kryo_core::ipc::{Completion, Delivery, Message, ReplyToken};
@@ -544,13 +544,15 @@ pub(crate) fn dispatch<'objects>(
             | Call::Wait
             | Call::SendCaps
             | Call::CallCaps
+            | Call::CallExchange
             | Call::SendUntil
             | Call::ReceiveUntil
             | Call::ReceiveFor
             | Call::CallUntil
             | Call::WaitUntil
             | Call::SendCapsUntil
-            | Call::CallCapsUntil => {
+            | Call::CallCapsUntil
+            | Call::CallExchangeUntil => {
                 let (operation, mut deadline) = match call {
                     Call::SendUntil => (Call::Send, Some(context.rdx)),
                     Call::ReceiveUntil => (Call::Receive, Some(context.rdx)),
@@ -559,6 +561,7 @@ pub(crate) fn dispatch<'objects>(
                     Call::WaitUntil => (Call::Wait, Some(context.rdx)),
                     Call::SendCapsUntil => (Call::SendCaps, Some(context.rdx)),
                     Call::CallCapsUntil => (Call::CallCaps, Some(context.rdx)),
+                    Call::CallExchangeUntil => (Call::CallExchange, Some(context.rdx)),
                     _ => (call, None),
                 };
                 let (kind, rights) = match operation {
@@ -586,6 +589,7 @@ pub(crate) fn dispatch<'objects>(
                 }
                 wait_on(caller, operation, deadline, context, &object, tasks, ipc)
             }
+            Call::ReplyCaps => reply_caps(caller, context, tasks, ipc),
             Call::Reply | Call::EndpointClose | Call::Signal => {
                 let (kind, rights) = match call {
                     Call::Reply => (ObjectKind::Endpoint, Rights::RECEIVE),
@@ -698,40 +702,32 @@ fn wait_on<'objects>(
     ipc: &mut IpcRuntime<'objects>,
 ) -> Result<Option<u64>, Error> {
     let mut resources = tasks.resources_mut(caller).unwrap();
-    let reservation = if call == Call::Receive {
+    let exchange = call == Call::CallExchange;
+    if exchange && (context.rsi > 2 || context.rcx > 2) {
+        return Err(Error::InvalidArgument);
+    }
+    let batch = if matches!(call, Call::SendCaps | Call::CallCaps) {
         let count = usize::try_from(context.rsi).map_err(|_| Error::InvalidArgument)?;
+        Some(prepare_grants(&resources.process.handles, context, count)?)
+    } else if exchange && context.rsi != 0 {
+        Some(prepare_grants(
+            &resources.process.handles,
+            context,
+            context.rsi as usize,
+        )?)
+    } else {
+        None
+    };
+    // Snapshot request references before reserving reply slots: a rejected
+    // grant must not leave a reservation behind.
+    let reservation = if call == Call::Receive || exchange {
+        let count = if exchange { context.rcx } else { context.rsi };
+        let count = usize::try_from(count).map_err(|_| Error::InvalidArgument)?;
         Some(
             resources
                 .process
                 .handles
                 .reserve(count)
-                .map_err(map_error)?,
-        )
-    } else {
-        None
-    };
-    let batch = if matches!(call, Call::SendCaps | Call::CallCaps) {
-        let count = usize::try_from(context.rsi).map_err(|_| Error::InvalidArgument)?;
-        if !(1..=2).contains(&count) {
-            return Err(Error::InvalidArgument);
-        }
-        let raw_handles = [context.r12, context.r13];
-        let raw_rights = [context.r14, context.r15];
-        let mut specs = [TransferSpec {
-            handle: Handle::INVALID,
-            rights: Rights::READ,
-        }; 2];
-        for index in 0..count {
-            specs[index] = TransferSpec {
-                handle: Handle::from_raw(raw_handles[index]),
-                rights: Rights::from_bits(raw_rights[index]).ok_or(Error::InvalidArgument)?,
-            };
-        }
-        Some(
-            resources
-                .process
-                .handles
-                .prepare_transfer(&specs[..count])
                 .map_err(map_error)?,
         )
     } else {
@@ -768,6 +764,16 @@ fn wait_on<'objects>(
                     .borrow_mut()
                     .call(caller, wait, message(context), &mut ipc.waits)
             }
+            (Call::CallExchange, KernelObject::Endpoint(endpoint)) => {
+                endpoint.borrow_mut().call_exchange(
+                    caller,
+                    wait,
+                    message(context),
+                    context.rsi as usize,
+                    context.rcx as usize,
+                    &mut ipc.waits,
+                )
+            }
             (Call::SendCaps, KernelObject::Endpoint(endpoint)) => endpoint.borrow_mut().send_caps(
                 caller,
                 wait,
@@ -803,6 +809,90 @@ fn wait_on<'objects>(
     }
     ipc.waits.park(wait).expect("Cannot finish IPC handoff");
     Ok(None)
+}
+
+fn prepare_grants<'objects>(
+    handles: &Handles<'objects>,
+    context: UserContext,
+    count: usize,
+) -> Result<Batch<'objects>, Error> {
+    if !(1..=2).contains(&count) {
+        return Err(Error::InvalidArgument);
+    }
+    let raw_handles = [context.r12, context.r13];
+    let raw_rights = [context.r14, context.r15];
+    let mut specs = [TransferSpec {
+        handle: Handle::INVALID,
+        rights: Rights::READ,
+    }; 2];
+    for index in 0..count {
+        specs[index] = TransferSpec {
+            handle: Handle::from_raw(raw_handles[index]),
+            rights: Rights::from_bits(raw_rights[index]).ok_or(Error::InvalidArgument)?,
+        };
+    }
+    handles.prepare_transfer(&specs[..count]).map_err(map_error)
+}
+
+fn reply_caps<'objects>(
+    caller: TaskId,
+    context: UserContext,
+    tasks: &mut Tasks<'_, 'objects>,
+    ipc: &mut IpcRuntime<'objects>,
+) -> Result<Option<u64>, Error> {
+    let object = lookup(
+        tasks,
+        caller,
+        Handle::from_raw(context.rdi),
+        ObjectKind::Endpoint,
+        Rights::RECEIVE,
+    )?;
+    let count = usize::try_from(context.rdx).map_err(|_| Error::InvalidArgument)?;
+    if !(1..=2).contains(&count) {
+        return Err(Error::InvalidArgument);
+    }
+    let token = ReplyToken::from_raw(context.rsi);
+    let (receiver, wait) = object
+        .with(|object| {
+            let KernelObject::Endpoint(endpoint) = object else {
+                unreachable!()
+            };
+            endpoint
+                .borrow_mut()
+                .reply_target(caller, token, count, &ipc.waits)
+        })
+        .map_err(map_ipc_error)?;
+    let batch = prepare_grants(
+        &tasks.resources_mut(caller).unwrap().process.handles,
+        context,
+        count,
+    )?;
+    {
+        let target = tasks
+            .resources_mut(receiver)
+            .expect("Pending reply caller invariant");
+        assert_eq!(target.wait, Some(wait));
+        assert!(
+            target
+                .receive_slots
+                .as_ref()
+                .is_some_and(|slots| slots.capacity() >= count)
+        );
+    }
+    object
+        .with(|object| {
+            let KernelObject::Endpoint(endpoint) = object else {
+                unreachable!()
+            };
+            endpoint
+                .borrow_mut()
+                .reply_caps(caller, token, message(context), count, &mut ipc.waits)
+        })
+        .map_err(map_ipc_error)?;
+    // The caller reserved both handle slots and this side record at admission.
+    // No execution or fallible allocation separates completion from staging.
+    ipc.hold_transfer(caller, wait, batch);
+    Ok(Some(0))
 }
 
 fn now() -> u64 {

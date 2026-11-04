@@ -1,0 +1,65 @@
+{
+  "scope": "static ANSI mlibc bring-up; no descriptors/pthreads/entropy/hosted ABI release",
+  "profile": "debug",
+  "sources": {
+    "mlibc": {
+      "repository": "https://github.com/managarm/mlibc",
+      "revision": "07cfd943977737b8147c1289922c23479feef53d",
+      "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+      "archive_bytes": 966764
+    },
+    "frigg": {
+      "repository": "https://github.com/managarm/frigg",
+      "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+      "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+      "archive_bytes": 91405
+    },
+    "freestanding-c-hdrs": {
+      "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+      "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+      "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+      "archive_bytes": 12647
+    },
+    "freestanding-cxx-hdrs": {
+      "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+      "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+      "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+      "archive_bytes": 325796
+    },
+    "libsmarter": {
+      "repository": "https://github.com/managarm/libsmarter",
+      "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+      "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+      "archive_bytes": 4039
+    }
+  },
+  "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+  "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "source_inputs_sha256": "f9ef4527308dbcd552eb5d0095634036896fce9e57997e5dacd74020d5d2b00a",
+  "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+  "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+  "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+  "codegen": {
+    "mmx": false,
+    "string_paths": "AVX2 without legacy dispatch"
+  },
+  "probe_sources": {
+    "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+    "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+    "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+    "main.c": "55ef1a0900dacb93ef78e8768b92da2e0155556f086ff5ea7f2529f9ac98a252",
+    "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+  },
+  "allocator_sources": {
+    "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+    "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+    "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+    "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+    "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+    "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+    "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+  },
+  "image_sha256": "49cd9d4430e2b430b266a1de382fc98f4a0f3260d3493f2e822241b039308e77",
+  "image_bytes": 325496
+}
