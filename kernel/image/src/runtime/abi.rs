@@ -23,6 +23,7 @@ pub(crate) fn check(
     };
     let before = pool.stats();
     let retained = memory.borrow().retained_pages();
+    let heap_before = memory.borrow().transient_heap_usage();
     {
         let objects = Objects::growing();
         let mut tasks = Tasks::growing();
@@ -219,9 +220,10 @@ pub(crate) fn check(
             preemptions
         ));
     }
+    assert_eq!(memory.borrow().transient_heap_usage(), heap_before);
     assert_eq!(
-        pool.stats().free + memory.borrow().retained_pages() - retained,
-        before.free
+        pool.stats().free + memory.borrow().retained_pages(),
+        before.free + retained
     );
     kryo_hal::emergency_write_str("ABI: startup and execution resources retired\n");
     kryo_hal::emergency_write_str("VM: private reserve commit retirement OK\n");

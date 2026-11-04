@@ -275,8 +275,8 @@ pub(crate) fn check(
             }
         }
     }
-    let retained = memory.borrow().retained_pages() - retained_before;
+    let retained = memory.borrow().retained_pages();
     assert_eq!(pool.stats().total, before.total);
-    assert_eq!(pool.stats().free, before.free - retained);
+    assert_eq!(pool.stats().free + retained, before.free + retained_before);
     kryo_hal::emergency_write_str("SUPERVISOR: manifests and authority isolation OK instances=2\n");
 }

@@ -1,0 +1,142 @@
+{
+  "source_files_matched": 1403,
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "tools/check_c_headers.py",
+        "--output",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/heap-work/actual-header-checks"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "userspace/abi-probe/Cargo.toml",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "-p",
+        "kryo",
+        "--locked",
+        "--offline",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/heap-work/actual-kernel-target",
+        "--all-features"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "cargo",
+        "build",
+        "-p",
+        "kryo",
+        "--locked",
+        "--offline",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/heap-work/actual-kernel-target"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "abi_builds": [
+    {
+      "scope": "freestanding C/C++/Rust ABI probe; no libc, libc++ or Rust std",
+      "packaging": "runtime load bytes exact except ELF64 section-table bookkeeping fields",
+      "profile": "debug",
+      "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+      "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+      "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+      "lock_sha256": "98f490279b63100f4b975b75f30a8de30aafb1c899550fa1014103dba69f7418",
+      "artifact_sha256": "c81a7307538f164a627ecb4bd73e2226d37611d9fab9b20a1117b425d7a15c61",
+      "image_sha256": "c19890065b9952a8ab300efff4d954c0dc995e07ad979e8f424d2ba9a41c4e27",
+      "image_bytes": 63944,
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "/home/entity27th/kryo/userspace/abi-probe/Cargo.toml",
+        "--target",
+        "/home/entity27th/kryo/targets/x86_64-unknown-cryolite.json",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/heap-work/actual-abi-target",
+        "-Zjson-target-spec",
+        "-Zbuild-std=core,compiler_builtins",
+        "-Zbuild-std-features=compiler-builtins-mem",
+        "--profile",
+        "dev",
+        "--offline",
+        "--locked"
+      ],
+      "load_pages": 17
+    },
+    {
+      "scope": "freestanding C/C++/Rust ABI probe; no libc, libc++ or Rust std",
+      "packaging": "runtime load bytes exact except ELF64 section-table bookkeeping fields",
+      "profile": "release",
+      "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+      "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+      "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+      "lock_sha256": "98f490279b63100f4b975b75f30a8de30aafb1c899550fa1014103dba69f7418",
+      "artifact_sha256": "3fecf50079b6c20121f68f87a5e42cc1a12bfe657a794fb13f78e233b110d0d8",
+      "image_sha256": "120afc1241080af1ea58589009d650521d8d3b728c801ecdf5de7a6037e4a52b",
+      "image_bytes": 49832,
+      "command": [
+        "cargo",
+        "build",
+        "--manifest-path",
+        "/home/entity27th/kryo/userspace/abi-probe/Cargo.toml",
+        "--target",
+        "/home/entity27th/kryo/targets/x86_64-unknown-cryolite.json",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/heap-work/actual-abi-target",
+        "-Zjson-target-spec",
+        "-Zbuild-std=core,compiler_builtins",
+        "-Zbuild-std-features=compiler-builtins-mem",
+        "--profile",
+        "release",
+        "--offline",
+        "--locked"
+      ],
+      "load_pages": 16
+    }
+  ],
+  "linked_probes_have_no_mmx": true,
+  "generated_outputs_relocated": true,
+  "scope": "actual source hashes and rebuilt kernels/probes; QEMU matrix uses identical staged source"
+}

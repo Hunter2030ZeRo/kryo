@@ -34,6 +34,7 @@ pub(super) fn run(
 ) {
     let before = pool.stats();
     let retained_before = kernel.borrow().retained_pages();
+    let heap_before = kernel.borrow().transient_heap_usage();
     crate::boot::storage::check_buffers(pool, direct, kernel);
     let controller = kryo_hal::timer_physical_address().expect("No supported local APIC");
     let mmio = crate::boot::platform::apic_mapping();
@@ -85,10 +86,11 @@ pub(super) fn run(
         region.detach().expect("Cannot detach kernel task region");
     }
     let retained_after = kernel.borrow().retained_pages();
+    assert_eq!(kernel.borrow().transient_heap_usage(), heap_before);
     assert_eq!(pool.stats().total, before.total);
     assert_eq!(
-        pool.stats().free,
-        before.free - (retained_after - retained_before)
+        pool.stats().free + retained_after,
+        before.free + retained_before
     );
     kryo_hal::emergency_write_str("TASK: teardown OK\n");
 }

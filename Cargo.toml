@@ -15,6 +15,7 @@ kryo-interfaces = { path = "interfaces" }
 limine = "=0.6.5"
 spin = "0.12.3"
 x86_64 = "0.15.5"
+talc = { version = "=5.1.1", default-features = false }
 
 [profile.dev]
 panic = "abort"

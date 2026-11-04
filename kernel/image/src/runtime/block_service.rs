@@ -358,8 +358,8 @@ pub(crate) fn check(
         }
     }
     assert_eq!(
-        pool.stats().free + memory.borrow().retained_pages() - retained,
-        before.free
+        pool.stats().free + memory.borrow().retained_pages(),
+        before.free + retained
     );
     kryo_hal::emergency_write_str("BLOCK IPC: graceful stop and resource retirement OK\n");
 }

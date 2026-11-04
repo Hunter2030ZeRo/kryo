@@ -1,0 +1,27 @@
+   Compiling scopeguard v1.2.0
+   Compiling rustversion v1.0.23
+   Compiling const_fn v0.4.12
+   Compiling volatile v0.4.6
+   Compiling bit_field v0.10.3
+   Compiling bitflags v2.13.2
+   Compiling allocator-api2 v0.4.0
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/kernel/image)
+   Compiling kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/interfaces)
+   Compiling limine v0.6.5
+   Compiling lock_api v0.4.14
+   Compiling spin v0.12.3
+   Compiling talc v5.1.1
+   Compiling kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/kernel/core)
+   Compiling x86_64 v0.15.5
+   Compiling kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.46s
+Traceback (most recent call last):
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/tools/build_abi.py", line 82, in <module>
+    main()
+    ~~~~^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/tools/build_abi.py", line 41, in main
+    versions = compiler_versions()
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/heap-work/kryo/tools/build_abi.py", line 27, in compiler_versions
+    raise RuntimeError("Cryolite target requires the validated Rust revision in targets/cryolite-toolchain.json")
+RuntimeError: Cryolite target requires the validated Rust revision in targets/cryolite-toolchain.json
+make: *** [Makefile:45: abi] Error 1

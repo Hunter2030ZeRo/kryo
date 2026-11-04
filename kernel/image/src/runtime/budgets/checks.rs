@@ -374,7 +374,7 @@ fn execution(
         assert_eq!(objects.live_count(), 0);
     }
     assert_eq!(
-        pool.stats().free,
-        before.free - (memory.borrow().retained_pages() - retained)
+        pool.stats().free + memory.borrow().retained_pages(),
+        before.free + retained
     );
 }

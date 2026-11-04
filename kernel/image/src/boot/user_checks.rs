@@ -12,6 +12,7 @@ const STACK_TOP: u64 = STACK + 4096;
 
 pub(super) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end: u64) {
     let before = pool.stats();
+    let heap_before = crate::heap::stats();
     let reserved = reserve_low_frames(pool);
     let mut region = super::platform::take_region();
     // This is the sole kernel alias manager, initialized before any child root.
@@ -118,12 +119,19 @@ pub(super) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
     survivor.close().expect("Cannot close surviving user space");
     super::task_checks::run(pool, direct, &kernel, &mut region);
     drop((flagged, survivor));
+    assert_eq!(
+        kernel.borrow().transient_heap_usage(),
+        (heap_before.allocations, heap_before.bytes)
+    );
     let (retained, retained_pages) = kernel.into_inner().retain_tables();
     for frame in reserved.into_iter().flatten() {
         // Reserved frames were never exposed to user mappings or devices.
         unsafe { pool.release(frame) }.expect("Cannot release test reservation");
     }
-    assert_eq!(pool.stats().free, before.free - retained_pages);
+    assert_eq!(
+        pool.stats().free + retained_pages,
+        before.free + heap_before.backing_pages
+    );
     let _ = kryo_hal::print(format_args!(
         "USER: isolation OK cases=16 kernel_tables={} free={}\n",
         retained,

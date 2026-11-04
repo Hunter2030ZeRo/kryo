@@ -387,8 +387,8 @@ fn spawn_failure(
         assert_eq!(resources.process.handles.reserved_count(), 0);
         assert!(resources.process.pending.is_none());
         assert_eq!(
-            pool.stats().free,
-            allocation.free - (memory.borrow().retained_pages() - retained_allocation)
+            pool.stats().free + memory.borrow().retained_pages(),
+            allocation.free + retained_allocation
         );
         tasks.stop(parent).unwrap();
         ipc.settle(&mut tasks);
@@ -400,8 +400,8 @@ fn spawn_failure(
         assert_eq!(objects.live_count(), 0);
     }
     assert_eq!(
-        pool.stats().free,
-        before.free - (memory.borrow().retained_pages() - retained_before)
+        pool.stats().free + memory.borrow().retained_pages(),
+        before.free + retained_before
     );
 }
 

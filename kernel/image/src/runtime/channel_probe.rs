@@ -108,12 +108,12 @@ pub(crate) fn run(
         assert_eq!(budget.live_count(), 0);
         assert_eq!(objects.live_count(), 0);
     }
-    let retained = memory.borrow().retained_pages() - retained_before;
+    let retained = memory.borrow().retained_pages();
     let after = pool.stats();
     assert_eq!(after.total, before.total);
     assert_eq!(
-        after.free,
-        before.free - retained,
+        after.free + retained,
+        before.free + retained_before,
         "Service probe retained physical frames"
     );
     kryo_hal::emergency_write_str("SERVICE: native IPC and restart OK instances=2 quota=8\n");

@@ -22,6 +22,10 @@ const PARKED: u8 = 9;
 const PROBE: u8 = 7;
 #[cfg(feature = "boot-tests")]
 const PROBE_DONE: u8 = 8;
+#[cfg(feature = "boot-tests")]
+const HEAP_PROBE: u8 = 10;
+#[cfg(feature = "boot-tests")]
+const HEAP_DONE: u8 = 11;
 const WAIT_LIMIT_NS: u64 = 500_000_000;
 
 struct Job {
@@ -74,6 +78,12 @@ static PREPARED: AtomicUsize = AtomicUsize::new(0);
 static NEXT_CPU: AtomicUsize = AtomicUsize::new(1);
 static NEXT_BATCH: AtomicU64 = AtomicU64::new(0);
 static RELEASED_BATCH: AtomicU64 = AtomicU64::new(0);
+#[cfg(feature = "boot-tests")]
+static HEAP_ARRIVED: AtomicUsize = AtomicUsize::new(0);
+#[cfg(feature = "boot-tests")]
+static HEAP_PHASE: AtomicUsize = AtomicUsize::new(0);
+#[cfg(feature = "boot-tests")]
+static HEAP_DEADLINE: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct BatchSummary {
@@ -158,6 +168,8 @@ pub(crate) fn start(apic_mapping: u64) -> usize {
         response.cpus().len(),
         kryo_hal::MAX_CPUS
     ));
+    #[cfg(feature = "boot-tests")]
+    check_heap(count);
     count
 }
 
@@ -217,6 +229,12 @@ unsafe extern "C" fn ap_entry(info: &MpInfo) -> ! {
     loop {
         match mailbox.state.load(Ordering::Acquire) {
             #[cfg(feature = "boot-tests")]
+            HEAP_PROBE => {
+                heap_work(cpu, cpu_count());
+                mailbox.state.store(HEAP_DONE, Ordering::Release);
+                notify(0);
+            }
+            #[cfg(feature = "boot-tests")]
             PROBE => {
                 let address = mailbox.probe_address.load(Ordering::Relaxed);
                 let value = unsafe { (address as *const u64).read_volatile() };
@@ -248,6 +266,106 @@ unsafe extern "C" fn ap_entry(info: &MpInfo) -> ! {
             _ => {
                 kryo_hal::idle_event().expect("Cannot idle AP");
             }
+        }
+    }
+}
+
+#[cfg(feature = "boot-tests")]
+fn check_heap(count: usize) {
+    let before = crate::heap::stats();
+    HEAP_DEADLINE.store(
+        kryo_hal::monotonic_time()
+            .expect("Missing heap probe clock")
+            .saturating_add(10_000_000_000),
+        Ordering::Release,
+    );
+    for (cpu, mailbox) in MAILBOXES.iter().enumerate().take(count).skip(1) {
+        assert_eq!(mailbox.state.load(Ordering::Acquire), IDLE);
+        mailbox.state.store(HEAP_PROBE, Ordering::Release);
+        notify(cpu);
+    }
+    heap_work(0, count);
+    wait_until(|| {
+        MAILBOXES[1..count]
+            .iter()
+            .all(|mailbox| mailbox.state.load(Ordering::Acquire) == HEAP_DONE)
+    });
+    assert_eq!(
+        crate::heap::stats(),
+        before,
+        "Concurrent heap owners survived"
+    );
+    for mailbox in &MAILBOXES[1..count] {
+        mailbox.state.store(IDLE, Ordering::Release);
+    }
+    let _ = kryo_hal::print(format_args!(
+        "HEAP: concurrent allocation and retirement OK cpus={}\n",
+        count
+    ));
+}
+
+#[cfg(feature = "boot-tests")]
+fn heap_barrier(count: usize) {
+    let phase = HEAP_PHASE.load(Ordering::Acquire);
+    if HEAP_ARRIVED.fetch_add(1, Ordering::AcqRel) + 1 == count {
+        HEAP_ARRIVED.store(0, Ordering::Relaxed);
+        HEAP_PHASE.store(phase + 1, Ordering::Release);
+        return;
+    }
+    let mut spins = 0usize;
+    while HEAP_PHASE.load(Ordering::Acquire) == phase {
+        if spins.is_multiple_of(256) {
+            assert!(
+                kryo_hal::monotonic_time().unwrap() < HEAP_DEADLINE.load(Ordering::Acquire),
+                "Concurrent heap phase stalled"
+            );
+        }
+        spins = spins.wrapping_add(1);
+        core::hint::spin_loop();
+    }
+}
+
+#[cfg(feature = "boot-tests")]
+fn heap_work(cpu: usize, count: usize) {
+    use alloc::alloc::{alloc, dealloc};
+    use core::alloc::Layout;
+
+    heap_barrier(count);
+    for round in 0..16 {
+        let mut objects = [(core::ptr::null_mut::<u8>(), Layout::new::<u64>()); 16];
+        for (slot, (pointer, layout)) in objects.iter_mut().enumerate() {
+            let choice = (cpu + round + slot) % 4;
+            *layout = Layout::from_size_align([8, 24, 64, 160][choice], [8, 16, 64, 128][choice])
+                .unwrap();
+            *pointer = unsafe { alloc(*layout) };
+            assert!(!pointer.is_null(), "Concurrent heap allocation failed");
+            assert_eq!(*pointer as usize % layout.align(), 0);
+            let pattern = ((cpu as u64) << 48) | ((round as u64) << 32) | ((slot as u64) << 16);
+            for word in 0..layout.size() / 8 {
+                unsafe {
+                    pointer
+                        .cast::<u64>()
+                        .add(word)
+                        .write_volatile(pattern ^ word as u64)
+                };
+            }
+        }
+        // Every CPU retains its allocations through all peer writes and reads.
+        // Distinct patterns expose aliasing without sharing Rust references.
+        heap_barrier(count);
+        for (slot, (pointer, layout)) in objects.iter().enumerate() {
+            let pattern = ((cpu as u64) << 48) | ((round as u64) << 32) | ((slot as u64) << 16);
+            for word in 0..layout.size() / 8 {
+                assert_eq!(
+                    unsafe { pointer.cast::<u64>().add(word).read_volatile() },
+                    pattern ^ word as u64,
+                    "Concurrent heap allocations overlap"
+                );
+            }
+        }
+        heap_barrier(count);
+        for (pointer, layout) in objects {
+            unsafe { dealloc(pointer, layout) };
         }
     }
 }

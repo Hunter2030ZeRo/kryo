@@ -195,8 +195,8 @@ pub(crate) fn run(
         assert_eq!(objects.live_count(), 0);
     }
     assert_eq!(
-        pool.stats().free,
-        before.free - (memory.borrow().retained_pages() - retained)
+        pool.stats().free + memory.borrow().retained_pages(),
+        before.free + retained
     );
     kryo_hal::emergency_write_str("RECEIVE: relative admission and absolute expiry OK\n");
 }

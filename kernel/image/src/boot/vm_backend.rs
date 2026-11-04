@@ -1,7 +1,7 @@
 use super::memory::BootFramePool;
 use alloc::vec::Vec;
-use core::alloc::Layout;
 use core::cell::RefCell;
+use core::mem::size_of;
 use kryo_core::mm::frame::{FrameAllocError, OwnedFrame};
 use kryo_core::mm::shared::{NoSharedPage, SharedBackend, SharedPage};
 use kryo_core::mm::vm::{AddressSpace, Permissions, VmBackend, VmError};
@@ -142,15 +142,17 @@ impl KernelMemory {
     }
 
     pub(crate) fn retained_pages(&self) -> u64 {
-        let metadata = if self.tables.capacity() == 0 {
-            0
-        } else {
-            crate::heap::allocation_pages(
-                Layout::array::<OwnedFrame<'static>>(self.tables.capacity()).unwrap(),
-            )
-            .unwrap()
-        };
-        (self.tables.len() + metadata) as u64
+        // Object allocations share backing runs. Count physical heap backing
+        // once globally, rather than attributing a whole run to each Vec.
+        self.tables.len() as u64 + crate::heap::stats().backing_pages
+    }
+
+    pub(crate) fn transient_heap_usage(&self) -> (usize, usize) {
+        let heap = crate::heap::stats();
+        (
+            heap.allocations - usize::from(self.tables.capacity() != 0),
+            heap.bytes - self.tables.capacity() * size_of::<OwnedFrame<'static>>(),
+        )
     }
 
     #[cfg(feature = "boot-tests")]

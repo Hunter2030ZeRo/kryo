@@ -173,8 +173,8 @@ pub(crate) fn run(
     }
     assert_eq!(pool.stats().total, before.total);
     assert_eq!(
-        pool.stats().free + memory.borrow().retained_pages() - retained,
-        before.free
+        pool.stats().free + memory.borrow().retained_pages(),
+        before.free + retained
     );
     kryo_hal::emergency_write_str("THREAD: runtime-owned admission rollback and lifetime OK\n");
 }

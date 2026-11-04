@@ -20,3 +20,4 @@ kryo-hal.workspace = true
 limine.workspace = true
 x86_64.workspace = true
 spin.workspace = true
+talc.workspace = true

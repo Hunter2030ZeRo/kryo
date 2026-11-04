@@ -2,6 +2,14 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [packed heap milestone](validation/2026-11-04-heap/README.md) reuses Talc
+5.1.1 over the existing owned-page backing. Small objects share arenas; public
+allocation failure, layout admission and IRQ-before-lock ordering remain
+explicit. Physical backing and logical live-object accounting are checked
+separately. A boot-only all-CPU probe validates concurrent allocation and full
+retirement; kernel policy is still BSP-serialized. [ADR 0032](decisions/0032-packed-kernel-heap.md)
+records the integration and native-toolchain revalidation.
+
 The [native C thread milestone](validation/2026-11-04-c-threads/README.md) adds
 C creation, exit, join and timed join over the existing kernel calls. Its Ring 3
 fixture checks raw entry, private stack/TLS lifetime, high-bit exit codes and
@@ -92,7 +100,7 @@ libc/std or GPU support is implied by those requirements.
 - Supervisor-only kernel mappings, HHDM NX policy, and read-only aliases for executable/read-only user frames.
 - Huge HHDM splitting with retained kernel table ownership.
 - A supervisor-only kernel region for uncached APIC access and guarded per-task entry stacks; added leaf tables extend it up to a one-GiB address budget.
-- A fallible metadata heap retaining contiguous frame-run tokens through deallocation. Whole-page allocation and physical fragmentation remain limitations.
+- A fallible Talc object heap retaining owned contiguous frame runs behind shared arenas. Empty secondary arenas return backing; the first metadata arena remains retained. Physical fragmentation and one global heap mutex remain limitations.
 
 Core remains HAL-independent through the unsafe VmBackend contract. Image code connects the concrete HAL to core.
 
@@ -409,7 +417,7 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 - Frame metadata scales with the Usable RAM plan and has no fixed four-GiB or 128-GiB bitmap cap. Boot discovery still accepts at most 256 raw map entries and 288 normalized ranges, and metadata requires one contiguous Usable span. CPU physical-address width and canonical HHDM bounds remain enforced. The shared entry-stack branch has a one-GiB virtual-address budget, roughly 52,000 guarded cells; other resources can exhaust sooner. Private user VM metadata grows instead of retaining the earlier 16-mapping/64-table fixture limits.
 - Private mappings have unique backing; shared mappings retain the whole memory object and its shared-page charge. Native memory objects allow up to eight pages each, subject to the account total. Buffer loans, bulk queues, pin accounting and revocation remain pending.
 - HHDM split tables and their growable ownership metadata remain kernel-owned, without coalescing. Bootloader-reclaimable/ACPI memory and active boot tables remain reserved.
-- The initial heap uses whole-page, physically contiguous runs. Small allocations waste space and fragmentation can cause failure despite free RAM. Slab allocation and virtually contiguous heap backing remain pending, along with stable calls, multi-object waits, and DMA isolation. IPC carries inline data and up to two copied capabilities; linear move, reply-capability transfer, and receiver-owner migration are unsupported. Wait/object changes retain serialized BSP ownership of one persistent wait table between execution batches.
+- Small heap objects share Talc arenas over physically contiguous backing runs. Fragmentation can still cause large backing requests to fail despite free RAM. The heap uses one IRQ-excluded mutex; CPU-local caches, virtually contiguous backing, stable calls, multi-object waits and DMA isolation remain pending. IPC carries inline data and up to two copied capabilities; linear move, reply-capability transfer, and receiver-owner migration are unsupported. Wait/object changes retain serialized BSP ownership of one persistent wait table between execution batches.
 - Task, membership, object, handle, and deadline selection use linear scans. Capacity growth does not provide scalable scheduling or parallel kernel policy. Deadline selection scans the growing wait table. Timer scheduling is connected by the shared normal/test runtime. Device IRQ routing, NMI work scheduling, suspend/resume, general C-state policy, and physical power measurements remain pending. HPET counter wrap, reset, or nanosecond exhaustion returns an error.
 - ICE execution, BetAFS I/O, terminal/Velocity, and KDE integration remain unimplemented.
 

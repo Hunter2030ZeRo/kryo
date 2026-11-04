@@ -349,6 +349,8 @@ fn fault_call_once(
     diagnostic: bool,
 ) -> bool {
     let before = pool.stats();
+    let retained_before = memory.borrow().retained_pages();
+    let heap_before = memory.borrow().transient_heap_usage();
     let objects = Objects::new();
     let mut tasks = Tasks::new();
     let mut ipc = IpcRuntime::with_objects(&objects);
@@ -411,7 +413,21 @@ fn fault_call_once(
     retire_pair(&mut tasks, &mut ipc, ids, pool, region);
     drop(ipc);
     assert_eq!(objects.live_count(), 0);
-    assert_eq!(pool.stats(), before);
+    drop(tasks);
+    drop(objects);
+    let retained_after = memory.borrow().retained_pages();
+    assert_eq!(memory.borrow().transient_heap_usage(), heap_before);
+    assert_eq!(pool.stats().total, before.total);
+    assert_eq!(
+        pool.stats().free + retained_after,
+        before.free + retained_before,
+    );
+    if retained_before != retained_after {
+        let _ = kryo_hal::print(format_args!(
+            "SMP: fault check retained kernel storage before={} after={}\n",
+            retained_before, retained_after
+        ));
+    }
     observed
 }
 

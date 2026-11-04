@@ -21,8 +21,8 @@ pub(crate) fn run(
         instance(pool, direct, kernel, region, function, mode);
     }
     assert_eq!(
-        pool.stats().free + kernel.borrow().retained_pages() - retained,
-        before.free
+        pool.stats().free + kernel.borrow().retained_pages(),
+        before.free + retained
     );
     kryo_hal::emergency_write_str("BLOCK: Ring3 commands and private DMA retirement OK cases=2\n");
 }

@@ -110,8 +110,8 @@ pub(crate) fn check_buffers(
             .expect("Cannot retire unpublished DMA buffer");
     }
     assert_eq!(
-        pool.stats().free + kernel.borrow().retained_pages() - retained_before,
-        before.free
+        pool.stats().free + kernel.borrow().retained_pages(),
+        before.free + retained_before
     );
     kryo_hal::emergency_write_str("DMA: unpublished buffer zeroing and retirement OK pages=3\n");
 }

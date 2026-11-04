@@ -72,6 +72,18 @@ def kernel_log(log):
     return "\n".join(line for line in log.splitlines() if not line.startswith("USERDIAG: "))
 
 
+def heap_checks(log, cpus):
+    log = kernel_log(log)
+    packed = re.findall(r"(?m)^HEAP: packed objects=128 bytes=64 backing_pages=(\d+) "
+                        r"baseline_pages=128 retained_pages=(\d+)$", log)
+    concurrent = re.findall(r"(?m)^HEAP: concurrent allocation and retirement OK cpus=(\d+)$", log)
+    return {
+        "heap_packing": len(packed) == 1 and 0 < int(packed[0][0]) < 32
+                        and int(packed[0][1]) > 0,
+        "heap_concurrent": concurrent == [str(cpus)],
+    }
+
+
 def diagnostic_checks(log):
     records = re.findall(r"(?m)^USERDIAG: process=(0x[0-9a-f]+) bytes=([0-9]+) text=(.*)$", log)
     expected = [b"C native calls ready",
@@ -288,6 +300,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
         for name, marker in MARKERS.items()
     }
     checks["device"] = "DEVICE: register authority and IRQ wakeup OK cases=4" in log
+    checks.update(heap_checks(log, cpus))
     checks["client_budget_exhaustion"] = budget_clients
     checks["smp_online"] = f"SMP: online={cpus} " in log
     checks["smp_retired"] = "SMP: AP resources retired" in log

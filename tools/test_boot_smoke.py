@@ -1,6 +1,6 @@
 import unittest
 
-from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, observed_checks, pci_checks, run_label
+from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, heap_checks, observed_checks, pci_checks, run_label
 
 
 def diagnostic_log():
@@ -16,6 +16,16 @@ def diagnostic_log():
 
 
 class PciEvidenceTests(unittest.TestCase):
+    def test_heap_checks_require_packing_and_all_cpu_retirement(self):
+        packed = "HEAP: packed objects=128 bytes=64 backing_pages=8 baseline_pages=128 retained_pages=2\n"
+        retired = "HEAP: concurrent allocation and retirement OK cpus=4\n"
+        self.assertTrue(all(heap_checks(packed + retired, 4).values()))
+        for invalid in (packed, retired, packed + retired + retired,
+                        packed + retired.replace("cpus=4", "cpus=1"),
+                        packed.replace("backing_pages=8", "backing_pages=128") + retired,
+                        "USERDIAG: process=0x123 bytes=0 text=" + packed + retired):
+            self.assertFalse(all(heap_checks(invalid, 4).values()))
+
     def test_abi_requires_preemption_and_actual_retirement(self):
         ready = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=1\n"
         retired = "ABI: startup and execution resources retired\n"

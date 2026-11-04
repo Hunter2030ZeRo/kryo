@@ -76,7 +76,15 @@ process/thread limits or exact physical-RAM accounting. CPU-time budgets and
 kernel-metadata byte accounting remain pending. [ADR 0016](decisions/0016-service-resource-budgets.md)
 defines charge ownership and the scheduler/SIMD boundary.
 
-An image-owned page allocator obtains physically contiguous runs from the frame pool and uses their retained HHDM aliases. Each allocation stores its run token in a private prefix and returns the entire run on deallocation. It allocates whole pages and can fail from physical fragmentation even when enough total RAM remains free. Slab allocation, CPU-local caches, and virtually contiguous heap backing are later work.
+The image's object heap uses pinned upstream Talc over the existing page
+allocator. Small objects share arenas instead of owning whole page runs. The
+backing source retains each original frame-run token in a private prefix and
+returns empty secondary arenas; the first metadata arena remains retained.
+IRQ exclusion precedes the shared heap mutex, and backing operations use only
+the allocation-free frame pool. Global live-object bytes/counts are separate
+from backing-page accounting. Backing is still physically contiguous and can
+fail from fragmentation. CPU-local caches and virtually contiguous backing
+remain later work. See [ADR 0032](decisions/0032-packed-kernel-heap.md).
 
 Kernel entry stacks use guarded cells in a shared supervisor branch. Additional leaf tables extend the branch up to one GiB without replacing the parent links already cloned into user roots. Table owners remain retained through global TLB retirement. Legacy private user stacks and TLS occupy a reserved user VA arena; native runtime-owned threads do not consume those slots. These address budgets, physical memory, and retained resources still bound execution capacity. Frame metadata has no fixed four-GiB or 128-GiB size limit; raw boot-map and normalized-range counts remain bounded.
 
