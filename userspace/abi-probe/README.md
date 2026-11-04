@@ -129,6 +129,11 @@ installed nightly rust-src and Clang. It packages with the existing ELF entry/
 load-data preservation check and records compiler revisions, target/lock/image
 hashes and the build command beside the packaged ELF as `.build.json`.
 
+Rust and C/C++ disable MMX code generation while retaining the cumulative v3
+hardware requirement. Ordinary floating-point arithmetic remains SSE/AVX;
+80-bit long double and the explicit environment/state fixtures retain x87.
+The kernel's separate soft-float target is unchanged.
+
 The default build is offline. On a new Rust source installation, add
 `--fetch-dependencies` once to permit fetching its locked sysroot dependencies.
 

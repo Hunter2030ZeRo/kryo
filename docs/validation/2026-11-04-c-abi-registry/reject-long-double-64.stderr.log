@@ -1,0 +1,19 @@
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/c-abi-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c:50:7: error: static assertion failed due to requirement 'sizeof(long double) == 16': long double storage
+   50 | CHECK(sizeof(long double) == 16 && ALIGNOF(long double) == 16, "long double storage");
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/c-abi-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c:50:27: note: expression evaluates to '8 == 16'
+   50 | CHECK(sizeof(long double) == 16 && ALIGNOF(long double) == 16, "long double storage");
+      |       ~~~~~~~~~~~~~~~~~~~~^~~~~
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/c-abi-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c:51:7: error: static assertion failed due to requirement '53 == 64': x87 precision
+   51 | CHECK(__LDBL_MANT_DIG__ == 64, "x87 precision");
+      |       ^~~~~~~~~~~~~~~~~~~~~~~
+<built-in>:183:27: note: expanded from macro '__LDBL_MANT_DIG__'
+  183 | #define __LDBL_MANT_DIG__ 53
+      |                           ^
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/c-abi-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c:52:7: error: static assertion failed due to requirement '(-1021) == -16381': x87 exponent
+   52 | CHECK(__LDBL_MIN_EXP__ == -16381 && __LDBL_MAX_EXP__ == 16384, "x87 exponent");
+      |       ^~~~~~~~~~~~~~~~~~~~~~~~~~
+<built-in>:188:26: note: expanded from macro '__LDBL_MIN_EXP__'
+  188 | #define __LDBL_MIN_EXP__ (-1021)
+      |                          ^
+3 errors generated.

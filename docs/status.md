@@ -1,6 +1,20 @@
 # Implementation status
 
-Snapshot: 2026-11-03. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+
+The [C ABI registry milestone](validation/2026-11-04-c-abi-registry/README.md)
+disables native MMX code generation in both the Rust target and C/C++ probe.
+Four QEMU TCG ABI runs pass at the Haswell v3 boundary and with four CPUs;
+linked probe disassembly contains no MMX instructions. The platform contract
+prioritizes performance and limits x87 to the selected long-double/environment
+boundary. This is functional and code-generation evidence, not hardware timing.
+
+Owned errno, memory/time, file and signal proposals now give concrete numbers
+and layouts. Eleven compiler checks cover candidate C/C++ target and Rust host
+layouts, table consistency, v3 instructions and rejected profile changes.
+The compact 64-position signal set does not implement signal delivery.
+Installed headers, resource/network/terminal types, provider objects and the
+actual libc/sysdeps build remain separate gates.
 
 The [Cryolite C ABI proposal](decisions/0028-cryolite-owned-c-abi.md) records the
 decision to own public definitions before the libc port. Its foundation layouts

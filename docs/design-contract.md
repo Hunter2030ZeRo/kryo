@@ -1,6 +1,6 @@
 # Design contract
 
-Version 0.11, 2026-11-03.
+Version 0.12, 2026-11-04.
 
 This document defines the resource and execution rules for Kryo. It includes requirements for subsystems that are not implemented yet. See [status](status.md) for current support and the [roadmap](roadmap.md) for completion criteria. Experimental calls use version 0; stable syscall numbers, wire layouts, and published ABI versions remain undecided.
 
@@ -130,6 +130,15 @@ replace compiler ABI configuration. Keep the kernel's soft-float compilation
 independent from the user target. Vulkan support targets Intel hardware first;
 GPU drivers and the graphics API remain in user space. See
 [platform requirements](decisions/0022-platform-baseline-and-performance.md).
+
+Performance is a primary interface and implementation requirement: account for
+copies, transitions, allocation, wakeups and state-storage costs during design.
+Native user code uses the v3 baseline without v1/v2 variants. Disable MMX code
+generation; retain x87 only for the selected long double ABI, floating-point
+environment and state preservation. Newer opcodes must preserve the required
+semantics and demonstrate their value under a stated workload. Optional features
+beyond v3 need explicit admission and state support. These requirements do not
+authorize general FP/SIMD use inside the soft-float kernel.
 
 CPU-local state owns the CPU ID, current thread, GDT/TSS/IST, idle and emergency stacks, entry context, and preemption state.
 

@@ -1,6 +1,6 @@
 # Platform baseline and performance work
 
-Date: 2026-11-02. Status: requirements fixed; runtime and GPU interfaces pending.
+Date: 2026-11-04. Status: requirements fixed; runtime and GPU interfaces pending.
 
 ## Requirements
 
@@ -23,6 +23,38 @@ Intel is the first hardware Vulkan target. The observed development machine has
 a Meteor Lake-P Arc iGPU, PCI ID 8086:7d55. This read-only host inventory is not
 Kryo device execution evidence. Vulkan, general drivers and presentation remain
 user-space responsibilities. No GPU driver is implemented by this decision.
+
+## Code generation and legacy boundary
+
+Performance is a primary design requirement. Review IPC transitions and copies,
+allocation and state-storage costs, scheduling latency and idle wakeups while
+designing an interface, before treating an optimization as later cleanup.
+Record the workload and measurements behind a performance claim. A functional
+QEMU result or a newer instruction alone does not prove an improvement.
+
+Native production libraries and applications use the v3 baseline directly;
+do not add v1/v2 dispatch variants or a lower-baseline platform fallback.
+AVX2, BMI1/2, FMA and the other v3 features may be used without per-call feature
+checks after CPU admission. Features outside v3, including AVX-512, still need
+explicit detection and execution-state support. Conservative early boot and
+the kernel's soft-float boundary remain necessary for safe initialization and
+entry; user compilation flags do not apply to those paths.
+
+Disable MMX code generation in the native Rust target and C/C++ build flags.
+Do not add MMX implementations to new native library paths. The cumulative
+v3 hardware checks still include MMX/FPU; their presence does not select a
+legacy implementation. General float/double arithmetic uses SSE/AVX. Retain
+x87 only where required by the selected 80-bit long double ABI, floating-point
+environment and state isolation. Do not change long double precision merely
+to remove an instruction family, or enable global fast-math that changes
+observable arithmetic behavior.
+
+The native entry path currently eagerly preserves x87/SSE/YMM with standard
+XSAVE. Its 1024-byte context buffer is combined state storage, not an x87-only
+allocation. Removing a C type would not change that path. Measure save/restore
+and scheduling costs separately before selecting state-saving optimizations;
+optional instruction support must not silently raise the v3 minimum. Internal
+FXSAVE model coverage is not a platform fallback.
 
 ## Current costs to measure
 

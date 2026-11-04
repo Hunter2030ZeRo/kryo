@@ -29,6 +29,13 @@ compatibility.
 | blkcnt_t / blksize_t | signed 64-bit integers |
 | fsblkcnt_t / fsfilcnt_t | unsigned 64-bit integers |
 
+Native code generation uses x86-64-v3 with MMX disabled. Float/double use
+SSE/AVX; x87 remains for this selected 80-bit long double profile and required
+environment/state handling. The 16-byte storage includes padding and does not
+imply binary128 arithmetic. Optional newer ISA features need separate admission;
+the kernel retains its soft-float boundary. See
+[performance requirements](../decisions/0022-platform-baseline-and-performance.md).
+
 The signed public PID type supports the negative selectors required by POSIX
 interfaces. Positive PIDs are allocated in a separate runtime/service namespace.
 They do not encode rights or reveal native handle slot/generation bits.
@@ -66,10 +73,11 @@ The existing native result uses RAX=status and RDX=value. Zero status indicates
 success; a native failure is a negative status. A successful handle may have its
 high bit set. Inspecting RDX's sign is not an error test.
 
-Public errno values will be distinct positive int constants in an owned,
-append-only numeric registry. Zero is not an assigned error. Proposed aliases
-are EWOULDBLOCK=EAGAIN and EOPNOTSUPP=ENOTSUP. Numeric assignments are deliberately
-not frozen in this foundation proposal; no host errno header fills the gap.
+Public errno values are proposed positive int constants in an owned,
+append-only [numeric registry](c-v1-errors.md). Zero is not an assigned error.
+Proposed aliases are EWOULDBLOCK=EAGAIN and EOPNOTSUPP=ENOTSUP. The explicit
+assignments remain under review rather than frozen as an ABI release; no host
+errno header fills a gap.
 
 Translation requirements:
 
@@ -104,9 +112,9 @@ Before implementation, review at least:
 
 | Area | Remaining decision |
 | --- | --- |
-| Memory | PROT/MAP values; exact unsupported combinations; partial unmap and protection-change behavior |
-| Files | Owned stat layout, timestamps, allocated-block unit, wide inode/device conversion and overflow; open/seek/wait flags |
-| Signals | Signal-set capacity and representation, signal numbers, sigaction/siginfo/context layouts and delivery/cleanup rules |
+| Memory | Review [explicit constants and adapter scope](c-v1-memory-time.md); implement range unmap and protection changes before a complete POSIX claim |
+| Files | Review [stat, descriptor and status definitions](c-v1-files.md); implement checked service conversion and descriptor lifetime |
+| Signals | Review [compact sets and public structures](c-v1-signals.md); delivery, context restoration and cleanup remain separate gates |
 | Resources/network/terminal | The provider build's required public types, constants and complete unsupported-operation policy |
 | Provider objects | Versioned pthread object sizes/alignment and compiler/runtime TCB profile; no kernel-private overlays |
 
@@ -139,6 +147,9 @@ At evaluated mlibc commit 07cfd943977737b8147c1289922c23479feef53d:
 - The provider's didExit store precedes its native ThreadExit. Actual Kryo
   completion is required before reclaiming TLS/stack or reusing an owner ID.
 
-The next implementation gate is a reviewed header set and error/flag registry,
-not successful stubs or placeholder structures. Provider revision, dependency
-revisions, compiler flags and eventual sysroot contents must be reproducible.
+The detailed registries and layout fixtures are design inputs, not installed
+headers. Resource/network/terminal types and provider objects still require
+their own complete definitions. The next implementation gate is a reviewed
+header set, not successful stubs or placeholder structures. Provider revision,
+dependency revisions, compiler flags and eventual sysroot contents must be
+reproducible.

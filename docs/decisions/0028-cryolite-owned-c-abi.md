@@ -1,11 +1,15 @@
 # Cryolite-owned C ABI
 
-Date: 2026-11-03. Status: proposed; design review before libc implementation.
+Date: 2026-11-04. Status: foundation selected; detailed registries proposed.
 
 The maintainer selected a Cryolite-owned ABI instead of importing mlibc's Linux
 ABI headers. This proposal defines the foundation and the remaining release
 gates. It does not publish a stable C ABI, install a sysroot or adopt mlibc.
 The [candidate profile](../abi/c-v1.md) gives exact scalar and time layouts.
+The [error](../abi/c-v1-errors.md), [memory/time](../abi/c-v1-memory-time.md),
+[file](../abi/c-v1-files.md) and [signal](../abi/c-v1-signals.md) proposals now
+give explicit numbers, layouts and unsupported-operation boundaries. Their
+compile fixtures remain validation inputs rather than installed headers.
 
 ## Boundaries
 
@@ -34,6 +38,10 @@ path.
 
 - Eight-bit bytes, little-endian LP64. Compiler-derived size_t and ptrdiff_t
   must match the selected compiler, including C++ type identity.
+- Native user code targets v3 with MMX generation disabled. Retain 80-bit long
+  double and the necessary x87 environment/state boundary; ordinary arithmetic
+  uses SSE/AVX. Performance is a primary requirement under
+  [ADR 0022](0022-platform-baseline-and-performance.md).
 - Signed 64-bit file offsets and wall-time seconds. Public pid_t and clockid_t
   are signed 32-bit integers. A POSIX PID is a descriptive namespace entry,
   not a truncated native TaskId or an allocation capability.

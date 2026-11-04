@@ -58,10 +58,11 @@ source or toolchain was installed by this evaluation.
   foundation proposal and remaining registry/file/signal/provider gates.
 - Preserve the accepted SysV stack, separate capability handoff and runtime-owned
   static TLS direction; define the complete mlibc TCB and cleanup contract.
-- Decide whether to reuse selected POSIX-facing ABI constants/structures or own
-  Cryolite copies. Upstream permits reuse without Linux syscalls but warns that
-  its shared ABI headers can change. Freeze and version only the selected
-  Cryolite contract; do not import every Linux ABI assumption by default.
+- Review the owned [error](../abi/c-v1-errors.md),
+  [memory/time](../abi/c-v1-memory-time.md), [file](../abi/c-v1-files.md) and
+  [signal](../abi/c-v1-signals.md) registries. They assign explicit candidate
+  values without importing another port's ABI headers. Complete the remaining
+  provider type dependencies before installing headers or claiming a build.
 - Apply the [private-VM and atomic-wait contracts](0026-private-vm-and-atomic-waits.md)
   independently of one libc's implementation; validate their mlibc wrappers and
   runtime-owned thread resources before claiming pthread support.

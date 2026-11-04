@@ -1,0 +1,7 @@
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/c-abi-work/kryo/docs/validation/2026-11-03-c-abi-design/layout.c:51:7: error: static assertion failed due to requirement '113 == 64': x87 precision
+   51 | CHECK(__LDBL_MANT_DIG__ == 64, "x87 precision");
+      |       ^~~~~~~~~~~~~~~~~~~~~~~
+<built-in>:183:27: note: expanded from macro '__LDBL_MANT_DIG__'
+  183 | #define __LDBL_MANT_DIG__ 113
+      |                           ^
+1 error generated.

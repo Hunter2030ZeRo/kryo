@@ -1,0 +1,29 @@
+{
+  "scope": "Four QEMU TCG native ABI regression runs and linked probe MMX absence; no hardware timing, installed headers or libc execution",
+  "runs": [
+    {
+      "label": "debug-Haswell-noTSX-abi",
+      "sha256": "c7ee09fc8a05e35a5a247ee364c1619166fd75420368a5771221d5a35cc4ee04"
+    },
+    {
+      "label": "release-Haswell-noTSX-abi",
+      "sha256": "a9eea1d4acc728101466a0e37158ffe5073179d2ad9720bd629e4f9a83f779f5"
+    },
+    {
+      "label": "debug-normal-max-smp4-abi-block-rw",
+      "sha256": "9751701c7044d0fafa0909d7932045dfd2c1d82cf7b5a2498615ae94f4518bfe"
+    },
+    {
+      "label": "release-normal-max-smp4-abi-block-ro",
+      "sha256": "84edbbf7e2e17a6844aff92569992f1857e2e5f9e5e212581a64e42298249ecb"
+    }
+  ],
+  "negative_compile_logs": {
+    "reject-long-double-128.stderr.log": "19db1ad9f7f1704653060fc10f20970ab671015f28572d8e660a185eeee8ef7d",
+    "reject-long-double-64.stderr.log": "b40d1108d412d53a7e922f8d2084710f0773f2d15b0d94da7753e2c3c78ab80e",
+    "reject-mmx.stderr.log": "8d2cc77d1ce5462706436320c9ebead6f1700eae3871371d0ea517ada99c6f40",
+    "reject-v2.stderr.log": "8502eb84d31e37fb33cb99a532df630438eb70e30aa17b44e8bd2f0bc96ab0e8"
+  },
+  "source_manifest_sha256": "5124280c92dea28dd3ffcb57da4317569226e4addb269a4b15155c693ca94dd8",
+  "status": "passed"
+}

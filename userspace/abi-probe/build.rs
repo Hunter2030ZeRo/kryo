@@ -13,6 +13,7 @@ fn compile(directory: &Path, compiler: &str, source: &str, standard: &str) -> Pa
         "--target=x86_64-unknown-none",
         standard,
         "-march=x86-64-v3",
+        "-mno-mmx",
         "-ffreestanding",
         "-fno-stack-protector",
         "-fno-pic",

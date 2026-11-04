@@ -1,0 +1,4 @@
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/c-abi-work/kryo/docs/validation/2026-11-04-c-abi-registry/isa.c:8:2: error: Native code generation must disable MMX.
+    8 | #error Native code generation must disable MMX.
+      |  ^
+1 error generated.
