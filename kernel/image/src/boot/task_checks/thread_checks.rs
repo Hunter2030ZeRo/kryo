@@ -34,6 +34,7 @@ pub(super) fn run(
     memory: &RefCell<KernelMemory>,
     region: &mut KernelRegion,
 ) {
+    check_process_reuse(pool, direct, memory, region);
     for case in [
         Case::InvalidEntry,
         Case::SelfJoin,
@@ -50,6 +51,71 @@ pub(super) fn run(
     kryo_hal::emergency_write_str("THREAD: lifecycle and isolation OK cases=9\n");
 }
 
+fn check_process_reuse(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+) {
+    let objects = Objects::new();
+    let mut tasks = Tasks::new();
+    let mut ipc = IpcRuntime::with_objects(&objects);
+    let first = tasks
+        .spawn_suspended(Resources::new(
+            pool,
+            direct,
+            memory,
+            region,
+            2,
+            &programs::counter(),
+        ))
+        .unwrap();
+    let first_process = tasks.process_for(first).unwrap();
+    let peer = prepare_peer(pool, direct, memory, region, &mut tasks);
+    let peer_process = tasks.process_for(peer).unwrap();
+    assert_ne!(first_process, peer_process);
+    tasks.check_process_links();
+    tasks.stop(first).unwrap();
+    reap(&mut tasks, &mut ipc, first, pool, region);
+    assert!(tasks.process_mut(first_process).is_err());
+
+    let replacement = tasks
+        .spawn_suspended(Resources::new(
+            pool,
+            direct,
+            memory,
+            region,
+            2,
+            &programs::counter(),
+        ))
+        .unwrap();
+    let replacement_process = tasks.process_for(replacement).unwrap();
+    assert_eq!(first.as_raw() as u32, replacement.as_raw() as u32);
+    assert_ne!(first, replacement);
+    assert_eq!(
+        first_process.as_raw() as u32,
+        replacement_process.as_raw() as u32,
+    );
+    assert_ne!(first_process, replacement_process);
+    assert_eq!(tasks.process_for(first), None);
+    assert!(tasks.resources_mut(first).is_err());
+    assert!(tasks.process_mut(first_process).is_err());
+    assert_eq!(tasks.process_for(peer), Some(peer_process));
+    tasks.thread_mut(replacement).unwrap().process_id = Some(first_process);
+    assert_eq!(tasks.process_for(replacement), None);
+    assert!(tasks.resources_mut(replacement).is_err());
+    tasks.thread_mut(replacement).unwrap().process_id = Some(replacement_process);
+    tasks.check_process_links();
+
+    for task in [replacement, peer] {
+        tasks.stop(task).unwrap();
+        reap(&mut tasks, &mut ipc, task, pool, region);
+    }
+    assert_eq!(tasks.live_count(), 0);
+    assert_eq!(tasks.process_count(), 0);
+    tasks.check_process_links();
+}
+
 fn run_case(
     case: Case,
     pool: &'static BootFramePool,
@@ -64,6 +130,7 @@ fn run_case(
     let mut stats = CallStats::default();
     let parent = prepare_parent(case, pool, direct, memory, region, &mut tasks);
     let process = tasks.process_for(parent).unwrap();
+    tasks.check_process_links();
     let peer = if case == Case::GuardFault {
         Some(prepare_peer(pool, direct, memory, region, &mut tasks))
     } else {
@@ -276,6 +343,8 @@ fn check_retirement_retry<'objects>(
         Err(kryo_core::task::ReapError::Cleanup(_))
     ));
     assert_eq!(tasks.state(child), Ok(TaskState::Dying));
+    assert_eq!(tasks.process_for(child), Some(process));
+    tasks.check_process_links();
     assert_eq!(tasks.process_thread_count(process), Ok(2));
     let first_page = crate::runtime::user_pages(1)[0];
     assert_eq!(
@@ -369,11 +438,14 @@ fn reap<'objects>(
     pool: &BootFramePool,
     region: &mut KernelRegion,
 ) {
-    drop(
-        tasks
-            .reap(task, ipc, |resources| resources.close(pool, region))
-            .unwrap(),
-    );
+    let retired = tasks
+        .reap(task, ipc, |resources| resources.close(pool, region))
+        .unwrap();
+    assert_eq!(retired.process_id, None);
+    assert_eq!(tasks.process_for(task), None);
+    assert!(tasks.resources_mut(task).is_err());
+    tasks.check_process_links();
+    drop(retired);
 }
 
 fn stop_peer<'objects>(

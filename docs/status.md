@@ -2,6 +2,13 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [process-link milestone](validation/2026-11-04-process-links/README.md)
+replaces nested process/member scans on image-runtime resource lookup with
+generation-checked thread backlinks. Membership remains canonical; cleanup
+failure retains the link and successful retirement clears it. Boot checks
+cover growth, rollback, cleanup retry and identity reuse. BSP serialization
+and scheduler registry scans remain. No hardware latency measurement is claimed.
+
 The [packed heap milestone](validation/2026-11-04-heap/README.md) reuses Talc
 5.1.1 over the existing owned-page backing. Small objects share arenas; public
 allocation failure, layout admission and IRQ-before-lock ordering remain

@@ -56,6 +56,7 @@ pub(crate) fn check(
     assert_eq!(error, kryo_core::task::TaskError::Capacity);
     assert_eq!(tasks.process_count(), 0);
     assert_eq!(tasks.live_count(), 0);
+    tasks.check_process_links();
     assert_eq!(pool.stats(), before_failure);
     let parent = tasks
         .spawn(resources)
@@ -90,6 +91,7 @@ pub(crate) fn check(
     }
     assert!(ready, "Scale probe did not finish registration");
     assert_eq!(tasks.process_count(), 7);
+    tasks.check_process_links();
     assert_eq!(stats.spawned, 6);
     assert_eq!(stats.threads_created, 120);
     assert_eq!(objects.live_count(), 128);
@@ -128,6 +130,7 @@ pub(crate) fn check(
     }
     assert_eq!(tasks.live_count(), 0);
     assert_eq!(tasks.process_count(), 0);
+    tasks.check_process_links();
     assert_eq!(ipc.waits.live_count(), 0);
     assert!(tasks.state(parent).is_err());
     drop(ipc);

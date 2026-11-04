@@ -465,6 +465,7 @@ fn prepare_pair<'kernel, 'objects>(
     let mut context = UserContext::new(entry, USER_STACKS[1] + 16_384).unwrap();
     configure(&mut context, 1);
     let second = ThreadResources {
+        process_id: None,
         execution: None,
         context,
         stack: KernelStack::new(pool, direct, region, 7),

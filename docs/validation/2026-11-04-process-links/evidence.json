@@ -1,0 +1,22 @@
+{
+  "scope": "Generation-checked direct thread-to-process links in image runtime; no policy parallelism or latency claim",
+  "files": {
+    "kernel/image/src/runtime/mod.rs": "4bf5cc9ef231dc1599c7ca43278901f24ca063371b9186661af740233e1dfb52",
+    "kernel/image/src/runtime/tasks.rs": "b79a567a7db28c7ce2504d6a602b0a90e5abe652eb33a1c3481011284d463880",
+    "kernel/image/src/runtime/threads.rs": "5a6dfde79817849c47b85cc27c3679ba4c18857a8fdbec5efa4c5479df0b90e3",
+    "kernel/image/src/runtime/scale.rs": "60da02876ff7d9d0bc6c386743a3fa87af754f21d2c22ba23e6382761bfe1c99",
+    "kernel/image/src/boot/task_checks/smp_checks.rs": "5ed374f94e74cdb8d4118572bae8e052fa1430f7f79cb0c0ffb4f44cf8827b41",
+    "kernel/image/src/boot/task_checks/thread_checks.rs": "b585c4efa9a0a29e21d496506bd6740110309fe2aab364d01b02c789e7e5d0c5"
+  },
+  "checks": {
+    "all_feature_kernel_build": true,
+    "all_feature_kernel_clippy_warnings_denied": true,
+    "rustfmt": true,
+    "core_process_task_tests": 29
+  },
+  "qemu_labels": [
+    "debug-max-smp4-abi-block-rw",
+    "release-Haswell-noTSX-abi"
+  ],
+  "independent_review": "CLEAR; publication, generation checks, cleanup retry and all six source hashes reviewed"
+}

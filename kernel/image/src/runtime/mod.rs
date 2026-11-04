@@ -160,6 +160,8 @@ pub(crate) struct ProcessResources<'kernel, 'objects> {
 }
 
 pub(crate) struct ThreadResources<'kernel, 'objects> {
+    // Mirrors process membership from attachment through successful retirement.
+    pub(crate) process_id: Option<ProcessId>,
     pub(crate) execution: Option<kryo_core::mm::vm::ExecutionLease>,
     pub(crate) context: UserContext,
     pub(crate) stack: KernelStack,
@@ -286,6 +288,7 @@ impl<'kernel, 'objects> Resources<'kernel, 'objects> {
         (
             self.process,
             ThreadResources {
+                process_id: None,
                 execution: self.execution,
                 context: self.context,
                 stack: self.stack,

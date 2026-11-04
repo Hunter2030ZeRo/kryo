@@ -15,6 +15,7 @@ pub(crate) struct Tasks<'kernel, 'objects> {
 pub(crate) struct ResourcesView<'borrow, 'kernel, 'objects> {
     pub(crate) process: &'borrow mut ProcessResources<'kernel, 'objects>,
     pub(crate) thread: &'borrow mut ThreadResources<'kernel, 'objects>,
+    // Only reap authorizes final process cleanup after the execution handoff.
     final_member: bool,
 }
 
@@ -163,6 +164,7 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         self.processes
             .attach(process, task)
             .expect("New process membership capacity invariant");
+        self.threads.resources_mut(task).unwrap().process_id = Some(process);
         if let Some(control) = self
             .processes
             .resources_mut(process)
@@ -196,6 +198,7 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         self.processes
             .attach(process, task)
             .expect("Validated thread membership capacity invariant");
+        self.threads.resources_mut(task).unwrap().process_id = Some(process);
         if let Some(control) = self
             .threads
             .resources_mut(task)
@@ -222,19 +225,13 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         task: TaskId,
     ) -> Result<ResourcesView<'_, 'kernel, 'objects>, TaskError> {
         let process = self.process_for(task).ok_or(TaskError::InvalidId)?;
-        let final_member = self
-            .processes
-            .thread_count(process)
-            .map_err(|_| TaskError::InvalidId)?
-            == 1
-            && self.processes.state(process) == Ok(ProcessState::Exiting);
         Ok(ResourcesView {
             thread: self.threads.resources_mut(task)?,
             process: self
                 .processes
                 .resources_mut(process)
                 .map_err(|_| TaskError::InvalidId)?,
-            final_member,
+            final_member: false,
         })
     }
 
@@ -245,7 +242,21 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         self.threads.resources_mut(task)
     }
     pub(crate) fn process_for(&self, task: TaskId) -> Option<ProcessId> {
-        self.processes.process_for(task)
+        let process = self.threads.resources(task).ok()?.process_id?;
+        self.processes.state(process).ok()?;
+        Some(process)
+    }
+    #[cfg(feature = "boot-tests")]
+    pub(crate) fn check_process_links(&self) {
+        for task in self.ids() {
+            assert_eq!(self.process_for(task), self.processes.process_for(task));
+            assert!(self.process_for(task).is_some());
+        }
+        for process in self.processes.ids() {
+            for task in self.processes.threads(process).unwrap() {
+                assert_eq!(self.process_for(task), Some(process));
+            }
+        }
     }
     pub(crate) fn process_mut(
         &mut self,
@@ -405,8 +416,11 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
         let process = self
             .process_for(task)
             .ok_or(ReapError::Task(TaskError::InvalidId))?;
+        let final_member = self.processes.thread_count(process) == Ok(1)
+            && self.processes.state(process) == Ok(ProcessState::Exiting);
         {
             let mut resources = self.resources_mut(task).map_err(ReapError::Task)?;
+            resources.final_member = final_member;
             assert!(resources.wait.is_none(), "Retiring thread wait invariant");
             let space = resources.process.space.identity();
             if resources.final_member {
@@ -418,10 +432,11 @@ impl<'kernel, 'objects> Tasks<'kernel, 'objects> {
             }
             cleanup(&mut resources).map_err(ReapError::Cleanup)?;
         }
-        let thread = self.threads.reap(task, |_| Ok::<_, E>(()))?;
+        let mut thread = self.threads.reap(task, |_| Ok::<_, E>(()))?;
         self.processes
             .detach(process, task)
             .expect("Retired thread membership invariant");
+        thread.process_id = None;
         if self.processes.thread_count(process) == Ok(0) {
             let owner = self
                 .processes
