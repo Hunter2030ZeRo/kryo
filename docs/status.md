@@ -2,13 +2,24 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+Provider C11 threads now create dedicated TCB/static-TLS storage, inherit the
+creator's FP environment and support join/detach through actual native
+completion. A raw process-local reaper retires detached children; creator pins
+protect publication. Completed native thread/process waits bypass wait credits.
+The [thread contract](decisions/0035-provider-thread-lifetime.md) records the
+limited static profile and remaining initial-thread/POSIX boundaries. The
+[validation record](validation/2026-11-04-provider-threads/README.md) covers
+three process instances per guest, including wait-credit pressure and the
+last provider thread's exit callbacks.
+
 The [static mlibc milestone](validation/2026-11-04-static-mlibc/README.md)
 builds and executes pinned upstream mlibc with Cryolite sysdeps and a fallible
 Talc user heap. Two fresh C process instances exercise startup, real provider
 TCB/static TLS, errno, allocation failures, formatting, guarded-page strings,
 sleep and exit callbacks. Separate raw native threads test the allocator only.
-File calls and provider thread creation fail explicitly. No entropy, hardened
-startup, pthreads, general stdio/VFS, C++ standard library or Rust std is implied.
+File calls still fail explicitly; the provider-thread follow-up extends this
+baseline. No entropy, hardened startup, pthreads, general stdio/VFS, C++ standard
+library or Rust std is implied.
 [ADR 0034](decisions/0034-static-mlibc.md) records the supported boundary.
 
 The [process-link milestone](validation/2026-11-04-process-links/README.md)
@@ -443,8 +454,8 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 ## Next work
 
 Extend the validated static mlibc profile with real entropy, service-backed
-descriptors and completion-aware provider thread/TCB lifecycle. The initial
-TCB, static TLS and fallible Talc heap are implemented; pthreads, dynamic TLS
+descriptors and broader POSIX contracts. Provider C11 thread/TCB lifecycle,
+static TLS and the fallible Talc heap are implemented; pthreads, dynamic TLS
 and complete standard libraries remain separate work. Connect the initial
 block service to VFS, the native runtime and BetAFS. Add storage IRQ
 completion and general device assignment while retaining the private queue

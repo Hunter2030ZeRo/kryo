@@ -1,0 +1,89 @@
+{
+  "base_commit": "0483bdb2d1a15ef926c3cfa02c504a334d87c425",
+  "initial_commit": "256963f",
+  "source_bundle_sha256": "9eaf9074d24d4a0816887d0d574b756bf5a46e244ca214f720b8736b98752160",
+  "source_inputs_sha256": "aadd6eef726c8f77a5f7724c0b5a416ffccd345946c7dd030aa731002890550d",
+  "source_inputs": 296,
+  "actual_files_matched": 1547,
+  "final_source_hash_check": true,
+  "qemu": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc",
+      "profile": "debug",
+      "cpu": "Haswell-noTSX",
+      "cpus": 1,
+      "mode": "boot-tests",
+      "passed": true,
+      "runs": 3,
+      "children_per_run": 17,
+      "retired_per_run": 18,
+      "image_sha256": "49cd9d4430e2b430b266a1de382fc98f4a0f3260d3493f2e822241b039308e77",
+      "image_bytes": 325496,
+      "source_inputs_sha256": "aadd6eef726c8f77a5f7724c0b5a416ffccd345946c7dd030aa731002890550d"
+    },
+    {
+      "label": "release-max-smp4-abi-libc-block-ro",
+      "profile": "release",
+      "cpu": "max",
+      "cpus": 4,
+      "mode": "boot-tests",
+      "passed": true,
+      "runs": 3,
+      "children_per_run": 17,
+      "retired_per_run": 18,
+      "image_sha256": "0e6b08d99a2a5d54149408576c35a6b1ca0b4e3c709151cdd0675e9a4823309f",
+      "image_bytes": 296880,
+      "source_inputs_sha256": "aadd6eef726c8f77a5f7724c0b5a416ffccd345946c7dd030aa731002890550d"
+    },
+    {
+      "label": "debug-normal-max-smp4-libc-block-rw",
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 4,
+      "mode": "normal",
+      "passed": true,
+      "runs": 3,
+      "children_per_run": 17,
+      "retired_per_run": 18,
+      "image_sha256": "49cd9d4430e2b430b266a1de382fc98f4a0f3260d3493f2e822241b039308e77",
+      "image_bytes": 325496,
+      "source_inputs_sha256": "aadd6eef726c8f77a5f7724c0b5a416ffccd345946c7dd030aa731002890550d"
+    },
+    {
+      "label": "release-Haswell-noTSX-libc",
+      "profile": "release",
+      "cpu": "Haswell-noTSX",
+      "cpus": 1,
+      "mode": "boot-tests",
+      "passed": true,
+      "runs": 3,
+      "children_per_run": 17,
+      "retired_per_run": 18,
+      "image_sha256": "0e6b08d99a2a5d54149408576c35a6b1ca0b4e3c709151cdd0675e9a4823309f",
+      "image_bytes": 296880,
+      "source_inputs_sha256": "aadd6eef726c8f77a5f7724c0b5a416ffccd345946c7dd030aa731002890550d"
+    }
+  ],
+  "completed_wait_regression": "completed-wait-debug-max-smp4",
+  "rust_tests": 463,
+  "python_tests": 32,
+  "c_header_checks": 32,
+  "provider_compile_audit": [
+    {
+      "profile": "debug",
+      "compile_commands": 359,
+      "target_header_commands": 351,
+      "all_commands_have_v3_no_mmx": true,
+      "host_include_paths": false
+    },
+    {
+      "profile": "release",
+      "compile_commands": 359,
+      "target_header_commands": 351,
+      "all_commands_have_v3_no_mmx": true,
+      "host_include_paths": false
+    }
+  ],
+  "independent_review": "CLEAR",
+  "scope": "static C11 provider extension and native lifetime validation; isolated QEMU plus actual source rebuild, not complete hosted libc or hardware performance"
+}

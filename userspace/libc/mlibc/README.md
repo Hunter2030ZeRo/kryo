@@ -15,9 +15,17 @@ no runtime descriptor table.
 
 `__dlapi_enter` performs upstream static loader initialization, ELF/TLS parsing,
 TCB setup and constructors. The overlay completes the owned pthread attribute
-tag with the pinned provider's real representation. It does not publish thread
-creation: native raw threads must not enter this libc until unique lock-owner
-IDs, provider TCB creation and completion-aware stack/TLS reclamation exist.
+tag with the pinned provider's real representation. C11 creation, join and detach
+now use dedicated provider TCB/static-TLS storage and native completion-aware
+retirement. A process-local raw reaper handles detached children. Arbitrary raw
+threads with dummy FS storage must not enter provider code. The native allocator
+probe and the internal reaper use only their separate native interfaces.
+
+Creator pins protect final publication against fast self-detach. Floating-point
+environment, errno and compiler TLS are per thread. The final application thread
+exits through provider exit(0), including atexit/global cleanup. The initial
+thread has no native self-control grant and cannot be joined or detached through
+this profile. POSIX attributes, cancellation and dynamic TLS remain unsupported.
 
 Private mappings accept null hints, anonymous private RW memory and offset zero.
 Each mapping owns one reservation containing a private metadata page followed by
@@ -48,11 +56,15 @@ in `sources.json`; subsequent builds work offline. `CRYOLITE_LIBC_CACHE` selects
 an existing archive cache. All source extraction, patched copies and sysroot
 installation stay under the generated build directory. Source/overlay drift
 invalidates reuse; unowned source trees are preserved. No upstream fork or host
-libc headers are used.
+libc headers are used. Meson is forced to use the four pinned wrapped dependencies;
+compiler/linker environment overrides are removed from the validated build.
 
 Run `rtk proxy python3 tools/boot_smoke.py --profile debug --cpu Haswell-noTSX --libc-probe`
 after fetching the archives. `make LIBC_PROBE=1 iso` adds the same optional ELF.
-The kernel executes two fresh instances and checks completion and complete
-retirement before printing the LIBC success markers. Ordinary boot omits it.
+The kernel executes three fresh instances, including final-thread exit and a
+single-wait-credit stress case, then checks complete retirement before printing
+the LIBC success markers. Ordinary boot omits it.
 The [decision](../../../docs/decisions/0034-static-mlibc.md) records the patch
-scope and remaining production gates.
+scope; the [thread contract](../../../docs/decisions/0035-provider-thread-lifetime.md)
+records publication, detach and lifetime rules. Internal thread-runtime hooks
+belong to the pinned provider adapter, not application interfaces.

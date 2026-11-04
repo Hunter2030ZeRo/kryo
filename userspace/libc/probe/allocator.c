@@ -50,7 +50,10 @@ static void synchronize(struct worker *worker) {
     } else {
         while (__atomic_load_n(&barrier->phase, __ATOMIC_ACQUIRE) == phase) {
             kryo_result parked = kryo_park((kryo_u64)&barrier->phase, phase);
-            require(parked.status == KRYO_STATUS_OK, worker->debug, 302);
+            if (parked.status == KRYO_STATUS_OUT_OF_RESOURCES)
+                require(kryo_yield().status == KRYO_STATUS_OK, worker->debug, 302);
+            else
+                require(parked.status == KRYO_STATUS_OK, worker->debug, 302);
         }
     }
 }
@@ -168,7 +171,18 @@ void check_allocator(kryo_handle debug) {
         threads[number] = created.value;
     }
     for (unsigned number = 0; number < WORKERS; ++number) {
-        kryo_thread_result joined = kryo_thread_join(threads[number]);
+        kryo_result start = kryo_clock();
+        require(start.status == KRYO_STATUS_OK, debug, 315);
+        kryo_thread_result joined;
+        for (;;) {
+            joined = kryo_thread_join(threads[number]);
+            if (joined.status != KRYO_STATUS_OUT_OF_RESOURCES)
+                break;
+            kryo_result now = kryo_clock();
+            require(now.status == KRYO_STATUS_OK && now.value - start.value < 10000000000ULL,
+                    debug, 315);
+            require(kryo_yield().status == KRYO_STATUS_OK, debug, 315);
+        }
         require(kryo_thread_result_valid(joined) && joined.reason == KRYO_EXIT_EXITED
                 && joined.code == 0, debug, 315);
         succeeded(kryo_close(threads[number]), debug, 316);

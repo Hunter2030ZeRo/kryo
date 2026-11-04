@@ -21,13 +21,17 @@ pub(crate) fn check(
         Err(crate::boot::ModuleError::Missing) => return,
         Err(error) => panic!("Invalid libc probe module: {:?}", error),
     };
-    for instance in 1..=2 {
+    for instance in 1..=3 {
         run(pool, direct, memory, region, image, instance);
     }
     kryo_hal::emergency_write_str(
-        "LIBC: static mlibc startup TLS allocator formatting OK runs=2\n",
+        "LIBC: static mlibc startup TLS allocator formatting OK runs=3\n",
     );
     kryo_hal::emergency_write_str("LIBC: process and backing retirement OK\n");
+    kryo_hal::emergency_write_str(
+        "LIBCTHREAD: provider TLS join detach and retirement OK children=14 reapers=1\n",
+    );
+    kryo_hal::emergency_write_str("LIBCTHREAD: last exit callbacks and wait quota recovery OK\n");
 }
 
 fn run(
@@ -47,13 +51,13 @@ fn run(
         let mut ipc = IpcRuntime::growing(&objects);
         let account = Budget::new(Limits {
             shared_pages: 0,
-            private_pages: 1024,
+            private_pages: 8192,
             reserved_pages: 65536,
             handles: 16,
-            waits: 8,
+            waits: if instance == 3 { 1 } else { 8 },
             threads: 4,
-            mappings: 4096,
-            tables: 128,
+            mappings: 16384,
+            tables: 256,
         });
         let slot = region
             .find_stack(pool, direct)
@@ -108,11 +112,13 @@ fn run(
             .unwrap_or_else(|_| panic!("Cannot publish libc probe"));
         let owner = tasks.process_for(task).unwrap();
         let mut calls = CallStats::default();
-        let mut events = [false; 4];
+        let mut events = [false; 5];
+        let mut snapshots = [None; 2];
+        let mut balanced = [false; 2];
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time()
             .unwrap()
-            .saturating_add(10_000_000_000);
+            .saturating_add(30_000_000_000);
         while tasks.terminal(owner).is_none() {
             assert!(
                 kryo_hal::monotonic_time().unwrap() < deadline,
@@ -134,16 +140,41 @@ fn run(
                 let index = match event {
                     200..=202 => {
                         assert_eq!(value, 1, "Invalid libc completion event {}", event);
-                        (event - 200) as usize
+                        Some((event - 200) as usize)
                     }
                     203 => {
                         assert_eq!(value, 2, "Libc allocator threads did not finish");
-                        3
+                        Some(3)
+                    }
+                    204 => {
+                        assert_eq!(value, 14, "Provider threads did not finish");
+                        Some(4)
+                    }
+                    206 | 207 => {
+                        let slot = (event - 206) as usize;
+                        let current = [
+                            account.count(Resource::PrivatePages),
+                            account.count(Resource::ReservedPages),
+                            account.count(Resource::Handles),
+                            account.count(Resource::Threads),
+                        ];
+                        assert!(!balanced[slot], "Duplicate provider balance proof");
+                        match value {
+                            0 => assert!(snapshots[slot].replace(current).is_none()),
+                            1 => {
+                                assert_eq!(snapshots[slot].take(), Some(current));
+                                balanced[slot] = true;
+                            }
+                            _ => panic!("Invalid provider balance stage"),
+                        }
+                        None
                     }
                     _ => panic!("Unexpected libc probe event {}", event),
                 };
-                assert!(!events[index], "Duplicate libc probe event {}", event);
-                events[index] = true;
+                if let Some(index) = index {
+                    assert!(!events[index], "Duplicate libc probe event {}", event);
+                    events[index] = true;
+                }
             }
             // Kernel thread resources can retire after execution handoff; the
             // retained control object still supplies actual native join results.
@@ -161,13 +192,21 @@ fn run(
         }
         let status = tasks.terminal(owner).unwrap();
         assert_eq!(status.reason, ExitReason::Exited, "Libc probe faulted");
-        assert_eq!(status.code, 42, "Libc probe returned failure");
+        assert_eq!(
+            status.code,
+            if instance == 2 { 0 } else { 42 },
+            "Libc probe returned failure"
+        );
         assert!(
             events.into_iter().all(|seen| seen),
             "Missing libc completion event"
         );
+        assert!(
+            balanced.into_iter().all(|seen| seen),
+            "Missing provider ownership balance proof"
+        );
         assert_eq!(
-            calls.threads_created, 2,
+            calls.threads_created, 17,
             "Libc fixture thread count changed"
         );
         ipc.settle(&mut tasks);
@@ -180,7 +219,7 @@ fn run(
             );
             retired += 1;
         }
-        assert_eq!(retired, 3, "Libc threads did not retire");
+        assert_eq!(retired, 18, "Libc threads did not retire");
         assert_eq!(tasks.live_count(), 0);
         assert!(ipc.words.is_empty(), "Libc private waits survived teardown");
         assert_eq!(ipc.waits.live_count(), 0);

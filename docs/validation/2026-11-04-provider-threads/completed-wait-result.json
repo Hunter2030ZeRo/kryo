@@ -1,0 +1,14 @@
+{
+  "scope": "Terminal thread/process observation before wait admission; existing deadline, authority and process-self checks preserved",
+  "files": {
+    "kernel/image/src/runtime/threads.rs": "ea94f562cfab38c7024bff0f0d45bf0b2c7b83551dd040008b23bb9ad182fd80",
+    "kernel/image/src/runtime/process.rs": "3ff6b73abdd7513b939d66d39042af40c316059bcdcf5d9480b69e2f3aec8eac",
+    "kernel/image/src/runtime/threads/native_checks.rs": "47556ac56175f3c285bb42d0364039b0f4ffaea1e1d069c1898e7575b48438cd"
+  },
+  "checks": {
+    "all_feature_kernel_build": true,
+    "all_feature_kernel_clippy_warnings_denied": true,
+    "rustfmt": true
+  },
+  "qemu_evidence": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/kryo/build/smoke/debug-max-smp4/evidence.json"
+}

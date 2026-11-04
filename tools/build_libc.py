@@ -27,6 +27,11 @@ FLAGS = [
 
 
 def run(command, **kwargs):
+    if "env" not in kwargs:
+        environment = os.environ.copy()
+        for name in ("CC", "CXX", "AR", "LD", "STRIP", "CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
+            environment.pop(name, None)
+        kwargs["env"] = environment
     subprocess.run([str(arg) for arg in command], check=True, cwd=ROOT, **kwargs)
 
 
@@ -160,6 +165,7 @@ def main():
     sysroot = build / "sysroot"
     setup = ["meson", "setup", configured, source, "--cross-file", cross,
              "--prefix=/usr", "--libdir=lib", "--wrap-mode=nodownload",
+             "--force-fallback-for=frigg,libsmarter,freestanding-c-hdrs,freestanding-cxx-hdrs",
              "-Ddefault_library=static", "-Db_staticpic=false", "-Dlibgcc_dependency=false",
              "-Dposix_option=disabled", "-Dlinux_option=disabled", "-Dglibc_option=disabled",
              "-Dbsd_option=disabled", "-Duse_freestnd_hdrs=enabled", "-Dbuild_tests=false"]
@@ -191,12 +197,13 @@ def main():
     artifact = build / "libc-probe"
     run(["clang", *FLAGS, "-O2", "-Wall", "-Wextra", "-Werror", "-nostdinc", "-isystem", sysroot / "usr/include",
          "-c", probe / "main.c", "-o", build / "probe.o"])
-    for name in ("allocator.c", "allocator_entry.S"):
+    for name in ("allocator.c", "allocator_entry.S", "provider_threads.c"):
         run(["clang", *FLAGS, "-O2", "-fno-builtin", "-nostdinc", "-isystem", sysroot / "usr/include",
              "-Wall", "-Wextra", "-Werror", "-c", probe / name, "-o", build / f"{name}.o"])
     run(["ld.lld", "--static", "--gc-sections", "--build-id=none", "-zmax-page-size=0x1000",
          "-T", probe / "linker.ld", configured / "sysdeps/cryolite/crt1.o", build / "probe.o",
          build / "allocator.c.o", build / "allocator_entry.S.o",
+         build / "provider_threads.c.o",
          "--start-group", sysroot / "usr/lib/libc.a", allocator, "--end-group", "-o", artifact])
     assembly = subprocess.check_output(["objdump", "-d", "-M", "intel", str(artifact)], text=True)
     symbols = subprocess.check_output(["llvm-nm", str(artifact)], text=True)

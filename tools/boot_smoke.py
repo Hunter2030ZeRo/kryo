@@ -90,9 +90,13 @@ def libc_checks(log, enabled):
     log = kernel_log(log)
     return {
         "libc_static_runtime": len(re.findall(
-            r"(?m)^LIBC: static mlibc startup TLS allocator formatting OK runs=2$", log)) == 1,
+            r"(?m)^LIBC: static mlibc startup TLS allocator formatting OK runs=3$", log)) == 1,
         "libc_retirement": len(re.findall(
             r"(?m)^LIBC: process and backing retirement OK$", log)) == 1,
+        "libc_provider_threads": len(re.findall(
+            r"(?m)^LIBCTHREAD: provider TLS join detach and retirement OK children=14 reapers=1$", log)) == 1,
+        "libc_thread_failures": len(re.findall(
+            r"(?m)^LIBCTHREAD: last exit callbacks and wait quota recovery OK$", log)) == 1,
     }
 
 

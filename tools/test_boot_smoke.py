@@ -17,13 +17,19 @@ def diagnostic_log():
 
 class PciEvidenceTests(unittest.TestCase):
     def test_libc_requires_both_singleton_trusted_kernel_markers(self):
-        ready = "LIBC: static mlibc startup TLS allocator formatting OK runs=2\n"
+        ready = "LIBC: static mlibc startup TLS allocator formatting OK runs=3\n"
         retired = "LIBC: process and backing retirement OK\n"
+        threads = "LIBCTHREAD: provider TLS join detach and retirement OK children=14 reapers=1\n"
+        failures = "LIBCTHREAD: last exit callbacks and wait quota recovery OK\n"
         self.assertEqual(libc_checks("", False), {})
-        self.assertTrue(all(libc_checks(ready + retired, True).values()))
+        self.assertTrue(all(libc_checks(ready + retired + threads + failures, True).values()))
         for invalid in (ready, retired, ready + ready + retired,
-                        ready + retired + retired, ready.replace("runs=2", "runs=1") + retired,
+                        ready + retired + retired, ready.replace("runs=3", "runs=2") + retired,
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired):
+            self.assertFalse(all(libc_checks(invalid, True).values()))
+        for invalid in (ready + retired, ready + retired + threads + threads,
+                        ready + retired + threads.replace("children=14", "children=13"),
+                        ready + retired + threads + failures + failures):
             self.assertFalse(all(libc_checks(invalid, True).values()))
 
     def test_libc_has_separate_evidence_and_diagnostic_scope(self):

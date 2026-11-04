@@ -1,0 +1,105 @@
+--- a/options/internal/generic/threads.cpp
++++ b/options/internal/generic/threads.cpp
+@@ -11,6 +11,9 @@
+ #include <mlibc/tcb.hpp>
+ #include <mlibc/time-helpers.hpp>
+ #include <stdlib.h>
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++#include <cryolite/thread-runtime.h>
++#endif
+ 
+ extern "C" Tcb *__rtld_allocateTcb();
+ 
+@@ -101,6 +104,10 @@
+ 		return ENOSYS;
+ 
+ 	auto new_tcb = __rtld_allocateTcb();
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	if (!new_tcb)
++		return ENOMEM;
++#endif
+ 	pid_t tid;
+ 	struct __mlibc_threadattr attr = {};
+ 	if (attrp)
+@@ -121,8 +128,12 @@
+ 	}
+ 	int ret = sysdep_or_panic<PrepareStack>(&stack, entry,
+ 			user_arg, new_tcb, &attr.__stacksize, &attr.__guardsize, &new_tcb->stackAddr);
+-	if (ret)
++	if (ret) {
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++		__cryolite_tcb_discard(new_tcb);
++#endif
+ 		return ret;
++	}
+ 
+ 	if (!IsImplemented<Clone>) {
+ 		MLIBC_MISSING_SYSDEP();
+@@ -133,16 +144,34 @@
+ 	new_tcb->returnValueType = (returns_int) ? TcbThreadReturnValue::Integer : TcbThreadReturnValue::Pointer;
+ 	new_tcb->isJoinable = (attr.__detachstate == __MLIBC_THREAD_CREATE_JOINABLE);
+ 	__atomic_store_n(&new_tcb->cancelBits, 0, __ATOMIC_RELAXED);
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	if (int e = sysdep_or_panic<Clone>(new_tcb, &tid, stack)) {
++		__cryolite_tcb_discard(new_tcb);
++		return e;
++	}
++#else
+ 	sysdep_or_panic<Clone>(new_tcb, &tid, stack);
++#endif
+ 	*thread = reinterpret_cast<struct __mlibc_thread_data *>(new_tcb);
+ 
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	// The creator pin keeps the TCB alive through the final publication wake.
++	auto tid_word = &new_tcb->tid;
++	__atomic_store_n(tid_word, tid, __ATOMIC_RELEASE);
++	mlibc::sysdep<FutexWake>(tid_word, true);
++	__cryolite_thread_published(new_tcb);
++#else
+ 	__atomic_store_n(&new_tcb->tid, tid, __ATOMIC_RELAXED);
+ 	mlibc::sysdep<FutexWake>(&new_tcb->tid, true);
++#endif
+ 
+ 	return 0;
+ }
+ 
+ int thread_join(struct __mlibc_thread_data *thread, void *ret) {
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	return __cryolite_thread_join(thread, ret);
++#else
+ 	auto tcb = reinterpret_cast<Tcb *>(thread);
+ 
+ 	if(!tcb->isJoinable) {
+@@ -168,9 +197,13 @@
+ 	// FIXME: destroy tcb here, currently we leak it
+ 
+ 	return 0;
++#endif
+ }
+ 
+ int thread_detach(struct __mlibc_thread_data *thread) {
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	return __cryolite_thread_detach(thread);
++#else
+ 	auto tcb = reinterpret_cast<Tcb *>(thread);
+ 	if (!__atomic_load_n(&tcb->isJoinable, __ATOMIC_RELAXED))
+ 		return EINVAL;
+@@ -181,6 +214,7 @@
+ 		return EINVAL;
+ 
+ 	return 0;
++#endif
+ }
+ 
+ namespace {
+@@ -216,8 +250,9 @@
+ 				key_mutex_.unlock();
+ 
+ 				if (dtor) {
++					// Destructors observe a cleared key and may set its next value.
++					(*self->localKeys)[i].value = nullptr;
+ 					dtor(v);
+-					(*self->localKeys)[i].value = nullptr;
+ 				}
+ 			}
+ 		}

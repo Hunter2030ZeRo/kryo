@@ -2,6 +2,10 @@
 
 Date: 2026-11-04. Status: experimental ANSI/static implementation.
 
+[ADR 0035](0035-provider-thread-lifetime.md) extends this initial milestone with
+provider threads; the single-provider-thread limit below describes the original
+bring-up boundary.
+
 Cryolite now builds and executes pinned upstream mlibc rather than a substitute
 set of C functions. The port keeps Kryo's native capability calls and the owned
 C ABI proposals. POSIX, Linux, BSD and glibc build options remain disabled.

@@ -195,7 +195,8 @@ records the requirements, performance work and decisions requiring review.
 [ADR 0025](decisions/0025-static-tls-and-elf-metadata.md) extends it with truthful
 mapped ELF metadata and runtime-owned compiler static TLS. The limited static
 mlibc profile now uses the upstream initial TCB and a fallible Talc user heap;
-provider thread/TCB lifecycle and hardened hosted startup remain pending.
+provider C11 thread/TCB lifecycle now includes native completion-aware join and
+detached retirement. Hardened hosted startup remains pending.
 Explicit private VM and atomic private waits
 provide page-backing and synchronization boundaries through
 [ADR 0026](decisions/0026-private-vm-and-atomic-waits.md).

@@ -10,6 +10,7 @@ constexpr size_t page_size = 4096;
 constexpr uint64_t nanos_per_second = 1000000000;
 uint64_t startup_handle;
 uint64_t debug_handle;
+uint64_t wait_fallbacks;
 
 [[noreturn]] void fail() {
     kryo_exit(253);
@@ -156,6 +157,10 @@ extern "C" uint64_t __cryolite_startup_handle() {
     return startup_handle;
 }
 
+extern "C" uint64_t __cryolite_wait_fallbacks() {
+    return __atomic_load_n(&wait_fallbacks, __ATOMIC_RELAXED);
+}
+
 extern "C" void __cryolite_startup(uint64_t record) {
     if (!record || startup_handle || read_word(record, 0) != KRYO_STARTUP_MAGIC
         || read_word(record, 1) != KRYO_STARTUP_VERSION)
@@ -255,6 +260,13 @@ int Sysdeps<FutexWait>::operator()(int *pointer, int expected, const timespec *t
         if (int e = deadline_after(time->tv_sec, time->tv_nsec, &deadline))
             return e;
         result = kryo_park_until(address, static_cast<uint32_t>(expected), deadline);
+    }
+    if (result.status == KRYO_STATUS_OUT_OF_RESOURCES) {
+        // The caller rechecks its predicate after this permitted spurious wake.
+        __atomic_fetch_add(&wait_fallbacks, 1, __ATOMIC_RELAXED);
+        if (kryo_yield().status)
+            fail();
+        return 0;
     }
     if (result.status)
         return error(result.status);

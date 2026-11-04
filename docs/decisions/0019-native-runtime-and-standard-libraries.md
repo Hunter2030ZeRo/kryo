@@ -52,8 +52,10 @@ monotonic time, threads, explicit FS-base setup, atomic private word waits and
 reserve/commit/decommit/release for private RW/NX RAM. The optional native bootstrap checks a SysV argument stack
 and mapped ELF metadata with compiler static TLS. Legacy startup conventions
 remain supported. The [static mlibc profile](0034-static-mlibc.md) now supplies
-the initial provider TCB, static TLS and a fallible Talc heap. Provider thread
-lifecycle and service-backed files/streams are still required. The managed
+the initial provider TCB, static TLS and a fallible Talc heap. The
+[C11 thread extension](0035-provider-thread-lifetime.md) adds completion-aware
+provider lifecycle; POSIX attributes/cancellation and service-backed files/streams
+are still required. The managed
 scratch TLS page and eight-page
 shared-object API remain separate mechanisms. See
 [interfaces](../interfaces.md) and [the private-VM decision](0026-private-vm-and-atomic-waits.md).

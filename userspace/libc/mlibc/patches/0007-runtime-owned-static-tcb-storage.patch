@@ -1,0 +1,95 @@
+--- a/options/rtld/generic/linker.cpp
++++ b/options/rtld/generic/linker.cpp
+@@ -20,6 +20,9 @@
+ #include <mlibc/thread.hpp>
+ #include <abi-bits/fcntl.h>
+ #include <internal-config.h>
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++#include <cryolite/thread-runtime.h>
++#endif
+ 
+ #include "elf.hpp"
+ #include "linker.hpp"
+@@ -1430,8 +1433,28 @@
+ 	// To make sure that both the TCB and TLS data are sufficiently aligned, allocate
+ 	// slightly more than necessary and adjust alignment afterwards.
+ 	size_t alignOverhead = frg::max(alignof(Tcb), tlsMaxAlignment);
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	static_assert(!tlsAboveTp);
++	for (size_t i = 1; i < runtimeTlsMap->indices.size(); ++i) {
++		auto object = runtimeTlsMap->indices[i];
++		if (object && object->tlsModel == TlsModel::dynamic)
++			return nullptr;
++	}
++	if (tlsInitialSize > SIZE_MAX - sizeof(Tcb)
++			|| tlsInitialSize + sizeof(Tcb) > SIZE_MAX - alignOverhead
++			|| runtimeTlsMap->indices.size() > SIZE_MAX / sizeof(void *))
++		return nullptr;
++#endif
+ 	size_t allocSize = tlsInitialSize + sizeof(Tcb) + alignOverhead;
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	using LocalKeys = frg::array<Tcb::LocalKey, PTHREAD_KEYS_MAX>;
++	cryolite_tcb_storage storage{};
++	if (__cryolite_tcb_allocate(allocSize, sizeof(LocalKeys), runtimeTlsMap->indices.size(), &storage))
++		return nullptr;
++	auto allocation = reinterpret_cast<uintptr_t>(storage.allocation);
++#else
+ 	auto allocation = reinterpret_cast<uintptr_t>(getLdsoAllocator().allocate(allocSize));
++#endif
+ 	memset(reinterpret_cast<void *>(allocation), 0, allocSize);
+ 
+ 	uintptr_t tlsAddress, tcbAddress;
+@@ -1474,9 +1497,17 @@
+ 	tcb_ptr->isJoinable = 1;
+ 	memset(&tcb_ptr->returnValue, 0, sizeof(tcb_ptr->returnValue));
+ 	tcb_ptr->cxaThreadExitHandlers = nullptr;
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	tcb_ptr->localKeys = new (storage.keys) LocalKeys{};
++#else
+ 	tcb_ptr->localKeys = frg::construct<frg::array<Tcb::LocalKey, PTHREAD_KEYS_MAX>>(getLdsoAllocator());
++#endif
+ 	tcb_ptr->dtvSize = runtimeTlsMap->indices.size();
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	tcb_ptr->dtvPointers = storage.dtv;
++#else
+ 	tcb_ptr->dtvPointers = frg::construct_n<void *>(getLdsoAllocator(), runtimeTlsMap->indices.size());
++#endif
+ 	memset(tcb_ptr->dtvPointers, 0, sizeof(void *) * runtimeTlsMap->indices.size());
+ 	for(size_t i = 1; i < runtimeTlsMap->indices.size(); ++i) {
+ 		auto object = runtimeTlsMap->indices[i];
+@@ -1495,7 +1526,12 @@
+ 		}
+ 	}
+ 
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	// The static port owns TCB lifetime; the loader list is for dynamic TLS updates.
++	__cryolite_tcb_bind(storage.cookie, tcb_ptr);
++#else
+ 	runtimeTlsMap->tcbs.push_back(tcb_ptr);
++#endif
+ 
+ 	return tcb_ptr;
+ }
+--- a/options/rtld/generic/main.cpp
++++ b/options/rtld/generic/main.cpp
+@@ -224,6 +224,10 @@
+ extern "C" [[ gnu::visibility("default") ]] void *__rtld_allocateTcb() {
+ 	frg::unique_lock lock{loaderLock};
+ 	auto tcb = allocateTcb();
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	if (!tcb)
++		return nullptr;
++#endif
+ 	initTlsObjects(tcb, globalScope->_objects, false);
+ 	return tcb;
+ }
+@@ -652,6 +656,9 @@
+ 	mlibc::initStackGuard(stack_entropy);
+ 
+ 	auto tcb = allocateTcb();
++#if defined(__cryolite__) && MLIBC_STATIC_BUILD
++	__ensure(tcb && "Cryolite startup TCB allocation failed");
++#endif
+ 	tcb->tid = earlyTcb.tid;
+ 	if(mlibc::sysdep<TcbSet>(tcb))
+ 		__ensure(!"sys_tcb_set() failed");

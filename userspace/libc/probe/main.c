@@ -9,7 +9,10 @@
 #include <cryolite/native.h>
 
 extern kryo_handle __cryolite_debug_handle(void);
+extern kryo_handle __cryolite_startup_handle(void);
+extern uint64_t __cryolite_wait_fallbacks(void);
 extern void check_allocator(kryo_handle debug);
+extern void check_provider_threads(kryo_handle debug);
 
 static _Thread_local volatile uint64_t tls_value = UINT64_C(0x2197acde4568);
 static _Thread_local volatile uint64_t tls_zero;
@@ -38,11 +41,6 @@ __attribute__((constructor(200))) static void initialize(void) {
 static void at_exit(void) {
     require(constructed == 1 && tls_zero == UINT64_C(0x817a37), 2);
     event(201, 1);
-}
-
-static int unsupported_thread(void *argument) {
-    (void)argument;
-    return 0;
 }
 
 __attribute__((destructor(200))) static void finalize(void) {
@@ -126,12 +124,15 @@ int main(int argc, char **argv, char **envp) {
         }
     }
     require(kryo_vm_release(reserved.value).status == 0, 31);
-    for (unsigned attempt = 0; attempt < 8; ++attempt) {
-        thrd_t unsupported;
-        require(thrd_create(&unsupported, unsupported_thread, NULL) == thrd_error, 32);
-    }
     require(kryo_debug_write(__cryolite_debug_handle(), text, (size_t)length).status == 0, 26);
+    check_provider_threads(__cryolite_debug_handle());
     check_allocator(__cryolite_debug_handle());
+    kryo_result instance = kryo_startup_read(__cryolite_startup_handle(), 4);
+    require(instance.status == KRYO_STATUS_OK && instance.value >= 1 && instance.value <= 3, 34);
+    if (instance.value == 3)
+        require(__cryolite_wait_fallbacks() > 0, 35);
     event(200, 1);
+    if (instance.value == 2)
+        thrd_exit(42);
     return 42;
 }

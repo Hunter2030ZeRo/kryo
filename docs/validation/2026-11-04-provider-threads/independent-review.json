@@ -1,0 +1,43 @@
+{
+  "status": "CLEAR",
+  "source_bundle_sha256": "9eaf9074d24d4a0816887d0d574b756bf5a46e244ca214f720b8736b98752160",
+  "source_inputs_sha256": "aadd6eef726c8f77a5f7724c0b5a416ffccd345946c7dd030aa731002890550d",
+  "checks": {
+    "four_final_guests": true,
+    "probe_and_packaged_image_hashes": true,
+    "three_process_runs_per_guest": true,
+    "exit_callbacks_and_wait_quota_recovery": true,
+    "completed_wait_regression": true,
+    "publication_and_native_retirement_ownership": true,
+    "legacy_checks_retained": true,
+    "python_tests_32": true,
+    "no_mmx_or_ifunc": true
+  },
+  "cases": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc",
+      "evidence_sha256": "116dc311146e9dff7ec0db5be648127de83728297415131f5c626d7b72878065",
+      "build_sha256": "eb7072c10d489023408209715d85c94b573e24591834a01fceb7af65514b9eae"
+    },
+    {
+      "label": "release-max-smp4-abi-libc-block-ro",
+      "evidence_sha256": "cdbc6864cd10c64b2bc406551b2069bb1df4201b3886bc63727f3be3ba9a8cef",
+      "build_sha256": "1337bef3b613a2ae7de76d2d7751ad8bb6c76c7d903429ac4b4c5bf537e21513"
+    },
+    {
+      "label": "debug-normal-max-smp4-libc-block-rw",
+      "evidence_sha256": "2cde9de3f769c28d95dcfe44968c4250c6553d2f21ccb56c6b7186cb9665c654",
+      "build_sha256": "eb7072c10d489023408209715d85c94b573e24591834a01fceb7af65514b9eae"
+    },
+    {
+      "label": "release-Haswell-noTSX-libc",
+      "evidence_sha256": "c8b6440fa57d374cad2601fc424b92b1b187dc7db51d4fee692e64db3d542f38",
+      "build_sha256": "1337bef3b613a2ae7de76d2d7751ad8bb6c76c7d903429ac4b4c5bf537e21513"
+    }
+  ],
+  "scope": "Read-only source and final isolated guest evidence review. Actual checkout rebuild is separately recorded.",
+  "notes": [
+    "Documentation now says the reaper skips records still executing language cleanup; successful native exit may still require a brief join wait.",
+    "Fast self-detach does not force child exit before the final creator publication wake."
+  ]
+}
