@@ -2,6 +2,13 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [stdio correction](decisions/0039-fallible-provider-stdio.md) makes FILE and
+buffer allocation fallible and preserves completed fread elements on error.
+A real quota-exhaustion probe checks buffer failure and recovery; a source-body
+host harness checks Open/Read failures separately. File hooks remain unsupported
+until the Ring 3 file service is connected. See the
+[validation record](validation/2026-11-04-stdio/README.md).
+
 [Capability-bearing replies](decisions/0037-capability-bearing-replies.md)
 add explicit caller reply capacity and atomic message/grant delivery while
 preserving existing Call/Reply. Preflight failures preserve a live token for

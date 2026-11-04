@@ -1,0 +1,69 @@
+[
+  {
+    "label": "initial-debug",
+    "status": "failed",
+    "passing_count": 0,
+    "reason": "guest reported PANIC",
+    "profile": "debug",
+    "cpu": "max",
+    "cpus": 4,
+    "evidence_sha256": "7206cb76ebdba1c2f20f722c4a598e4e72df181a2a5e6e4737515e670fd5763a",
+    "debug_log_sha256": "7690c062f91fb56202a423d4212ad3a8b75b8bb3bcb4bb412450de13a2009ba9",
+    "progress_values": [],
+    "minimum_successful_malloc_blocks": 0
+  },
+  {
+    "label": "initial-release",
+    "status": "failed",
+    "passing_count": 0,
+    "reason": "guest reported PANIC",
+    "profile": "release",
+    "cpu": "Haswell-noTSX",
+    "cpus": 1,
+    "evidence_sha256": "39c4b77c5d23ab43d786afc75a648aa0fa5c0fb494ede588007a2c34ac795d2c",
+    "debug_log_sha256": "26c042cf169048cfba7af65b5093324c3222a82cc4aea7748da85060ab7bb1e9",
+    "progress_values": [],
+    "minimum_successful_malloc_blocks": 0
+  },
+  {
+    "label": "pressure",
+    "status": "failed",
+    "passing_count": 0,
+    "reason": "guest reported PANIC",
+    "profile": "debug",
+    "cpu": "max",
+    "cpus": 4,
+    "evidence_sha256": "1fa7d7ac2ffb09fbd49c80967be8c063d7592d1742e7a0009d12ec225d5da609",
+    "debug_log_sha256": "d95454a53a4b8801d2a1bd113bf06325cf430aceea1273e0be1be2af66f226df",
+    "progress_values": [
+      1
+    ],
+    "minimum_successful_malloc_blocks": 0
+  },
+  {
+    "label": "power-pressure",
+    "status": "failed",
+    "passing_count": 0,
+    "reason": "guest reported PANIC",
+    "profile": "debug",
+    "cpu": "max",
+    "cpus": 4,
+    "evidence_sha256": "31548e3e5f2c519cc9c35923f733cb4b8469ad9cf4d76eca4e3afd0a6da8ac55",
+    "debug_log_sha256": "610a934ef2d3b52c58d6192105ddafd27ee99a31584facdcfe237dc954be51a6",
+    "progress_values": [
+      1,
+      1001,
+      1002,
+      1004,
+      1008,
+      1016,
+      1032,
+      1064,
+      1128,
+      1256,
+      1512,
+      2024
+    ],
+    "minimum_successful_malloc_blocks": 1024
+  }
+]

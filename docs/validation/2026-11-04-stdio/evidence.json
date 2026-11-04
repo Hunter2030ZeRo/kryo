@@ -1,0 +1,87 @@
+{
+  "base_commit": "784f5b5e2207639a87bad3b42894972d6c8a3c55",
+  "source_bundle_sha256": "08ddec8cec6b003820bf3e9bf93065243721fd14f8c410f9d88f623717c1c17d",
+  "review_sha256": "5df54a3c46f3cb62b7f4bf51ea1c0348cfaa7af33af4ccc0bf879698d01bbaef",
+  "source_changes": 11,
+  "actual_and_stdio_snapshot_files_matched": 1686,
+  "main_working_stage_excluded": "contains separate unfinished endpoint-gate work",
+  "final_source_hash_check": true,
+  "source_inputs_sha256": "b0ec9e11aac64b411e126ceee42e83359be636cf72ccadc30d339df7ce1f78b5",
+  "rust_tests": 476,
+  "python_tests": 34,
+  "c_header_checks": 43,
+  "qemu": [
+    {
+      "label": "debug-max-smp4-libc",
+      "profile": "debug",
+      "cpu": "max",
+      "cpus": 4,
+      "mode": "boot-tests",
+      "passed": true,
+      "abi_probe": false,
+      "libc_runs": 3,
+      "stdio_success_events": 3,
+      "stdio_failure_events": 0,
+      "stdio_kernel_markers": 1,
+      "watchdog_ns_per_process": 30000000000,
+      "source_inputs_sha256": "b0ec9e11aac64b411e126ceee42e83359be636cf72ccadc30d339df7ce1f78b5",
+      "image_sha256": "afb562a98578894801bc3f30cde3d690aebcef58723a509eaa9aca51807a8d14",
+      "image_bytes": 330280,
+      "evidence_sha256": "a8446d8d9499a85cd67c424be63323dc46ecfd012ed90d5efffcc11cea57ea50",
+      "debug_log_sha256": "59ef2200c493481359ea8e29db80011d7fcc844b8d3990501e0c95b44e7e3917"
+    },
+    {
+      "label": "release-Haswell-noTSX-libc",
+      "profile": "release",
+      "cpu": "Haswell-noTSX",
+      "cpus": 1,
+      "mode": "boot-tests",
+      "passed": true,
+      "abi_probe": false,
+      "libc_runs": 3,
+      "stdio_success_events": 3,
+      "stdio_failure_events": 0,
+      "stdio_kernel_markers": 1,
+      "watchdog_ns_per_process": 30000000000,
+      "source_inputs_sha256": "b0ec9e11aac64b411e126ceee42e83359be636cf72ccadc30d339df7ce1f78b5",
+      "image_sha256": "845e432ab260f960db564bd468777611eec98bd3a3df65e665f2c573ca12a621",
+      "image_bytes": 301672,
+      "evidence_sha256": "51a814386356acb4737fbbadb37666913d8d0d62b462886aaa19c70921f2d6f4",
+      "debug_log_sha256": "9b52943eceded2a0389a28af28b6c53425aaba7e59dab1c58d9acef8104831a5"
+    }
+  ],
+  "host_source_cases": 25,
+  "host_optimized_runs": 2,
+  "host_sanitizers": [
+    "address",
+    "undefined"
+  ],
+  "leak_sanitizer": "disabled: restricted host ptrace; FILE cleanup checked by allocator counters",
+  "failed_guests": 4,
+  "failed_guests_in_passing_count": 0,
+  "read_regression_control": {
+    "expected_failed_case": 13,
+    "run_exit": 13,
+    "record_sha256": "47f7deb1a673d816890cd7d434ad90e7b040898cecbe7fe184fded9b6371e6ab",
+    "scope": "host-only read-body regression control"
+  },
+  "provider_compile_audit": [
+    {
+      "profile": "debug",
+      "compile_commands": 359,
+      "target_header_commands": 351,
+      "all_commands_have_v3_no_mmx": true,
+      "host_include_paths": false
+    },
+    {
+      "profile": "release",
+      "compile_commands": 359,
+      "target_header_commands": 351,
+      "all_commands_have_v3_no_mmx": true,
+      "host_include_paths": false
+    }
+  ],
+  "independent_source_review": "CLEAR",
+  "matrix_and_actual_artifact_checks": "executor verified; scope recorded in independent-review.json",
+  "scope": "native stdio buffer OOM/recovery and host source-body fallibility; no successful native file Open, stdout transport, hosted ABI completion or hardware performance claim"
+}

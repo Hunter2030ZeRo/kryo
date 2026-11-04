@@ -21,12 +21,17 @@ class PciEvidenceTests(unittest.TestCase):
         retired = "LIBC: process and backing retirement OK\n"
         threads = "LIBCTHREAD: provider TLS join detach and retirement OK children=14 reapers=1\n"
         failures = "LIBCTHREAD: last exit callbacks and wait quota recovery OK\n"
+        stdio = "LIBCSTDIO: buffer allocation failure and recovery OK runs=3\n"
         self.assertEqual(libc_checks("", False), {})
-        self.assertTrue(all(libc_checks(ready + retired + threads + failures, True).values()))
+        self.assertTrue(all(libc_checks(ready + retired + threads + failures + stdio, True).values()))
         for invalid in (ready, retired, ready + ready + retired,
                         ready + retired + retired, ready.replace("runs=3", "runs=2") + retired,
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired):
             self.assertFalse(all(libc_checks(invalid, True).values()))
+        for invalid in (ready + retired + threads + failures,
+                        ready + retired + threads + failures + stdio + stdio,
+                        "USERDIAG: process=0x1 bytes=0 text=" + stdio):
+            self.assertFalse(libc_checks(invalid, True)["libc_stdio_recovery"])
         for invalid in (ready + retired, ready + retired + threads + threads,
                         ready + retired + threads.replace("children=14", "children=13"),
                         ready + retired + threads + failures + failures):

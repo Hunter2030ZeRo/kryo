@@ -1,0 +1,26 @@
+{
+  "status": "CLEAR",
+  "source_bundle_sha256": "08ddec8cec6b003820bf3e9bf93065243721fd14f8c410f9d88f623717c1c17d",
+  "source_inputs_sha256": "b0ec9e11aac64b411e126ceee42e83359be636cf72ccadc30d339df7ce1f78b5",
+  "checks": {
+    "independent_final_source_review": true,
+    "pinned_source_body_harness_25_cases_two_optimizations": true,
+    "old_read_regression_detected": true,
+    "two_real_quota_exhaustion_guests": true,
+    "guest_retirement_and_required_legacy_checks": true,
+    "actual_matches_isolated_stdio_source": true
+  },
+  "cases": [
+    {
+      "label": "debug-max-smp4-libc",
+      "evidence_sha256": "a8446d8d9499a85cd67c424be63323dc46ecfd012ed90d5efffcc11cea57ea50",
+      "build_sha256": "63b05609eeafb2130e34de6571a6db6d4f9a5240f52ccd4a9fae6b674f551257"
+    },
+    {
+      "label": "release-Haswell-noTSX-libc",
+      "evidence_sha256": "51a814386356acb4737fbbadb37666913d8d0d62b462886aaa19c70921f2d6f4",
+      "build_sha256": "c6fcc01c806c14fbf5870d1b97dfdc758b1e68e43b9e26d5265f0e346d75527a"
+    }
+  ],
+  "scope": "Independent read-only source and stdio artifact review is clear. Mock Open/Read tests and actual guest buffer-OOM tests are distinct; file hooks remain unsupported. Earlier timeout failures are preserved separately."
+}

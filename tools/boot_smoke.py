@@ -98,6 +98,8 @@ def libc_checks(log, enabled):
             r"(?m)^LIBCTHREAD: provider TLS join detach and retirement OK children=14 reapers=1$", log)) == 1,
         "libc_thread_failures": len(re.findall(
             r"(?m)^LIBCTHREAD: last exit callbacks and wait quota recovery OK$", log)) == 1,
+        "libc_stdio_recovery": len(re.findall(
+            r"(?m)^LIBCSTDIO: buffer allocation failure and recovery OK runs=3$", log)) == 1,
     }
 
 

@@ -39,6 +39,26 @@ is converted once to an absolute monotonic deadline with checked arithmetic.
 Realtime and CPU-time clocks fail with ENOTSUP; unselected clocks fail EINVAL.
 Unsupported mappings and file operations are never reported as successful.
 
+The local stdio storage patch checks FILE allocation before opening a descriptor,
+so allocation failure cannot strand an opened owner. Buffer allocation and size
+overflow return ENOMEM without null-pointer arithmetic; failed pushback also
+sets the stream error indicator. A read publishes consumed pushback as a short
+read before further I/O; fread retains complete elements across a later read,
+reset or write-back error. These changes do not supply a descriptor backend.
+
+The optional provider probe exhausts its private memory account, checks public
+stdio buffer/pushback failure, and recovers after releasing allocations. Most
+pressure uses one native VM reservation with bounded commit sizes; malloc
+drains only existing allocator slack. The probe restores errno and the
+floating-point environment and leaves stdout without
+dirty data. `tests/stdio_fallibility.py` separately compiles the generated target's
+verbatim fopen, buffer-allocation, read and fread bodies against host-only
+allocator, Open and I/O doubles. Its 25 cases include consumed pushback before
+buffered/unbuffered EIO and EOF, complete/incomplete elements, reset/write-back
+errors and buffer OOM. They run under AddressSanitizer and
+UndefinedBehaviorSanitizer at O0/O2. Source-manifest and function hashes identify
+the tested code; successful mock Open is not evidence of native file-service support.
+
 The build disables stack-protector instrumentation. No AT_RANDOM entropy is
 fabricated: this provider's deterministic fallback canary is a bring-up
 limitation, not a security guarantee. A real entropy source and enforced hardened

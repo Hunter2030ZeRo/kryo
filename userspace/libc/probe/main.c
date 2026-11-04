@@ -13,6 +13,7 @@ extern kryo_handle __cryolite_startup_handle(void);
 extern uint64_t __cryolite_wait_fallbacks(void);
 extern void check_allocator(kryo_handle debug);
 extern void check_provider_threads(kryo_handle debug);
+extern void check_provider_stdio(kryo_handle debug);
 
 static _Thread_local volatile uint64_t tls_value = UINT64_C(0x2197acde4568);
 static _Thread_local volatile uint64_t tls_zero;
@@ -125,6 +126,7 @@ int main(int argc, char **argv, char **envp) {
     }
     require(kryo_vm_release(reserved.value).status == 0, 31);
     require(kryo_debug_write(__cryolite_debug_handle(), text, (size_t)length).status == 0, 26);
+    check_provider_stdio(__cryolite_debug_handle());
     check_provider_threads(__cryolite_debug_handle());
     check_allocator(__cryolite_debug_handle());
     kryo_result instance = kryo_startup_read(__cryolite_startup_handle(), 4);

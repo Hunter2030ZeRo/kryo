@@ -32,6 +32,7 @@ pub(crate) fn check(
         "LIBCTHREAD: provider TLS join detach and retirement OK children=14 reapers=1\n",
     );
     kryo_hal::emergency_write_str("LIBCTHREAD: last exit callbacks and wait quota recovery OK\n");
+    kryo_hal::emergency_write_str("LIBCSTDIO: buffer allocation failure and recovery OK runs=3\n");
 }
 
 fn run(
@@ -112,7 +113,7 @@ fn run(
             .unwrap_or_else(|_| panic!("Cannot publish libc probe"));
         let owner = tasks.process_for(task).unwrap();
         let mut calls = CallStats::default();
-        let mut events = [false; 5];
+        let mut events = [false; 6];
         let mut snapshots = [None; 2];
         let mut balanced = [false; 2];
         let mut retired = 0;
@@ -137,6 +138,7 @@ fn run(
             if let Some((source, event, value)) = calls.last_debug.take() {
                 assert_eq!(source, task, "Unexpected child libc diagnostic");
                 assert_ne!(event, 209, "Libc probe failed at stage {}", value);
+                assert_ne!(event, 211, "Libc stdio probe failed at stage {}", value);
                 let index = match event {
                     200..=202 => {
                         assert_eq!(value, 1, "Invalid libc completion event {}", event);
@@ -150,6 +152,11 @@ fn run(
                         assert_eq!(value, 14, "Provider threads did not finish");
                         Some(4)
                     }
+                    210 => {
+                        assert_eq!(value, 1, "Libc stdio recovery did not finish");
+                        Some(5)
+                    }
+                    212 => None,
                     206 | 207 => {
                         let slot = (event - 206) as usize;
                         let current = [

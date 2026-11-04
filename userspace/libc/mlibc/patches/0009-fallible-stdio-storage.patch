@@ -1,0 +1,162 @@
+--- a/options/ansi/generic/file-io.cpp
++++ b/options/ansi/generic/file-io.cpp
+@@ -110,19 +110,13 @@
+ 	if(int e = _init_bufmode(); e)
+ 		return e;
+ 
+-	size_t unget_length = 0;
+ 	if (__unget_ptr != __buffer_ptr) {
+-		unget_length = frg::min(max_size, (size_t)(__buffer_ptr - __unget_ptr));
+-		memcpy(buffer, __unget_ptr, unget_length);
+-
+-		__unget_ptr += unget_length;
+-		buffer += unget_length;
+-		max_size -= unget_length;
+-
+-		if (max_size == 0) {
+-			*actual_size = unget_length;
+-			return 0;
+-		}
++		auto chunk = frg::min(max_size, (size_t)(__buffer_ptr - __unget_ptr));
++		memcpy(buffer, __unget_ptr, chunk);
++		__unget_ptr += chunk;
++		// Publish pushback as a short read before any later I/O can fail.
++		*actual_size = chunk;
++		return 0;
+ 	}
+ 
+ 	if(globallyDisableBuffering || _bufmode == buffer_mode::no_buffer) {
+@@ -133,7 +127,7 @@
+ 		}
+ 		if(!io_size)
+ 			__status_bits |= __MLIBC_EOF_BIT;
+-		*actual_size = io_size + unget_length;
++		*actual_size = io_size;
+ 		return 0;
+ 	}
+ 
+@@ -148,7 +142,8 @@
+ 			return e;
+ 
+ 		// Perform a read-ahead.
+-		_ensure_allocation();
++		if(int e = _ensure_allocation(); e)
++			return e;
+ 		size_t io_size;
+ 		if(int e = io_read(__buffer_ptr, __buffer_size, &io_size); e) {
+ 			__status_bits |= __MLIBC_ERROR_BIT;
+@@ -171,7 +166,7 @@
+ 	memcpy(buffer, __buffer_ptr + __offset, chunk);
+ 	__offset += chunk;
+ 
+-	*actual_size = chunk + unget_length;
++	*actual_size = chunk;
+ 	return 0;
+ }
+ 
+@@ -217,7 +212,8 @@
+ 	__ensure(chunk);
+ 
+ 	// Buffer data (without necessarily performing I/O).
+-	_ensure_allocation();
++	if(int e = _ensure_allocation(); e)
++		return e;
+ 	memcpy(__buffer_ptr + __offset, buffer, chunk);
+ 
+ 	if(__dirty_begin != __dirty_end) {
+@@ -245,7 +241,10 @@
+ 		// This can happen if the file is unbuffered, but we still need
+ 		// a space to store ungetc'd data.
+ 		__ensure(!__buffer_ptr);
+-		_ensure_allocation();
++		if(int e = _ensure_allocation(); e) {
++			errno = e;
++			return EOF;
++		}
+ 		__ensure(__unget_ptr);
+ 	}
+ 
+@@ -456,13 +455,22 @@
+ }
+ 
+ // This may still be called when buffering is disabled, for ungetc.
+-void abstract_file::_ensure_allocation() {
++int abstract_file::_ensure_allocation() {
+ 	if(__buffer_ptr)
+-		return;
+-
++		return 0;
++
++	if(__buffer_size > SIZE_MAX - ungetBufferSize) {
++		__status_bits |= __MLIBC_ERROR_BIT;
++		return ENOMEM;
++	}
+ 	auto ptr = getAllocator().allocate(__buffer_size + ungetBufferSize);
++	if(!ptr) {
++		__status_bits |= __MLIBC_ERROR_BIT;
++		return ENOMEM;
++	}
+ 	__buffer_ptr = reinterpret_cast<char *>(ptr) + ungetBufferSize;
+ 	__unget_ptr = __buffer_ptr;
++	return 0;
+ }
+ 
+ // --------------------------------------------------------------------------------------
+@@ -734,14 +742,20 @@
+ FILE *fopen(const char *path, const char *mode) {
+ 	int flags = mlibc::fd_file::parse_modestring(mode);
+ 
++	// Allocate before Open so allocation failure never leaves an owned descriptor.
++	auto storage = getAllocator().allocate(sizeof(mlibc::fd_file));
++	if(!storage) {
++		errno = ENOMEM;
++		return nullptr;
++	}
+ 	int fd;
+ 	if(int e = mlibc::sysdep<Open>(path, flags, 0666, &fd); e) {
++		getAllocator().free(storage);
+ 		errno = e;
+ 		return nullptr;
+ 	}
+ 
+-	return frg::construct<mlibc::fd_file>(getAllocator(), fd,
+-			mlibc::file_dispose_cb<mlibc::fd_file>);
++	return new (storage) mlibc::fd_file(fd, mlibc::file_dispose_cb<mlibc::fd_file>);
+ }
+ 
+ #if __MLIBC_LINUX_OPTION
+--- a/options/ansi/generic/stdio.cpp
++++ b/options/ansi/generic/stdio.cpp
+@@ -2501,8 +2501,9 @@
+ 			size_t chunk;
+ 			if(int e = file->read((char *)buffer + progress,
+ 					count - progress, &chunk)) {
++				file->__status_bits |= __MLIBC_ERROR_BIT;
+ 				errno = e;
+-				return 0;
++				return progress;
+ 			}else if(!chunk) {
+ 				// TODO: Handle eof.
+ 				break;
+@@ -2519,8 +2520,9 @@
+ 				size_t chunk;
+ 				if(int e = file->read((char *)buffer + i * size + progress,
+ 						size - progress, &chunk)) {
++					file->__status_bits |= __MLIBC_ERROR_BIT;
+ 					errno = e;
+-					return 0;
++					return i;
+ 				}else if(!chunk) {
+ 					// TODO: Handle eof.
+ 					break;
+--- a/options/ansi/include/mlibc/file-io.hpp
++++ b/options/ansi/include/mlibc/file-io.hpp
+@@ -99,7 +99,7 @@
+ 	int _write_back();
+ 	int _save_pos(bool &preserve_buffer);
+ 
+-	void _ensure_allocation();
++	int _ensure_allocation();
+ 
+ 	stream_type _type;
+ 	buffer_mode _bufmode;

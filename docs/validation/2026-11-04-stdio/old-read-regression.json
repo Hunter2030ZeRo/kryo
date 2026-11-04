@@ -1,0 +1,21 @@
+{
+  "old_read_body_sha256": "66b9a2ce981f6a6132b8993ee9ab4f5c7ef6b7f499222dc1b612dfea151e1303",
+  "new_read_body_sha256": "77167f2b4676d7ce8d0a40551eb3f0318da32cee0d229e92eb4a229604eb5223",
+  "compile_command": [
+    "clang++",
+    "-std=c++23",
+    "-O2",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-fno-builtin",
+    "-fsanitize=address,undefined",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/file-work/stdio-provider/fallibility/old-read-regression.cpp",
+    "-o",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/file-work/stdio-provider/fallibility/old-read-regression"
+  ],
+  "compile_exit": 0,
+  "run_exit": 13,
+  "expected_failure_case": "unbuffered pushback before EIO",
+  "scope": "only pushback handling in the read body reverted to the previous 0009 state; current harness rejects the regression"
+}
