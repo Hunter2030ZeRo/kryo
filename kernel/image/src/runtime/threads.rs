@@ -445,6 +445,16 @@ pub(super) fn join<'objects>(
     {
         return Err(Error::TimedOut);
     }
+    let terminal = control.with(|object| {
+        let KernelObject::ThreadControl(exit) = object else {
+            unreachable!()
+        };
+        exit.borrow().result()
+    });
+    if let Some(status) = terminal {
+        tasks.thread_mut(caller).unwrap().context.r8 = status.reason as u64;
+        return Ok(Some(status.code));
+    }
     let account = tasks.resources_mut(caller).unwrap().process.account.clone();
     let wait = ipc.begin_wait_for(caller, deadline, account.as_ref())?;
     tasks.thread_mut(caller).unwrap().wait = Some(wait);
