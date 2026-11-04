@@ -12,9 +12,9 @@ memory ordering; the selected v3/MMX-disabled user build remains separate from
 the kernel's soft-float target.
 
 The SDK contains no Linux syscall fallback, POSIX errno translation or hidden
-allocator. Ordinary scalar wrappers do not stand in for the many-register
-thread-creation or IPC-grant contracts. Those require their own reviewed C
-shims before a general native C runtime can use them.
+allocator. Ordinary scalar wrappers do not stand in for many-register calls.
+[Native thread shims](0031-native-c-threads.md) now cover creation and completion;
+IPC grants still require their own reviewed C transport.
 
 ## Diagnostic mechanism
 

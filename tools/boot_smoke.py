@@ -111,9 +111,10 @@ def abi_checks(log, enabled):
         "native_abi_retired": "ABI: startup and execution resources retired" in log,
         "native_tls": "TLS: ELF template and thread isolation OK threads=3" in log,
         "native_private_vm": "VM: private reserve commit retirement OK" in log,
-        "native_atomic_wait": bool(re.search(r"(?m)^WAIT: private atomic park wake retirement OK threads=11 halt=true$", log)),
+        "native_atomic_wait": bool(re.search(r"(?m)^WAIT: private atomic park wake retirement OK threads=13 halt=true$", log)),
         "native_runtime_threads": bool(re.search(r"(?m)^THREAD: runtime-owned stack TLS and rounding OK threads=2$", log)),
         "native_c_calls": bool(re.search(r"(?m)^CABI: native C calls and diagnostic retirement OK$", log)),
+        "native_c_threads": bool(re.search(r"(?m)^CTHREAD: native C create join and backing retirement OK threads=2$", log)),
         **diagnostics,
     }
 

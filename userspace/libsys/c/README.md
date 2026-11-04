@@ -64,6 +64,34 @@ kryo_status report(kryo_handle debug) {
 }
 ```
 
-The header deliberately omits the many-register thread creation and IPC grant
-interfaces. A future C runtime needs explicit shims for those contracts rather
-than treating this three-argument transport as the complete kernel ABI.
+## Runtime-owned threads
+
+`kryo_thread_create_native` uses the existing version-one native thread contract.
+Its `kryo_thread_memory` gives the stack base/length, TLS base/length, FS base and
+optional lower guard length. The caller prepares the runtime TCB/TLS before
+creation. The kernel leases the supplied private mappings and creates execution
+state; it does not allocate or free user backing.
+
+The entry pointer names a raw assembly bootstrap, not an ordinary C function.
+It starts with RDI=argument, RSI=TLS base, RDX=CPU feature flags, FS installed and
+RSP at the 16-byte-aligned stack end **without a return address**. The bootstrap
+must CALL the language entry and never return. Code, argument storage, stack,
+TLS and shared values remain valid and synchronized through actual completion.
+The wrapper fixes native version one and flags zero; its register constraints
+preserve the C ABI, including the callee-saved registers used by this call.
+
+`kryo_thread_exit` terminates the current thread without unwinding; complete
+language cleanup and TLS destructors first. `kryo_thread_join` and the absolute
+monotonic `kryo_thread_join_until` return `kryo_thread_result`: status from RAX,
+the full 64-bit exit code from RDX and the separate reason from R8. Reasons are
+Exited, Fault and Stopped. `kryo_thread_result_valid` accepts only successful
+responses with a known reason. A nonzero status, including timeout, does not
+establish completion and does not authorize backing reuse.
+
+Observe successful native completion before reclaiming stack/TLS, then close the
+thread handle separately. Closing a handle or observing a user flag cannot
+replace join. These calls do not supply a TCB implementation, allocator, POSIX
+attributes, environment inheritance, cleanup handlers or pthread semantics.
+
+The header still omits IPC grant interfaces. Their many-register contract needs
+its own reviewed shim before a general C runtime can use capability transfer.

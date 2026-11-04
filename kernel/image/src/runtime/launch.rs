@@ -11,7 +11,7 @@ use kryo_interfaces::syscall::Error;
 const USER_STACK: u64 = 0x80_0000;
 const STACK_PAGES: u64 = 4;
 const TLS: u64 = 0x90_0000;
-const MAX_IMAGE_PAGES: usize = 16;
+const MAX_IMAGE_PAGES: usize = 32;
 
 pub(crate) struct NativeImage<'a> {
     pub(crate) bytes: &'a [u8],

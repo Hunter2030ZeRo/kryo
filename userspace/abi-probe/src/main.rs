@@ -177,6 +177,7 @@ extern "C" fn probe_main(stack: u64, startup: u64) -> ! {
     check_initial_tls();
     store_tls(MAIN_TLS_VALUE);
     check_native_c(debug, startup);
+    check_c_threads(debug, startup);
     sys::debug_log(debug, 94, 1).unwrap_or_else(|_| exit(207));
     check_thread_tls(debug);
     check_private_vm(debug);
@@ -248,6 +249,16 @@ fn check_native_c(debug: Handle, startup: u64) {
     if sys::debug_write(debug, message) != Ok(message.len()) {
         exit(302);
     }
+    check_tls(MAIN_TLS_VALUE);
+}
+
+fn check_c_threads(debug: Handle, startup: u64) {
+    unsafe extern "C" {
+        fn c_thread_checks(debug: u64, wrong_type: u64);
+    }
+    // C owns its local argument through join and its private POD FS backing.
+    unsafe { c_thread_checks(debug.raw(), startup) };
+    check_vm_usage(0, 0);
     check_tls(MAIN_TLS_VALUE);
 }
 

@@ -50,6 +50,7 @@ fn main() {
         compile(&directory, "clang", "src/peer.c", "-std=c11"),
         compile(&directory, "clang++", "src/peer.cpp", "-std=c++23"),
         compile(&directory, "clang", "src/native.c", "-std=c11"),
+        compile(&directory, "clang", "src/threads.c", "-std=c11"),
     ] {
         println!("cargo::rustc-link-arg={}", object.display());
     }

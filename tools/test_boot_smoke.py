@@ -21,10 +21,11 @@ class PciEvidenceTests(unittest.TestCase):
         retired = "ABI: startup and execution resources retired\n"
         tls = "TLS: ELF template and thread isolation OK threads=3\n"
         vm = "VM: private reserve commit retirement OK\n"
-        words = "WAIT: private atomic park wake retirement OK threads=11 halt=true\n"
+        words = "WAIT: private atomic park wake retirement OK threads=13 halt=true\n"
         threads = "THREAD: runtime-owned stack TLS and rounding OK threads=2\n"
         native_c = "CABI: native C calls and diagnostic retirement OK\n"
-        markers = [ready, retired, tls, vm, words, threads, native_c, diagnostic_log()]
+        c_threads = "CTHREAD: native C create join and backing retirement OK threads=2\n"
+        markers = [ready, retired, tls, vm, words, threads, native_c, c_threads, diagnostic_log()]
         log = "".join(markers)
         self.assertTrue(all(abi_checks(log, True).values()))
         self.assertFalse(all(abi_checks(log.replace("preemptions=1", "preemptions=0"), True).values()))
@@ -42,7 +43,7 @@ class PciEvidenceTests(unittest.TestCase):
     def test_atomic_wait_requires_kernel_retirement_proof(self):
         log = "USERLOG: process=0x100 event=96 value=1\n"
         self.assertFalse(abi_checks(log, True)["native_atomic_wait"])
-        log += "WAIT: private atomic park wake retirement OK threads=11 halt=true\n"
+        log += "WAIT: private atomic park wake retirement OK threads=13 halt=true\n"
         self.assertTrue(abi_checks(log, True)["native_atomic_wait"])
 
     def test_runtime_threads_require_kernel_retirement_proof(self):
@@ -75,6 +76,14 @@ class PciEvidenceTests(unittest.TestCase):
         self.assertFalse(abi_checks(log, True)["native_c_calls"])
         log += "CABI: native C calls and diagnostic retirement OK\n"
         self.assertTrue(abi_checks(log, True)["native_c_calls"])
+
+    def test_c_thread_evidence_requires_complete_kernel_retirement(self):
+        marker = "CTHREAD: native C create join and backing retirement OK threads=2\n"
+        for log in ("USERLOG: process=0x123 event=99 value=2\n",
+                    "USERDIAG: process=0x123 bytes=0 text=" + marker,
+                    marker.replace("threads=2", "threads=1")):
+            self.assertFalse(abi_checks(log, True)["native_c_threads"])
+        self.assertTrue(abi_checks(marker, True)["native_c_threads"])
 
     def test_abi_requires_three_thread_tls_proof(self):
         log = "ABI: v3 SysV C C++ Rust stack and state OK preemptions=2\n"

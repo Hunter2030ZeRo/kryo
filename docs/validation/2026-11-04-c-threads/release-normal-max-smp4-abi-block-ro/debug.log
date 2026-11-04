@@ -1,0 +1,151 @@
+CPU: x86-64-v3 hardware admitted cpu=0
+CPU: x86-64-v3 hardware admitted cpu=1
+CPU: x86-64-v3 hardware admitted cpu=2
+CPU: x86-64-v3 hardware admitted cpu=3
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001ea7c000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007f000) bytes=516096
+MEM[1]: kind=0 [0x000000000007f000, 0x000000000009f000) bytes=131072
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001e92c000) bytes=511885312
+MEM[7]: kind=5 [0x000000001e92c000, 0x000000001ea06000) bytes=892928
+MEM[8]: kind=6 [0x000000001ea06000, 0x000000001ea07000) bytes=4096
+MEM[9]: kind=5 [0x000000001ea07000, 0x000000001ea09000) bytes=8192
+MEM[10]: kind=6 [0x000000001ea09000, 0x000000001ea16000) bytes=53248
+MEM[11]: kind=5 [0x000000001ea16000, 0x000000001ea18000) bytes=8192
+MEM[12]: kind=6 [0x000000001ea18000, 0x000000001ea1e000) bytes=24576
+MEM[13]: kind=5 [0x000000001ea1e000, 0x000000001ea20000) bytes=8192
+MEM[14]: kind=6 [0x000000001ea20000, 0x000000001ea26000) bytes=24576
+MEM[15]: kind=5 [0x000000001ea26000, 0x000000001ea28000) bytes=8192
+MEM[16]: kind=6 [0x000000001ea28000, 0x000000001ea2b000) bytes=12288
+MEM[17]: kind=5 [0x000000001ea2b000, 0x000000001ea2d000) bytes=8192
+MEM[18]: kind=6 [0x000000001ea2d000, 0x000000001ea34000) bytes=28672
+MEM[19]: kind=5 [0x000000001ea34000, 0x000000001ea36000) bytes=8192
+MEM[20]: kind=6 [0x000000001ea36000, 0x000000001ea3c000) bytes=24576
+MEM[21]: kind=5 [0x000000001ea3c000, 0x000000001ea3e000) bytes=8192
+MEM[22]: kind=6 [0x000000001ea3e000, 0x000000001ea47000) bytes=36864
+MEM[23]: kind=5 [0x000000001ea47000, 0x000000001ea49000) bytes=8192
+MEM[24]: kind=6 [0x000000001ea49000, 0x000000001ea4c000) bytes=12288
+MEM[25]: kind=5 [0x000000001ea4c000, 0x000000001ea4e000) bytes=8192
+MEM[26]: kind=6 [0x000000001ea4e000, 0x000000001ea53000) bytes=20480
+MEM[27]: kind=5 [0x000000001ea53000, 0x000000001ea55000) bytes=8192
+MEM[28]: kind=6 [0x000000001ea55000, 0x000000001ea59000) bytes=16384
+MEM[29]: kind=5 [0x000000001ea59000, 0x000000001ea5b000) bytes=8192
+MEM[30]: kind=6 [0x000000001ea5b000, 0x000000001ea5e000) bytes=12288
+MEM[31]: kind=5 [0x000000001ea5e000, 0x000000001ea60000) bytes=8192
+MEM[32]: kind=6 [0x000000001ea60000, 0x000000001ea63000) bytes=12288
+MEM[33]: kind=5 [0x000000001ea63000, 0x000000001ea65000) bytes=8192
+MEM[34]: kind=6 [0x000000001ea65000, 0x000000001ea67000) bytes=8192
+MEM[35]: kind=5 [0x000000001ea67000, 0x000000001ea69000) bytes=8192
+MEM[36]: kind=6 [0x000000001ea69000, 0x000000001ea6d000) bytes=16384
+MEM[37]: kind=5 [0x000000001ea6d000, 0x000000001ea7c000) bytes=61440
+MEM[38]: kind=6 [0x000000001ea7c000, 0x000000001f3a7000) bytes=9613312
+MEM[39]: kind=5 [0x000000001f3a7000, 0x000000001ffdc000) bytes=12800000
+MEM[40]: kind=1 [0x000000001ffdc000, 0x000000001ffe0000) bytes=16384
+MEM[41]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[42]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[43]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[44]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[45]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[46]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+MEM[47]: kind=1 [0x000000fd00000000, 0x0000010000000000) bytes=12884901888
+FRAME metadata: start=0x7f000 end=0x83000 bytes=16384 bitmap_words=1954 summary_words=31 usable_frames=125004 managed_frames=125000
+MEM normalized: ranges=2 frames=125000
+AVAILABLE[0]: [0x0000000000083000, 0x000000000009f000) frames=28
+AVAILABLE[1]: [0x0000000000100000, 0x000000001e92c000) frames=124972
+PCI: function bus=0 slot=0 function=0 vendor=0x8086 device=0x29c0 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=1 function=0 vendor=0x1234 device=0x1111 class=0x03 command=0x0103 bars=6
+PCI: function bus=0 slot=2 function=0 vendor=0x8086 device=0x10d3 class=0x02 command=0x0103 bars=6
+PCI: function bus=0 slot=3 function=0 vendor=0x1b36 device=0x000c class=0x06 command=0x0103 bars=2
+PCI: function bus=0 slot=31 function=0 vendor=0x8086 device=0x2918 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=2 vendor=0x8086 device=0x2922 class=0x01 command=0x0107 bars=6
+PCI: function bus=0 slot=31 function=3 vendor=0x8086 device=0x2930 class=0x0c command=0x0103 bars=6
+PCI: function bus=1 slot=0 function=0 vendor=0x1af4 device=0x1042 class=0x01 command=0x0107 bars=6
+PCI: inventory complete functions=8 virtio_block=1 command_unchanged=true
+FRAME: ready total=125000 free=124999
+
+FB: addr=0xffff8000fd000000 1280x800 pitch=5120 bpp=32 model=1
+FB masks: R=8@16 G=8@8 B=8@0
+Kryo: value=42, hex=0x2a
+0x000000000000002a
+ABC
+DMA: unpublished buffer zeroing and retirement OK pages=3
+CLOCK: HPET monotonic ready lapic_counts=624023 sample_ns=10132950
+SMP: online=4 discovered=4 limit=255
+USERDIAG: process=0x100000001 bytes=20 text=C native calls ready
+USERDIAG: process=0x100000001 bytes=60 text=\x0aPANIC\x0d\x1b\\\x00\x7f\x80ABC\x0aABI: startup and execution resources retired
+USERDIAG: process=0x100000001 bytes=256 text=DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+USERLOG: process=0x100000001 event=98 value=1
+USERDIAG: process=0x100000001 bytes=28 text=Rust diagnostic bridge ready
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x200000002 process=0x100000001
+USERLOG: process=0x100000001 event=99 value=2
+USERLOG: process=0x100000001 event=94 value=1
+THREAD: created id=0x300000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+USERLOG: process=0x100000001 event=94 value=2
+USERLOG: process=0x100000001 event=97 value=1
+USERLOG: process=0x100000001 event=95 value=1
+THREAD: created id=0x400000002 process=0x100000001
+THREAD: created id=0x200000003 process=0x100000001
+THREAD: created id=0x500000002 process=0x100000001
+THREAD: created id=0x600000002 process=0x100000001
+THREAD: created id=0x700000002 process=0x100000001
+THREAD: created id=0x800000002 process=0x100000001
+THREAD: created id=0x900000002 process=0x100000001
+THREAD: created id=0x300000003 process=0x100000001
+USERLOG: process=0x100000001 event=96 value=1
+USERLOG: process=0x100000001 event=90 value=0
+USERLOG: process=0x100000001 event=90 value=1
+USERLOG: process=0x100000001 event=90 value=2
+TLS: ELF template and thread isolation OK threads=3
+ABI: v3 SysV C C++ Rust stack and state OK preemptions=4
+ABI: startup and execution resources retired
+VM: private reserve commit retirement OK
+WAIT: private atomic park wake retirement OK threads=13 halt=true
+THREAD: runtime-owned stack TLS and rounding OK threads=2
+CABI: native C calls and diagnostic retirement OK
+CTHREAD: native C create join and backing retirement OK threads=2
+BLOCK: driver complete mode=0 readonly=true
+BLOCK: driver complete mode=1 readonly=true
+BLOCK: Ring3 commands and private DMA retirement OK cases=2
+THREAD: created id=0x100000002 process=0x100000001
+DEVICE: register authority and IRQ wakeup OK cases=4
+PROCESS: spawned id=0x100000002 parent=0x100000001
+PROCESS: spawned id=0x200000002 parent=0x100000001
+USERLOG: process=0x100000001 event=4 value=2
+SERVICE: native IPC and restart OK instances=2 quota=8
+BOOT: supervisor dispatched id=0x100000001 accounts=4 budgets=4
+BLOCK IPC: service dispatched id=0x100000002
+USERLOG: process=0x100000002 event=91 value=1
+PROCESS: spawned id=0x100000006 parent=0x100000001
+BLOCK IPC: accepted cancellation retains loan
+USERLOG: process=0x100000002 event=92 value=1
+USERLOG: process=0x100000003 event=93 value=3
+PROCESS: spawned id=0x200000003 parent=0x100000001
+USERLOG: process=0x200000003 event=7 value=1
+PROCESS: spawned id=0x200000006 parent=0x100000001
+PROCESS: spawned id=0x100000007 parent=0x100000001
+USERLOG: process=0x200000006 event=12 value=85899345921
+USERLOG: process=0x200000006 event=12 value=85899345922
+THREAD: created id=0x100000008 process=0x200000006
+USERLOG: process=0x100000007 event=12 value=90194313217
+THREAD: created id=0x100000009 process=0x200000006
+THREAD: created id=0x10000000a process=0x200000006
+USERLOG: process=0x100000007 event=12 value=90194313218
+THREAD: created id=0x200000008 process=0x100000007
+USERLOG: process=0x200000006 event=12 value=85899345923
+THREAD: created id=0x200000009 process=0x100000007
+THREAD: created id=0x20000000a process=0x100000007
+USERLOG: process=0x100000007 event=12 value=90194313219
+PROCESS: spawned id=0x300000003 parent=0x100000001
+USERLOG: process=0x300000003 event=7 value=2
+USERLOG: process=0x200000006 event=8 value=20
+USERLOG: process=0x100000007 event=8 value=21
+USERLOG: process=0x100000001 event=6 value=2
+USERLOG: process=0x100000001 event=7 value=2
+USERLOG: process=0x100000004 event=93 value=0
+USERLOG: process=0x100000005 event=93 value=1
+BLOCK IPC: clients complete; service waiting

@@ -15,8 +15,8 @@ The fixture requires argv `abi-probe`, `cryolite-v3`, environment `KRYO_ABI=1`,
 AT_PHDR, AT_PHENT, AT_PHNUM, AT_PAGESZ, AT_ENTRY and terminating nulls. The probe
 reads the actual mapped ELF header through `__ehdr_start` and checks those
 auxiliary values against its read-only header/program-header load. Incoming RDI separately identifies an
-immutable version-1 startup record: service 50, instance 1, argument 0, and one
-role-1 WRITE-only debug capability. The probe validates the record and actual
+immutable version-1 startup record: service 50, instance 1, a high-bit argument,
+and one role-1 WRITE|DUP debug capability. The probe validates the record and actual
 granted handle. It emits event 90/value 2 before exiting successfully.
 
 Native yield and sleep run with live 256-bit patterns in YMM0 and YMM15. An
@@ -113,6 +113,17 @@ there, and owner exit/cleanup must cancel that sibling before TLS backing is
 reused. Results and predicates use Release/Acquire atomics; revocation cases
 hold no Rust references into the affected mappings. Raw entry trampolines and
 native joins retain child argument/code/data lifetimes.
+
+Before the compiler-TLS phase, a C parent creates and joins two successive C
+children through the C SDK. Each raw assembly entry CALLs the C body with its
+argument, TLS base and captured initial stack. The children use a private POD
+word at FS:0 without invoking compiler TLS or a libc TCB. The parent verifies
+timed join expiry, Busy retirement while execution is live, full-width high-bit
+exit codes and retained old results. Stack backing is decommitted/recommitted
+only after successful join and reused while the old control handle remains open.
+The final release leaves no private/reserved charge. Event 99/value 2 is a user
+report; the kernel CTHREAD marker additionally requires complete process/object/
+frame retirement. The combined probe creates 13 threads including its parent.
 
 Event 96/value 1 marks completed word checks and zero remaining wait charges.
 The phase retains legacy ThreadCreate and creates eight children in groups of at most two; the kernel reaps

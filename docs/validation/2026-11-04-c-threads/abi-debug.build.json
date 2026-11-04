@@ -1,0 +1,31 @@
+{
+  "scope": "freestanding C/C++/Rust ABI probe; no libc, libc++ or Rust std",
+  "packaging": "runtime load bytes exact except ELF64 section-table bookkeeping fields",
+  "profile": "debug",
+  "rustc": "rustc 1.101.0-nightly (3e92e1a2d 2026-11-01)\nbinary: rustc\ncommit-hash: 3e92e1a2d20b991ef23a6c6064c34d57ee8c98d3\ncommit-date: 2026-11-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+  "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "toolchain_sha256": "1f28bcbd9dfc16b39b99ebd4a1c5ca19a13509a8241a42b3c2704065495c2e86",
+  "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+  "lock_sha256": "98f490279b63100f4b975b75f30a8de30aafb1c899550fa1014103dba69f7418",
+  "artifact_sha256": "8076f167218a8e0116613bb961b73ea7f1db90c8e90f0416503669be393f2e3d",
+  "image_sha256": "221813dad8f8d1d9aa72cf954810d6e7c52dee912158385c49cc939a586de416",
+  "image_bytes": 63864,
+  "command": [
+    "cargo",
+    "build",
+    "--manifest-path",
+    "/home/entity27th/kryo/userspace/abi-probe/Cargo.toml",
+    "--target",
+    "/home/entity27th/kryo/targets/x86_64-unknown-cryolite.json",
+    "--target-dir",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/native-runtime-work/actual-abi-target",
+    "-Zjson-target-spec",
+    "-Zbuild-std=core,compiler_builtins",
+    "-Zbuild-std-features=compiler-builtins-mem",
+    "--profile",
+    "dev",
+    "--offline",
+    "--locked"
+  ]
+}

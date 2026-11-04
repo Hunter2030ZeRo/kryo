@@ -100,6 +100,7 @@ pub(crate) fn check(
         let mut words_checked = false;
         let mut native_threads_checked = false;
         let mut c_checked = false;
+        let mut c_threads_checked = false;
         let mut words_halted = false;
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time().unwrap() + 5_000_000_000;
@@ -112,7 +113,7 @@ pub(crate) fn check(
             if tasks.has_runnable() {
                 super::smp::step(&mut tasks, &mut calls, &mut ipc, region);
             } else {
-                let words_pending = !ipc.words.is_empty();
+                let words_pending = native_threads_checked && !ipc.words.is_empty();
                 words_halted |= super::idle_until_deadline(&mut tasks, &mut ipc) && words_pending;
             }
             if calls.last_debug == Some((task, 90, 0)) && start_ticks.is_none() {
@@ -131,6 +132,11 @@ pub(crate) fn check(
                 assert_eq!(account.count(Resource::PrivatePages), 0);
                 assert_eq!(account.count(Resource::ReservedPages), 0);
                 c_checked = true;
+            }
+            if calls.last_debug == Some((task, 99, 2)) && !c_threads_checked {
+                assert_eq!(account.count(Resource::PrivatePages), 0);
+                assert_eq!(account.count(Resource::ReservedPages), 0);
+                c_threads_checked = true;
             }
             if calls.last_debug == Some((task, 97, 1)) && !native_threads_checked {
                 assert_eq!(account.count(Resource::PrivatePages), 0);
@@ -170,6 +176,7 @@ pub(crate) fn check(
         assert!(words_checked, "Missing atomic private wait proof");
         assert!(native_threads_checked, "Missing runtime-owned thread proof");
         assert!(c_checked, "Missing native C call proof");
+        assert!(c_threads_checked, "Missing native C thread proof");
         assert!(
             words_halted,
             "Private wait deadline did not halt the idle CPU"
@@ -189,7 +196,7 @@ pub(crate) fn check(
             calls.threads_created + 1,
             "Native threads did not retire"
         );
-        assert_eq!(retired, 11, "Native wait fixture thread count changed");
+        assert_eq!(retired, 13, "Native ABI fixture thread count changed");
         assert!(
             ipc.words.is_empty(),
             "Private word registrations survived teardown"
@@ -219,8 +226,11 @@ pub(crate) fn check(
     kryo_hal::emergency_write_str("ABI: startup and execution resources retired\n");
     kryo_hal::emergency_write_str("VM: private reserve commit retirement OK\n");
     kryo_hal::emergency_write_str(
-        "WAIT: private atomic park wake retirement OK threads=11 halt=true\n",
+        "WAIT: private atomic park wake retirement OK threads=13 halt=true\n",
     );
     kryo_hal::emergency_write_str("THREAD: runtime-owned stack TLS and rounding OK threads=2\n");
     kryo_hal::emergency_write_str("CABI: native C calls and diagnostic retirement OK\n");
+    kryo_hal::emergency_write_str(
+        "CTHREAD: native C create join and backing retirement OK threads=2\n",
+    );
 }

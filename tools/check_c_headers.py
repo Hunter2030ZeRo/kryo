@@ -83,6 +83,7 @@ def main():
              "-I", str(PROFILE / "include"), "-I", str(NATIVE.parents[1])]
     headers = ("types", "errno", "memory", "time", "file", "signal")
     layout = PROFILE / "tests/layout.c"
+    thread_fixture = ROOT / "userspace/libsys/c/tests/thread.c"
     for compiler, standard, language in (("clang", "c11", "c"), ("clang++", "c++23", "c++")):
         base = ["rtk", "proxy", compiler, *flags, f"-std={standard}", "-x", language]
         if language == "c++":
@@ -96,6 +97,13 @@ def main():
             path.write_text("".join(f"#include <cryolite/{name}.h>\n" for name in order)
                             + f'#include "{layout}"\n')
             run(f"layout-{label}-{language}", [*base, "-c", str(path), "-o", str(output / f"{label}-{language}.o")])
+        for optimization in ("-O0", "-O2"):
+            for mode, options in (("static", ("-fno-pic", "-fno-pie")),
+                                  ("pic-frame", ("-fPIC", "-fno-omit-frame-pointer"))):
+                name = f"thread-{language}-{optimization[1:]}-{mode}"
+                run(name, [*base, optimization, *options, "-mno-red-zone",
+                           "-c", str(thread_fixture), "-o", str(output / f"{name}.o")],
+                    scope="Target SDK thread layout and compiler/register constraints; no execution")
 
     tables = {name: table_constants(ROOT / f"docs/abi/c-v1-{name}.md")
               for name in ("errors", "memory-time", "files", "signals")}
@@ -111,13 +119,20 @@ def main():
     syscall, startup, libsys, native = (path.read_text() for path in (syscall_path, startup_path, libsys_path, NATIVE))
     calls = {"KRYO_CALL_" + screaming(name): value for name, value in enum_values(syscall, "pub enum Call").items()}
     exposed = enum_values(native, "enum kryo_call")
-    assert len(exposed) == 16 and exposed.keys() <= calls.keys()
+    assert len(exposed) == 20 and exposed.keys() <= calls.keys()
     native_expected = {name: calls[name] for name in exposed}
     statuses = {"KRYO_STATUS_" + screaming(name): -value for name, value in enum_values(syscall, "pub enum Error").items()}
     statuses["KRYO_STATUS_OK"] = 0
     assert enum_values(native, "enum kryo_status_code").keys() == statuses.keys()
     native_expected.update(statuses)
+    wait = re.search(r"fn wait\([\s\S]*?\n}\n", libsys)[0]
+    exit_reasons = {"KRYO_EXIT_" + screaming(name): int(value)
+                    for value, name in re.findall(r"(\d+)(?:u64)? => ExitReason::(\w+)", wait)}
+    assert len(exit_reasons) == 3
+    assert enum_values(native, "enum kryo_exit_reason").keys() == exit_reasons.keys()
+    native_expected.update(exit_reasons)
     native_expected.update({"KRYO_NATIVE_ABI_VERSION": rust_constant(syscall, "ABI_VERSION"),
+                            "KRYO_NATIVE_THREAD_VERSION": rust_constant(syscall, "NATIVE_THREAD_VERSION"),
                             "KRYO_DEBUG_WRITE_MAX": rust_constant(syscall, "DEBUG_WRITE_MAX"),
                             "KRYO_RIGHT_READ": rust_constant(libsys, "READ"),
                             "KRYO_RIGHT_WRITE": rust_constant(libsys, "WRITE"),
@@ -155,7 +170,7 @@ def main():
     run("wait-host-run", ["rtk", "proxy", "./wait-host"],
         scope="Linux host macro semantics; no native calls", directory=output)
 
-    inputs = [Path(__file__).resolve(), pin_path, target_path, layout, PROFILE / "tests/wait.c", NATIVE,
+    inputs = [Path(__file__).resolve(), pin_path, target_path, layout, thread_fixture, PROFILE / "tests/wait.c", NATIVE,
               syscall_path, startup_path, libsys_path]
     inputs += sorted((PROFILE / "include/cryolite").glob("*.h"))
     inputs += [ROOT / f"docs/abi/c-v1-{name}.md" for name in tables]

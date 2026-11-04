@@ -2,6 +2,12 @@
 
 Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [native C thread milestone](validation/2026-11-04-c-threads/README.md) adds
+C creation, exit, join and timed join over the existing kernel calls. Its Ring 3
+fixture checks raw entry, private stack/TLS lifetime, high-bit exit codes and
+completion before backing reuse. [ADR 0031](decisions/0031-native-c-threads.md)
+records the boundary. These calls do not implement pthreads or a libc TCB.
+
 The [security policy](../SECURITY.md) and [kernel SOF contract](decisions/0030-kernel-sof.md)
 record kernel-only ownership and two candidate-verification gates. Download
 verification failure rejects the update. Verification or technical failure
@@ -397,8 +403,8 @@ validated. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes format and
 - One to 255 xAPIC logical processors with directed APIC IDs 0..254 and multiword CPU sets, four-level paging, PCID off, and serialized BSP page-table policy. Larger CPU inventories are rejected before HHDM protection changes. No hotplug, x2APIC, affinity, topology/NUMA policy, per-CPU run queues, or parallel kernel syscall processing. IRQs remain disabled during policy work; idle, drain, and user execution use controlled IRQ windows.
 - xAPIC only. Time requires an ACPI-described 64-bit HPET, bounded firmware tables, and BSP configuration ownership with shared registered-CPU reads. PIT/PM/TSC fallbacks, 32-bit counter extension, suspend/resume, and hardware clock/latency validation are pending. Calibration does not guarantee scheduling latency while kernel IRQs remain off.
 - Scalar entry traps FP; extended entry supports x87/SSE and optional AVX in a private 1,024-byte standard state area. XCR0 components beyond bits 0..2, AVX-512, AMX, and supervisor state are unsupported. Kernel code remains soft-float.
-- Legacy native tests use scalar Rust compilation and manual SIMD assembly. The optional v3 hard-float C/C++/Rust probe uses SysV startup and static ELF TLS; complete libc/std, dynamic linking, dynamic TLS and runtime-owned native thread creation remain pending.
-- Initial executable policy is static little-endian AMD64 ET_EXEC only, at most 64 program headers/eight load segments/16 pages and a 1-MiB boot-module cap. The page budget was expanded after the budget-aware supervisor measured nine load pages. This is not ICE execution or general ELF compatibility.
+- Legacy native tests use scalar Rust compilation and manual SIMD assembly. The optional v3 hard-float C/C++/Rust probe uses SysV startup, static ELF TLS and runtime-owned native thread creation. Complete libc/std, dynamic linking, dynamic TLS and pthread integration remain pending.
+- Initial executable policy is static little-endian AMD64 ET_EXEC only, at most 64 program headers/eight load segments/32 pages and a 1-MiB boot-module cap. The native C thread fixture requires 17 load pages in debug. Per-process mapping/table budgets still apply. This is not ICE execution or general ELF compatibility.
 - Normal metadata grows through fallible allocation within configured service accounts. Shared pages, handles, waits, live threads, explicit private VM pages and reserved virtual pages have persistent charges; VM mapping/table limits are per process. Exact kernel-metadata byte accounting, private-RAM accounting for ELF/stacks/legacy TLS and CPU-time budgets remain pending. These are account policy limits, not a fixed kernel-wide process/thread count. Endpoint RECEIVE and notification WAIT remain thread-bound. General process hierarchy, multi-receiver IPC, dynamic service inventory, supervisor recovery and WAIT delegation remain pending. The configured registry is scoped to one supervisor lifetime.
 - Frame metadata scales with the Usable RAM plan and has no fixed four-GiB or 128-GiB bitmap cap. Boot discovery still accepts at most 256 raw map entries and 288 normalized ranges, and metadata requires one contiguous Usable span. CPU physical-address width and canonical HHDM bounds remain enforced. The shared entry-stack branch has a one-GiB virtual-address budget, roughly 52,000 guarded cells; other resources can exhaust sooner. Private user VM metadata grows instead of retaining the earlier 16-mapping/64-table fixture limits.
 - Private mappings have unique backing; shared mappings retain the whole memory object and its shared-page charge. Native memory objects allow up to eight pages each, subject to the account total. Buffer loans, bulk queues, pin accounting and revocation remain pending.
