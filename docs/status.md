@@ -2,6 +2,14 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[BetAFS boundary verification](validation/2026-11-05-betafs-boundary/README.md)
+checks the actual independent engine against native block/file contracts using
+an isolated host harness. Separate QEMU tests cover the current Ring 3 block
+service. This does not execute BetAFS in Kryo. Native Rust/std and codec support,
+host FileDevice portability and general block-device admission remain gates;
+the scratch-disk marker restriction is preserved. No filesystem engine was
+copied into Ring 0 or changed in the independent repository.
+
 [Service-backed FILE hooks](decisions/0040-service-backed-files.md) connect the
 static ANSI mlibc profile to a separate Ring 3 memory-backed validation peer.
 The service owns offsets and append status; local descriptor pins protect
