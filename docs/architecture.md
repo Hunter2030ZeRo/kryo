@@ -177,11 +177,15 @@ probe connects to a volatile Ring 3 validation peer; production VFS, inherited
 streams, public POSIX descriptors, durable storage and mounted BetAFS remain
 pending. [ADR 0040](decisions/0040-service-backed-files.md) defines this boundary.
 
-The accepted Rust std direction exposes Unix APIs over Cryolite-specific
-platform implementations and owned ABI bindings. Generic Unix startup and
+The experimental Rust std profile now supplies native allocation, threads,
+TLS destruction, futex synchronization and monotonic time in Ring 3. A separate
+restricted Unix-family target uses Cryolite-specific implementations and owned
+ABI bindings. The first Unix extension surface covers byte strings and file
+descriptor ownership; general file and hosted APIs remain pending. Generic Unix startup and
 pthread paths cannot be enabled before their contracts exist. The bootstrap
 target remains std=false; [ADR 0041](decisions/0041-cryolite-rust-std.md) records
-the required subsystem dispatch and actual Ring 3 validation.
+the required subsystem dispatch and actual Ring 3 validation. The restricted
+implementation follows [ADR 0043](decisions/0043-restricted-native-rust-std.md).
 
 ## Isolation and recovery
 

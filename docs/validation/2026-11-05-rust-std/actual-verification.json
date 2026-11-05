@@ -1,0 +1,11 @@
+{
+  "source_apply": "62 reviewed files matched staged hashes",
+  "repository": "/home/entity27th/kryo",
+  "base_head": "621e48f3052ef26ba2cc0fda1854b48da2418b38",
+  "actual_std_build": "passed",
+  "actual_std_image_bytes": 406192,
+  "actual_std_image_sha256": "55d384553fd39526d49e20f9f48b3471a34a07f74f6d13640a8ee940584bc8f7",
+  "git_diff_check": "passed",
+  "workspace_fmt": "passed",
+  "qemu_scope": "final source-matched isolated debug/release builds; not this relocated debug executable"
+}

@@ -1,0 +1,9 @@
+   Compiling rustversion v1.0.23
+   Compiling const_fn v0.4.12
+    Checking spin v0.12.3
+    Checking talc v5.1.1
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/rust-std-work/kryo/kernel/image)
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/rust-std-work/kryo/kernel/core)
+    Checking x86_64 v0.15.5
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/rust-std-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.89s

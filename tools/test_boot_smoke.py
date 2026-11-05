@@ -1,6 +1,6 @@
 import unittest
 
-from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, heap_checks, libc_checks, observed_checks, pci_checks, run_label
+from boot_smoke import abi_checks, block_checks, block_service_checks, cpu_checks, diagnostic_checks, heap_checks, libc_checks, observed_checks, pci_checks, run_label, std_checks
 
 
 def diagnostic_log():
@@ -16,6 +16,26 @@ def diagnostic_log():
 
 
 class PciEvidenceTests(unittest.TestCase):
+    def test_rust_std_requires_trusted_runtime_and_retirement_markers(self):
+        ready = "RUSTSTD: allocator threads synchronization TLS monotonic time OK runs=2\n"
+        retired = "RUSTSTD: process and backing retirement OK\n"
+        aborted = "RUSTSTD: native abort termination OK\n"
+        self.assertEqual(std_checks("", False), {})
+        self.assertTrue(all(std_checks(ready + retired + aborted, True).values()))
+        for invalid in (ready, retired, ready + retired, ready + aborted, retired + aborted,
+                        ready + ready + retired + aborted,
+                        ready + retired + retired + aborted,
+                        ready + retired + aborted + aborted,
+                        ready.replace("runs=2", "runs=1") + retired + aborted,
+                        "USERDIAG: process=0x1 bytes=0 text=" + ready + retired + aborted,
+                        ready + retired + "USERDIAG: process=0x1 bytes=0 text=" + aborted,
+                        "USERLOG: process=0x1 event=227 value=1\n"):
+            self.assertFalse(all(std_checks(invalid, True).values()))
+
+    def test_rust_std_has_separate_evidence_directory(self):
+        self.assertNotEqual(run_label("debug", libc_probe=True),
+                            run_label("debug", libc_probe=True, std_probe=True))
+
     def test_libc_requires_singleton_trusted_kernel_markers(self):
         ready = "LIBC: static mlibc startup TLS allocator formatting OK runs=3\n"
         retired = "LIBC: process and backing retirement OK\n"

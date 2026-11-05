@@ -40,6 +40,11 @@ Normal boot starts a native supervisor with explicit root authority. Versioned m
 
 A general supported runtime/sysroot, full TLS/TCB, libc/std and dynamic linking remain necessary for ordinary applications. The freestanding target, static TLS and explicit private-memory API do not establish those ports. Shared pages and copied capabilities are implemented; buffer loans, bulk queues, object revocation, DMA pins, and IOMMU isolation remain pending.
 
+The first [restricted std profile](../userspace/rust-std/README.md) now executes
+allocation, native threads, TLS destruction, synchronization and monotonic time.
+Next connect real entropy and native file APIs before attempting ordinary
+std-based services. Unix classification alone does not supply those APIs.
+
 ## Service and application checkpoints
 
 1. Start init from the boot image, distribute initial authority, then start supervisor and device management. Test service termination, restart generations, and stale requests.

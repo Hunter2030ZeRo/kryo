@@ -1,6 +1,7 @@
 # Cryolite Rust standard library
 
-Date: 2026-11-05. Status: platform direction accepted; std implementation pending.
+Date: 2026-11-05. Status: platform direction accepted; the first restricted
+implementation is recorded in [ADR 0043](0043-restricted-native-rust-std.md).
 
 ## Platform classification
 

@@ -10,6 +10,9 @@ crate-type = ["staticlib", "rlib"]
 [dependencies]
 talc = { version = "=5.1.1", default-features = false }
 
+[features]
+std = []
+
 [workspace]
 resolver = "3"
 

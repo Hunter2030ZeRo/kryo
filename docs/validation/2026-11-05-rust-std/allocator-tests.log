@@ -1,0 +1,17 @@
+   Compiling cryolite-allocator v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/rust-std-work/kryo/userspace/libc/allocator)
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.23s
+     Running unittests src/lib.rs (userspace/libc/allocator/target/x86_64-unknown-linux-gnu/debug/build/cryolite-allocator/83bf40f0512fbd8a/out/cryolite_allocator-83bf40f0512fbd8a)
+
+running 10 tests
+test tests::backing_exhaustion_is_recoverable ... ok
+test tests::invalid_and_extreme_layouts_never_reach_backing ... ok
+test tests::failed_reallocation_preserves_owner_bytes_and_alignment ... ok
+test tests::guard_sharing_requires_a_sync_payload ... ok
+test tests::null_reallocation_uses_malloc_alignment ... ok
+test tests::requested_alignment_and_size_survive_prefix ... ok
+test tests::zero_allocations_are_distinct_and_freeable ... ok
+test tests::small_objects_pack_and_empty_secondary_arenas_return ... ok
+test tests::contended_lock_serializes_metadata_and_returns_backing ... ok
+test tests::lock_publishes_updates_without_allocation ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s

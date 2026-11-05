@@ -61,6 +61,7 @@ pub(super) fn run(
     let cpus = crate::runtime::smp::start(mmio);
     crate::runtime::abi::check(pool, direct, kernel, region);
     crate::runtime::libc::check(pool, direct, kernel, region);
+    crate::runtime::rust_std::check(pool, direct, kernel, region);
     crate::runtime::transport::run(pool, direct, kernel, region);
     crate::runtime::block_service::check(pool, direct, kernel, region);
     crate::runtime::devices::probe(pool, direct, kernel, region, true);

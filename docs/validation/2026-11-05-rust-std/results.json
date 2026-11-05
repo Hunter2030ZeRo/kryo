@@ -1,0 +1,28 @@
+{
+  "scope": "QEMU TCG functional runtime evidence; no hardware performance or general std support claim",
+  "runs": {
+    "debug-Haswell-noTSX-abi-libc-std": {
+      "status": "passed",
+      "checks": 86,
+      "std_image_bytes": 410472,
+      "std_image_sha256": "c62f461f1717577933d720351579e2e60763b7a383539a4383885d36646761c3",
+      "cpu": "Haswell-noTSX",
+      "cpus": 1,
+      "mode": "boot-tests"
+    },
+    "release-normal-smp4-abi-libc-std-block-rw": {
+      "status": "passed",
+      "checks": 46,
+      "std_image_bytes": 286008,
+      "std_image_sha256": "94099035357e38bed3fb8f3a89d38da5980a39b9fb2ce67cfafe6abcaf1987ea",
+      "cpu": "max",
+      "cpus": 4,
+      "mode": "normal"
+    }
+  },
+  "host": {
+    "python_tests": 45,
+    "allocator_tests": 10,
+    "c_header_checks": 43
+  }
+}

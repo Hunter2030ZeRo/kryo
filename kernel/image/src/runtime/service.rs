@@ -23,6 +23,7 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
     smp::start(mmio);
     super::abi::check(pool, direct, &memory, &mut region);
     super::libc::check(pool, direct, &memory, &mut region);
+    super::rust_std::check(pool, direct, &memory, &mut region);
     super::transport::run(pool, direct, &memory, &mut region);
     super::devices::probe(pool, direct, &memory, &mut region, false);
     super::channel_probe::run(pool, direct, &memory, &mut region);

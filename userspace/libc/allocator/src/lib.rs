@@ -1,4 +1,5 @@
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
+#![cfg_attr(feature = "std", feature(restricted_std))]
 
 use core::alloc::{GlobalAlloc, Layout};
 use core::mem::{align_of, size_of};
@@ -135,16 +136,16 @@ unsafe fn read_header(data: *mut u8) -> Header {
 static HEAP: mutex::Mutex<Heap<native::PageAllocator>> =
     mutex::Mutex::new(Heap::new(native::PageAllocator));
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "std")))]
 #[global_allocator]
 static RUST_ALLOCATOR: RustAllocator = RustAllocator;
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "std")))]
 struct RustAllocator;
 
 // Talc's allocator API dependency links alloc. Keep any resulting Rust
 // allocation on this same fallible heap instead of requiring a second runtime.
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "std")))]
 unsafe impl GlobalAlloc for RustAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         __cryolite_allocate(layout.size(), layout.align())
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn __cryolite_allocation_size(data: *mut u8) -> usize {
     unsafe { read_header(data).requested }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "std")))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo<'_>) -> ! {
     native::abort()
