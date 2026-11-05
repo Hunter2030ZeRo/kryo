@@ -1,0 +1,16 @@
+[
+  {
+    "name": "missing-alias-owner",
+    "exit_code": 134,
+    "detected": true,
+    "source_sha256": "76f6e139912b84b06e6cd2283994b2270bca591e9f87801bcd8c0e735da14cc7",
+    "log": "missing-alias-owner.log"
+  },
+  {
+    "name": "shared-descriptor-flags",
+    "exit_code": 134,
+    "detected": true,
+    "source_sha256": "a79d7abcce753c2c416c955ab833af67c24f48664c3e657bb8ddad2785675ad5",
+    "log": "shared-descriptor-flags.log"
+  }
+]

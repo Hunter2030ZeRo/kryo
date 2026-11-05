@@ -1,0 +1,425 @@
+patching file include/__fcxx/algorithm_results.h
+patching file include/__fcxx/iterator_base.h
+Hunk #1 succeeded at 728 (offset 6 lines).
+patching file include/__fcxx/ranges_access.h
+patching file include/__fcxx/span.h
+patching file include/algorithm
+patching file include/array
+patching file include/expected
+patching file include/optional
+patching file include/span
+patching file include/variant
+patching file meson.build
+patching file options/internal/include/mlibc/allocator.hpp
+patching file options/internal/generic/allocator.cpp
+patching file options/internal/generic/cryolite-allocator.inc
+patching file options/internal/generic/sigset.cpp
+patching file options/ansi/x86_64/strlen.cpp
+patching file options/ansi/x86_64/strcmp.cpp
+patching file options/ansi/x86_64/meson.build
+patching file options/ansi/generic/string.cpp
+patching file options/internal/generic/essential.cpp
+patching file options/internal/include/bits/nl_item.h
+patching file options/ansi/include/stdio.h
+patching file options/ansi/include/time.h
+patching file options/ansi/generic/string.cpp
+patching file options/internal/generic/threads.cpp
+patching file options/rtld/generic/linker.cpp
+patching file options/rtld/generic/main.cpp
+patching file options/internal/generic/threads.cpp
+patching file options/ansi/generic/file-io.cpp
+patching file options/ansi/generic/stdio.cpp
+patching file options/ansi/include/mlibc/file-io.hpp
+The Meson build system
+Version: 1.12.1
+Source dir: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/provider-debug/source
+Build dir: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/provider-debug/meson
+Build type: cross build
+Project name: mlibc
+Project version: 7.0.0
+Build machine cpu family: x86_64
+Build machine cpu: x86_64
+Host machine cpu family: x86_64
+Host machine cpu: x86-64-v3
+Target machine cpu family: x86_64
+Target machine cpu: x86-64-v3
+C compiler for the build machine: cc (gcc 16.2.1 "cc (GCC) 16.2.1 20260810")
+C linker for the build machine: cc ld.bfd 2.47
+C++ compiler for the build machine: c++ (gcc 16.2.1 "c++ (GCC) 16.2.1 20260810")
+C++ linker for the build machine: c++ ld.bfd 2.47
+C compiler for the host machine: clang (clang 23.1.4 "clang version 23.1.4")
+C linker for the host machine: clang ld.lld 23.1.4
+C++ compiler for the host machine: clang++ (clang 23.1.4 "clang version 23.1.4")
+C++ linker for the host machine: clang++ ld.lld 23.1.4
+Checking if "C++ compiler supports ifunc" compiles: NO 
+Looking for a fallback subproject for the dependency freestanding-c-hdrs because:
+Use of fallback dependencies is forced.
+
+Executing subproject freestanding-c-hdrs for machine: host 
+
+freestanding-c-hdrs| Project name: freestanding-c-hdrs
+freestanding-c-hdrs| Project version: undefined
+freestanding-c-hdrs| Build targets in project: 0
+freestanding-c-hdrs| Subproject freestanding-c-hdrs finished.
+
+Dependency freestanding-c-hdrs for host machine from subproject subprojects/freestanding-c-hdrs found: YES undefined
+Looking for a fallback subproject for the dependency freestanding-cxx-hdrs because:
+Use of fallback dependencies is forced.
+
+Executing subproject freestanding-cxx-hdrs for machine: host 
+
+freestanding-cxx-hdrs| Project name: freestanding-cxx-hdrs
+freestanding-cxx-hdrs| Project version: undefined
+freestanding-cxx-hdrs| Build targets in project: 0
+freestanding-cxx-hdrs| Subproject freestanding-cxx-hdrs finished.
+
+Dependency freestanding-cxx-hdrs for host machine from subproject subprojects/freestanding-cxx-hdrs found: YES undefined
+Looking for a fallback subproject for the dependency frigg because:
+Use of fallback dependencies is forced.
+
+Executing subproject frigg for machine: host 
+
+frigg| Project name: frigg
+frigg| Project version: undefined
+frigg| Build targets in project: 0
+frigg| Subproject frigg finished.
+
+Dependency frigg for host machine from subproject subprojects/frigg found: YES undefined
+Looking for a fallback subproject for the dependency libsmarter because:
+Use of fallback dependencies is forced.
+
+Executing subproject libsmarter for machine: host 
+
+libsmarter| Project name: libsmarter
+libsmarter| Project version: undefined
+libsmarter| Build targets in project: 0
+libsmarter| Subproject libsmarter finished.
+
+Dependency libsmarter for host machine from subproject subprojects/libsmarter found: YES undefined
+Compiler for C++ supports arguments -Wno-prio-ctor-dtor: NO 
+Configuring internal-config.h using configuration
+Configuring mlibc-config.h using configuration
+Program hdoc found: NO
+Configuring .hdoc.toml using configuration
+Build targets in project: 12
+
+mlibc 7.0.0
+
+  tests
+    Build tests           : NO
+    Build host-libc tests : YES
+    Build cross-libc tests: NO
+
+  mlibc options
+    headers-only          : NO
+    ABI                   : 7
+    POSIX option          : disabled
+    Linux option          : disabled
+    glibc option          : disabled
+    BSD option            : disabled
+    debug allocator       : NO
+    libgcc dependency     : NO
+
+  Subprojects (for host machine)
+    freestanding-c-hdrs   : YES
+    freestanding-cxx-hdrs : YES
+    frigg                 : YES
+    libsmarter            : YES
+
+  User defined options
+    Cross files           : /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/provider-debug/cryolite.cross
+    b_staticpic           : false
+    bsd_option            : disabled
+    build_tests           : false
+    default_library       : static
+    force_fallback_for    : frigg,libsmarter,freestanding-c-hdrs,freestanding-cxx-hdrs
+    glibc_option          : disabled
+    libdir                : lib
+    libgcc_dependency     : false
+    linux_option          : disabled
+    posix_option          : disabled
+    prefix                : /usr
+    use_freestnd_hdrs     : enabled
+    wrap_mode             : nodownload
+
+Found ninja-1.13.2 at /home/entity27th/.local/bin/ninja
+Generating targets:   0%|          | 0/12 eta ?                                               Writing build.ninja:   0%|          | 0/408 eta ?                                                 ninja: Entering directory `/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/provider-debug/meson'
+[1/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acoshf.c.o
+[2/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosh.c.o
+[3/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acoshl.c.o
+[4/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinf.c.o
+[5/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acos.c.o
+[6/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosf.c.o
+[7/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosl.c.o
+[8/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asin.c.o
+[9/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinhl.c.o
+[10/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinl.c.o
+[11/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan2.c.o
+[12/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan2l.c.o
+[13/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinhf.c.o
+[14/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinh.c.o
+[15/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan.c.o
+[16/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan2f.c.o
+[17/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanhf.c.o
+[18/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanh.c.o
+[19/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanf.c.o
+[20/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanl.c.o
+[21/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cbrtf.c.o
+[22/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanhl.c.o
+[23/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cbrt.c.o
+[24/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cbrtl.c.o
+[25/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ceil.c.o
+[26/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ceilf.c.o
+[27/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_copysignf.c.o
+[28/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ceill.c.o
+[29/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_copysign.c.o
+[30/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___cos.c.o
+[31/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cos.c.o
+[32/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_coshf.c.o
+[33/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cosh.c.o
+[34/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___cosdf.c.o
+[35/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cosf.c.o
+[36/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___cosl.c.o
+[37/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_coshl.c.o
+[38/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_copysignl.c.o
+[39/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cosl.c.o
+[40/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp10.c.o
+[41/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp10f.c.o
+[42/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_erf.c.o
+[43/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_erfl.c.o
+[44/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp10l.c.o
+[45/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp2.c.o
+[46/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_erff.c.o
+[47/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp2l.c.o
+[48/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expl.c.o
+[49/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expf.c.o
+[50/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp.c.o
+[51/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expm1l.c.o
+[52/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expm1f.c.o
+[53/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expm1.c.o
+[54/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___expo2.c.o
+[55/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fabs.c.o
+[56/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp2f.c.o
+[57/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___expo2f.c.o
+[58/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fabsf.c.o
+[59/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fdimf.c.o
+[60/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fabsl.c.o
+[61/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fdim.c.o
+[62/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fdiml.c.o
+[63/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_finite.c.o
+[64/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_floor.c.o
+[65/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_finitef.c.o
+[66/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_floorf.c.o
+[67/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_floorl.c.o
+[68/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmaf.c.o
+[69/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmaxf.c.o
+[70/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmaxl.c.o
+[71/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmal.c.o
+[72/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fma.c.o
+[73/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmin.c.o
+[74/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fminf.c.o
+[75/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fminl.c.o
+[76/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmax.c.o
+[77/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___fpclassify.c.o
+[78/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmodf.c.o
+[79/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmod.c.o
+[80/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___fpclassifyl.c.o
+[81/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_frexpf.c.o
+[82/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmodl.c.o
+[83/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_frexp.c.o
+[84/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_frexpl.c.o
+[85/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_hypot.c.o
+[86/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_hypotf.c.o
+[87/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___fpclassifyf.c.o
+[88/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_hypotl.c.o
+[89/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ilogbl.c.o
+[90/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ilogbf.c.o
+[91/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ilogb.c.o
+[92/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___invtrigl.c.o
+[93/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ldexp.c.o
+[94/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j0.c.o
+[95/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j0f.c.o
+[96/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j1f.c.o
+[97/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_jnf.c.o
+[98/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ldexpl.c.o
+[99/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ldexpf.c.o
+[100/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_jn.c.o
+[101/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgammaf.c.o
+[102/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgamma.c.o
+[103/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llround.c.o
+[104/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgammaf_r.c.o
+[105/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llrint.c.o
+[106/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llrintl.c.o
+[107/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgammal.c.o
+[108/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llrintf.c.o
+[109/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgamma_r.c.o
+[110/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j1.c.o
+[111/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llroundf.c.o
+[112/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llroundl.c.o
+[113/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log10f.c.o
+[114/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log10.c.o
+[115/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log10l.c.o
+[116/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log1p.c.o
+[117/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log1pf.c.o
+[118/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logbf.c.o
+[119/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logb.c.o
+[120/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log1pl.c.o
+[121/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logbl.c.o
+[122/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log2f.c.o
+[123/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log2.c.o
+[124/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log2l.c.o
+[125/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lrint.c.o
+[126/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log.c.o
+[127/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logl.c.o
+[128/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logf.c.o
+[129/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lrintl.c.o
+[130/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lround.c.o
+[131/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lrintf.c.o
+[132/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lroundf.c.o
+[133/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lroundl.c.o
+[134/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nan.c.o
+[135/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nanf.c.o
+[136/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nanl.c.o
+[137/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_modff.c.o
+[138/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_modf.c.o
+[139/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_modfl.c.o
+[140/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nearbyint.c.o
+[141/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nearbyintf.c.o
+[142/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nextafterf.c.o
+[143/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nexttoward.c.o
+[144/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nextafter.c.o
+[145/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nearbyintl.c.o
+[146/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nextafterl.c.o
+[147/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nexttowardl.c.o
+[148/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remainder.c.o
+[149/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remainderf.c.o
+[150/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___polevll.c.o
+[151/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nexttowardf.c.o
+[152/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_powf.c.o
+[153/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remainderl.c.o
+[154/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_pow.c.o
+[155/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_powl.c.o
+[156/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2.c.o
+[157/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2f.c.o
+[158/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2l.c.o
+[159/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remquof.c.o
+[160/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_rint.c.o
+[161/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remquo.c.o
+[162/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2_large.c.o
+[163/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remquol.c.o
+[164/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_rintf.c.o
+[165/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_rintl.c.o
+[166/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_round.c.o
+[167/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_roundf.c.o
+[168/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbln.c.o
+[169/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_roundl.c.o
+[170/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalb.c.o
+[171/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbf.c.o
+[172/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalblnl.c.o
+[173/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalblnf.c.o
+[174/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbn.c.o
+[175/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___signbit.c.o
+[176/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbnl.c.o
+[177/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___signbitf.c.o
+[178/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___signbitl.c.o
+[179/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbnf.c.o
+[180/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_significand.c.o
+[181/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_signgam.c.o
+[182/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_significandf.c.o
+[183/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sincos.c.o
+[184/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sin.c.o
+[185/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___sin.c.o
+[186/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sincosl.c.o
+[187/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___sindf.c.o
+[188/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinf.c.o
+[189/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sincosf.c.o
+[190/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinh.c.o
+[191/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinhl.c.o
+[192/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinl.c.o
+[193/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinhf.c.o
+[194/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sqrt.c.o
+[195/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sqrtl.c.o
+[196/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___sinl.c.o
+[197/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sqrtf.c.o
+[198/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___tandf.c.o
+[199/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tan.c.o
+[200/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanf.c.o
+[201/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___tan.c.o
+[202/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanh.c.o
+[203/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanhl.c.o
+[204/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanhf.c.o
+[205/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___tanl.c.o
+[206/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanl.c.o
+[207/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tgammaf.c.o
+[208/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_trunc.c.o
+[209/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tgamma.c.o
+[210/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tgammal.c.o
+[211/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_truncf.c.o
+[212/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_truncl.c.o
+[213/372] Compiling C++ object ld.a.p/sysdeps_cryolite_sysdeps.cpp.o
+FAILED: [code=1] ld.a.p/sysdeps_cryolite_sysdeps.cpp.o 
+clang++ -Ild.a.p -I. -I../source -I../source/sysdeps/cryolite/include -I../source/options/internal/include -I../source/options/internal/x86_64-include -I../source/options/rtld/x86_64 -I../source/options/rtld/include -I../source/sysdeps/generic-helpers/include -I../source/options/ansi/include -I../source/options/elf/include -I../source/subprojects/frigg/include -I../source/subprojects/libsmarter/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -std=c++23 -O2 -g -Werror=misleading-indentation -fno-rtti -fno-exceptions -D__MLIBC_DEBUG --target=x86_64-unknown-none -march=x86-64-v3 -mno-mmx -mno-red-zone -D__cryolite__=1 -ffreestanding -fno-stack-protector -fno-pic -fno-pie -ftls-model=local-exec -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables -O1 -g -isystem../source/subprojects/freestanding-cxx-hdrs/include -isystem../source/subprojects/freestanding-c-hdrs/include -Wno-unused-function -fno-builtin -ffreestanding -nostdinc -fvisibility=hidden -fvisibility-inlines-hidden -fno-stack-protector -DMLIBC_BUILDING_RTLD -Wno-extern-c-compat -Wno-unknown-pragmas -Wno-unused-function -D__MLIBC_BUILDING_MLIBC -fno-builtin -ffreestanding -nostdinc -fno-sanitize=function -DMLIBC_ARCH_HAS_STRCMP=1 -DMLIBC_ARCH_HAS_STRLEN=1 -DMLIBC_STATIC_BUILD -MD -MQ ld.a.p/sysdeps_cryolite_sysdeps.cpp.o -MF ld.a.p/sysdeps_cryolite_sysdeps.cpp.o.d -o ld.a.p/sysdeps_cryolite_sysdeps.cpp.o -c ../source/sysdeps/cryolite/sysdeps.cpp
+In file included from ../source/sysdeps/cryolite/sysdeps.cpp:6:
+In file included from ../source/options/internal/include/mlibc/all-sysdeps.hpp:9:
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:45: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                             ^
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:51: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                                   ^
+2 errors generated.
+[214/372] Compiling C++ object ld.a.p/options_internal_generic_inline-emitter.cpp.o
+[215/372] Compiling C++ object ld.a.p/options_internal_generic_essential.cpp.o
+[216/372] Compiling C++ object ld.a.p/options_internal_gcc_stack_protector.cpp.o
+[217/372] Compiling C++ object ld.a.p/options_internal_generic_debug.cpp.o
+FAILED: [code=1] ld.a.p/options_internal_generic_debug.cpp.o 
+clang++ -Ild.a.p -I. -I../source -I../source/sysdeps/cryolite/include -I../source/options/internal/include -I../source/options/internal/x86_64-include -I../source/options/rtld/x86_64 -I../source/options/rtld/include -I../source/sysdeps/generic-helpers/include -I../source/options/ansi/include -I../source/options/elf/include -I../source/subprojects/frigg/include -I../source/subprojects/libsmarter/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -std=c++23 -O2 -g -Werror=misleading-indentation -fno-rtti -fno-exceptions -D__MLIBC_DEBUG --target=x86_64-unknown-none -march=x86-64-v3 -mno-mmx -mno-red-zone -D__cryolite__=1 -ffreestanding -fno-stack-protector -fno-pic -fno-pie -ftls-model=local-exec -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables -O1 -g -isystem../source/subprojects/freestanding-cxx-hdrs/include -isystem../source/subprojects/freestanding-c-hdrs/include -Wno-unused-function -fno-builtin -ffreestanding -nostdinc -fvisibility=hidden -fvisibility-inlines-hidden -fno-stack-protector -DMLIBC_BUILDING_RTLD -Wno-extern-c-compat -Wno-unknown-pragmas -Wno-unused-function -D__MLIBC_BUILDING_MLIBC -fno-builtin -ffreestanding -nostdinc -fno-sanitize=function -DMLIBC_ARCH_HAS_STRCMP=1 -DMLIBC_ARCH_HAS_STRLEN=1 -DMLIBC_STATIC_BUILD -MD -MQ ld.a.p/options_internal_generic_debug.cpp.o -MF ld.a.p/options_internal_generic_debug.cpp.o.d -o ld.a.p/options_internal_generic_debug.cpp.o -c ../source/options/internal/generic/debug.cpp
+In file included from ../source/options/internal/generic/debug.cpp:4:
+In file included from ../source/options/internal/include/mlibc/all-sysdeps.hpp:9:
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:45: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                             ^
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:51: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                                   ^
+2 errors generated.
+[218/372] Compiling C++ object ld.a.p/options_internal_gcc_guard-abi.cpp.o
+FAILED: [code=1] ld.a.p/options_internal_gcc_guard-abi.cpp.o 
+clang++ -Ild.a.p -I. -I../source -I../source/sysdeps/cryolite/include -I../source/options/internal/include -I../source/options/internal/x86_64-include -I../source/options/rtld/x86_64 -I../source/options/rtld/include -I../source/sysdeps/generic-helpers/include -I../source/options/ansi/include -I../source/options/elf/include -I../source/subprojects/frigg/include -I../source/subprojects/libsmarter/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -std=c++23 -O2 -g -Werror=misleading-indentation -fno-rtti -fno-exceptions -D__MLIBC_DEBUG --target=x86_64-unknown-none -march=x86-64-v3 -mno-mmx -mno-red-zone -D__cryolite__=1 -ffreestanding -fno-stack-protector -fno-pic -fno-pie -ftls-model=local-exec -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables -O1 -g -isystem../source/subprojects/freestanding-cxx-hdrs/include -isystem../source/subprojects/freestanding-c-hdrs/include -Wno-unused-function -fno-builtin -ffreestanding -nostdinc -fvisibility=hidden -fvisibility-inlines-hidden -fno-stack-protector -DMLIBC_BUILDING_RTLD -Wno-extern-c-compat -Wno-unknown-pragmas -Wno-unused-function -D__MLIBC_BUILDING_MLIBC -fno-builtin -ffreestanding -nostdinc -fno-sanitize=function -DMLIBC_ARCH_HAS_STRCMP=1 -DMLIBC_ARCH_HAS_STRLEN=1 -DMLIBC_STATIC_BUILD -MD -MQ ld.a.p/options_internal_gcc_guard-abi.cpp.o -MF ld.a.p/options_internal_gcc_guard-abi.cpp.o.d -o ld.a.p/options_internal_gcc_guard-abi.cpp.o -c ../source/options/internal/gcc/guard-abi.cpp
+In file included from ../source/options/internal/gcc/guard-abi.cpp:5:
+In file included from ../source/options/internal/include/mlibc/all-sysdeps.hpp:9:
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:45: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                             ^
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:51: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                                   ^
+2 errors generated.
+[219/372] Compiling C++ object ld.a.p/options_internal_generic_allocator.cpp.o
+FAILED: [code=1] ld.a.p/options_internal_generic_allocator.cpp.o 
+clang++ -Ild.a.p -I. -I../source -I../source/sysdeps/cryolite/include -I../source/options/internal/include -I../source/options/internal/x86_64-include -I../source/options/rtld/x86_64 -I../source/options/rtld/include -I../source/sysdeps/generic-helpers/include -I../source/options/ansi/include -I../source/options/elf/include -I../source/subprojects/frigg/include -I../source/subprojects/libsmarter/include -fdiagnostics-color=always -D_GLIBCXX_ASSERTIONS=1 -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -Wextra -std=c++23 -O2 -g -Werror=misleading-indentation -fno-rtti -fno-exceptions -D__MLIBC_DEBUG --target=x86_64-unknown-none -march=x86-64-v3 -mno-mmx -mno-red-zone -D__cryolite__=1 -ffreestanding -fno-stack-protector -fno-pic -fno-pie -ftls-model=local-exec -ffunction-sections -fdata-sections -fno-unwind-tables -fno-asynchronous-unwind-tables -O1 -g -isystem../source/subprojects/freestanding-cxx-hdrs/include -isystem../source/subprojects/freestanding-c-hdrs/include -Wno-unused-function -fno-builtin -ffreestanding -nostdinc -fvisibility=hidden -fvisibility-inlines-hidden -fno-stack-protector -DMLIBC_BUILDING_RTLD -Wno-extern-c-compat -Wno-unknown-pragmas -Wno-unused-function -D__MLIBC_BUILDING_MLIBC -fno-builtin -ffreestanding -nostdinc -fno-sanitize=function -DMLIBC_ARCH_HAS_STRCMP=1 -DMLIBC_ARCH_HAS_STRLEN=1 -DMLIBC_STATIC_BUILD -MD -MQ ld.a.p/options_internal_generic_allocator.cpp.o -MF ld.a.p/options_internal_generic_allocator.cpp.o.d -o ld.a.p/options_internal_generic_allocator.cpp.o -c ../source/options/internal/generic/allocator.cpp
+In file included from ../source/options/internal/generic/allocator.cpp:6:
+In file included from ../source/options/internal/include/mlibc/all-sysdeps.hpp:9:
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:45: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                             ^
+../source/sysdeps/cryolite/include/mlibc/sysdeps.hpp:10:51: error: expected class name
+   10 |     Open, Read, Write, Seek, Close, Isatty, Dup2, Fcntl,
+      |                                                   ^
+2 errors generated.
+[220/372] Compiling C++ object ld.a.p/options_internal_generic_ensure.cpp.o
+ninja: build stopped: subcommand failed.
+Traceback (most recent call last):
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/kryo/tools/build_libc.py", line 237, in <module>
+    main()
+    ~~~~^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/kryo/tools/build_libc.py", line 176, in main
+    run(["ninja", "-C", configured, f"-j{arguments.jobs}"])
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/kryo/tools/build_libc.py", line 35, in run
+    subprocess.run([str(arg) for arg in command], check=True, cwd=ROOT, **kwargs)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/entity27th/anaconda3/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['ninja', '-C', '/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/provider-debug/meson', '-j8']' returned non-zero exit status 1.

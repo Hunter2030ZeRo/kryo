@@ -1,0 +1,106 @@
+{
+  "mlibc_revision": "07cfd943977737b8147c1289922c23479feef53d",
+  "mlibc_archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+  "patch_sha256": "4ec24178a767fe9688f6501bda7860a009fe0cdd7bc68a430258175968963d9f",
+  "target_source_inputs": {
+    "options/ansi/generic/file-io.cpp": "b7fccab66efd51f0c5f84f4a93e3a966c7948e914ea6e401d5b48dbef35e1555",
+    "options/ansi/generic/stdio.cpp": "fe08a28d068581414cf733fbb9e2d4dfd176fd39a62200b02187ef49ed7c56cc",
+    "options/ansi/include/mlibc/file-io.hpp": "b71fe466d087c048dd9bed0c46595abc20a6e3ad97bed4266aab0d93c9a0edd5"
+  },
+  "function_body_sha256": {
+    "fopen": "c356dfe83ed5e5a3429494f584971409875ea594dfbccf43b96b39b28493a32d",
+    "buffer": "5e425947918970044adc9e4bd5c27bc62cb7ea0263cd2bcb323f3865bb23ed99",
+    "read": "77167f2b4676d7ce8d0a40551eb3f0318da32cee0d229e92eb4a229604eb5223",
+    "fread": "f1ca31de6ce31fadb67274b89a23630a15006583e9a8e6882fb9775f530c13ad"
+  },
+  "harness_sha256": "65272db2553a3014209f7d647c090acdf38630ac714c57be2f87f71b3893a811",
+  "cases": [
+    "FILE allocation failure before Open",
+    "Open error releases FILE storage",
+    "FILE construction after successful Open",
+    "buffer allocation failure",
+    "buffer size overflow",
+    "buffer allocation and reuse",
+    "byte read error preserves completed bytes",
+    "object read error preserves completed elements",
+    "zero size skips Read",
+    "zero count skips Read",
+    "byte read EOF preserves completed bytes",
+    "object read EOF preserves completed elements",
+    "unbuffered pushback before EIO",
+    "buffered pushback before EIO",
+    "unbuffered pushback before EOF",
+    "buffered pushback before EOF",
+    "unbuffered incomplete object after pushback",
+    "buffered incomplete object after pushback",
+    "unbuffered complete object after pushback",
+    "buffered complete object after pushback",
+    "pushback before write-back failure",
+    "pushback before reset failure",
+    "buffered read allocation failure",
+    "mode failure preserves pending pushback",
+    "zero-size read preserves pending pushback"
+  ],
+  "checks": [
+    {
+      "name": "-O0-compile",
+      "command": [
+        "clang++",
+        "-std=c++23",
+        "-O0",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fsanitize=address,undefined",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility/stdio-functions.cpp",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility/stdio-O0"
+      ],
+      "exit_code": 0,
+      "log": "O0-compile.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "-O0-run",
+      "command": [
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility/stdio-O0"
+      ],
+      "exit_code": 0,
+      "log": "O0-run.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "-O2-compile",
+      "command": [
+        "clang++",
+        "-std=c++23",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fsanitize=address,undefined",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility/stdio-functions.cpp",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility/stdio-O2"
+      ],
+      "exit_code": 0,
+      "log": "O2-compile.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "-O2-run",
+      "command": [
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility/stdio-O2"
+      ],
+      "exit_code": 0,
+      "log": "O2-run.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "leak_sanitizer": "disabled: restricted host ptrace; FILE cleanup checked by allocator counters",
+  "scope": "host-only execution of verbatim target function bodies with test allocator/Open/Read doubles; not native file-service or hosted ABI integration"
+}

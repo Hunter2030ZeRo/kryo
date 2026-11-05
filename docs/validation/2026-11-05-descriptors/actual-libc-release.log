@@ -1,0 +1,641 @@
+patching file include/__fcxx/algorithm_results.h
+patching file include/__fcxx/iterator_base.h
+Hunk #1 succeeded at 728 (offset 6 lines).
+patching file include/__fcxx/ranges_access.h
+patching file include/__fcxx/span.h
+patching file include/algorithm
+patching file include/array
+patching file include/expected
+patching file include/optional
+patching file include/span
+patching file include/variant
+patching file meson.build
+patching file options/internal/include/mlibc/allocator.hpp
+patching file options/internal/generic/allocator.cpp
+patching file options/internal/generic/cryolite-allocator.inc
+patching file options/internal/generic/sigset.cpp
+patching file options/ansi/x86_64/strlen.cpp
+patching file options/ansi/x86_64/strcmp.cpp
+patching file options/ansi/x86_64/meson.build
+patching file options/ansi/generic/string.cpp
+patching file options/internal/generic/essential.cpp
+patching file options/internal/include/bits/nl_item.h
+patching file options/ansi/include/stdio.h
+patching file options/ansi/include/time.h
+patching file options/ansi/generic/string.cpp
+patching file options/internal/generic/threads.cpp
+patching file options/rtld/generic/linker.cpp
+patching file options/rtld/generic/main.cpp
+patching file options/internal/generic/threads.cpp
+patching file options/ansi/generic/file-io.cpp
+patching file options/ansi/generic/stdio.cpp
+patching file options/ansi/include/mlibc/file-io.hpp
+The Meson build system
+Version: 1.12.1
+Source dir: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source
+Build dir: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/meson
+Build type: cross build
+Project name: mlibc
+Project version: 7.0.0
+Build machine cpu family: x86_64
+Build machine cpu: x86_64
+Host machine cpu family: x86_64
+Host machine cpu: x86-64-v3
+Target machine cpu family: x86_64
+Target machine cpu: x86-64-v3
+C compiler for the build machine: cc (gcc 16.2.1 "cc (GCC) 16.2.1 20260810")
+C linker for the build machine: cc ld.bfd 2.47
+C++ compiler for the build machine: c++ (gcc 16.2.1 "c++ (GCC) 16.2.1 20260810")
+C++ linker for the build machine: c++ ld.bfd 2.47
+C compiler for the host machine: clang (clang 23.1.4 "clang version 23.1.4")
+C linker for the host machine: clang ld.lld 23.1.4
+C++ compiler for the host machine: clang++ (clang 23.1.4 "clang version 23.1.4")
+C++ linker for the host machine: clang++ ld.lld 23.1.4
+Checking if "C++ compiler supports ifunc" compiles: NO 
+Looking for a fallback subproject for the dependency freestanding-c-hdrs because:
+Use of fallback dependencies is forced.
+
+Executing subproject freestanding-c-hdrs for machine: host 
+
+freestanding-c-hdrs| Project name: freestanding-c-hdrs
+freestanding-c-hdrs| Project version: undefined
+freestanding-c-hdrs| Build targets in project: 0
+freestanding-c-hdrs| Subproject freestanding-c-hdrs finished.
+
+Dependency freestanding-c-hdrs for host machine from subproject subprojects/freestanding-c-hdrs found: YES undefined
+Looking for a fallback subproject for the dependency freestanding-cxx-hdrs because:
+Use of fallback dependencies is forced.
+
+Executing subproject freestanding-cxx-hdrs for machine: host 
+
+freestanding-cxx-hdrs| Project name: freestanding-cxx-hdrs
+freestanding-cxx-hdrs| Project version: undefined
+freestanding-cxx-hdrs| Build targets in project: 0
+freestanding-cxx-hdrs| Subproject freestanding-cxx-hdrs finished.
+
+Dependency freestanding-cxx-hdrs for host machine from subproject subprojects/freestanding-cxx-hdrs found: YES undefined
+Looking for a fallback subproject for the dependency frigg because:
+Use of fallback dependencies is forced.
+
+Executing subproject frigg for machine: host 
+
+frigg| Project name: frigg
+frigg| Project version: undefined
+frigg| Build targets in project: 0
+frigg| Subproject frigg finished.
+
+Dependency frigg for host machine from subproject subprojects/frigg found: YES undefined
+Looking for a fallback subproject for the dependency libsmarter because:
+Use of fallback dependencies is forced.
+
+Executing subproject libsmarter for machine: host 
+
+libsmarter| Project name: libsmarter
+libsmarter| Project version: undefined
+libsmarter| Build targets in project: 0
+libsmarter| Subproject libsmarter finished.
+
+Dependency libsmarter for host machine from subproject subprojects/libsmarter found: YES undefined
+Compiler for C++ supports arguments -Wno-prio-ctor-dtor: NO 
+Configuring internal-config.h using configuration
+Configuring mlibc-config.h using configuration
+Program hdoc found: NO
+Configuring .hdoc.toml using configuration
+Build targets in project: 12
+
+mlibc 7.0.0
+
+  tests
+    Build tests           : NO
+    Build host-libc tests : YES
+    Build cross-libc tests: NO
+
+  mlibc options
+    headers-only          : NO
+    ABI                   : 7
+    POSIX option          : disabled
+    Linux option          : disabled
+    glibc option          : disabled
+    BSD option            : disabled
+    debug allocator       : NO
+    libgcc dependency     : NO
+
+  Subprojects (for host machine)
+    freestanding-c-hdrs   : YES
+    freestanding-cxx-hdrs : YES
+    frigg                 : YES
+    libsmarter            : YES
+
+  User defined options
+    Cross files           : /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/cryolite.cross
+    b_staticpic           : false
+    bsd_option            : disabled
+    build_tests           : false
+    default_library       : static
+    force_fallback_for    : frigg,libsmarter,freestanding-c-hdrs,freestanding-cxx-hdrs
+    glibc_option          : disabled
+    libdir                : lib
+    libgcc_dependency     : false
+    linux_option          : disabled
+    posix_option          : disabled
+    prefix                : /usr
+    use_freestnd_hdrs     : enabled
+    wrap_mode             : nodownload
+
+Found ninja-1.13.2 at /home/entity27th/.local/bin/ninja
+Generating targets:   0%|          | 0/12 eta ?                                               Writing build.ninja:   0%|          | 0/408 eta ?                                                 ninja: Entering directory `/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/meson'
+[1/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosh.c.o
+[2/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosl.c.o
+[3/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acoshf.c.o
+[4/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acoshl.c.o
+[5/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinf.c.o
+[6/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acosf.c.o
+[7/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_acos.c.o
+[8/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asin.c.o
+[9/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinhf.c.o
+[10/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinl.c.o
+[11/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinh.c.o
+[12/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_asinhl.c.o
+[13/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan2.c.o
+[14/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan2l.c.o
+[15/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan.c.o
+[16/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanh.c.o
+[17/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanf.c.o
+[18/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atan2f.c.o
+[19/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanhl.c.o
+[20/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanl.c.o
+[21/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_atanhf.c.o
+[22/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cbrt.c.o
+[23/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cbrtf.c.o
+[24/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ceill.c.o
+[25/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ceil.c.o
+[26/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ceilf.c.o
+[27/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cbrtl.c.o
+[28/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_copysignl.c.o
+[29/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___cos.c.o
+[30/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_copysignf.c.o
+[31/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___cosdf.c.o
+[32/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cos.c.o
+[33/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cosf.c.o
+[34/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cosh.c.o
+[35/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_copysign.c.o
+[36/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___cosl.c.o
+[37/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_coshf.c.o
+[38/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_coshl.c.o
+[39/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_cosl.c.o
+[40/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_erf.c.o
+[41/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp10.c.o
+[42/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_erff.c.o
+[43/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_erfl.c.o
+[44/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp2f.c.o
+[45/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp2.c.o
+[46/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp10l.c.o
+[47/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp2l.c.o
+[48/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp10f.c.o
+[49/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_exp.c.o
+[50/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expf.c.o
+[51/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expl.c.o
+[52/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expm1.c.o
+[53/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expm1f.c.o
+[54/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___expo2.c.o
+[55/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fabs.c.o
+[56/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_expm1l.c.o
+[57/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fabsl.c.o
+[58/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___expo2f.c.o
+[59/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fabsf.c.o
+[60/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fdim.c.o
+[61/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_finite.c.o
+[62/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fdimf.c.o
+[63/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fdiml.c.o
+[64/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_finitef.c.o
+[65/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_floor.c.o
+[66/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmax.c.o
+[67/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_floorl.c.o
+[68/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_floorf.c.o
+[69/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmaf.c.o
+[70/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmal.c.o
+[71/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmaxf.c.o
+[72/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmin.c.o
+[73/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fminl.c.o
+[74/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fminf.c.o
+[75/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmaxl.c.o
+[76/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fma.c.o
+[77/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmod.c.o
+[78/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___fpclassify.c.o
+[79/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___fpclassifyf.c.o
+[80/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_frexp.c.o
+[81/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmodf.c.o
+[82/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___fpclassifyl.c.o
+[83/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_frexpf.c.o
+[84/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_frexpl.c.o
+[85/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_fmodl.c.o
+[86/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_hypot.c.o
+[87/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ilogb.c.o
+[88/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_hypotl.c.o
+[89/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ilogbl.c.o
+[90/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ilogbf.c.o
+[91/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___invtrigl.c.o
+[92/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_hypotf.c.o
+[93/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j0f.c.o
+[94/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j1.c.o
+[95/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j1f.c.o
+[96/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_j0.c.o
+[97/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ldexpf.c.o
+[98/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ldexp.c.o
+[99/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_jnf.c.o
+[100/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_ldexpl.c.o
+[101/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_jn.c.o
+[102/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgamma.c.o
+[103/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgammaf.c.o
+[104/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llrintf.c.o
+[105/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgammaf_r.c.o
+[106/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgamma_r.c.o
+[107/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lgammal.c.o
+[108/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llrint.c.o
+[109/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llround.c.o
+[110/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llrintl.c.o
+[111/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llroundf.c.o
+[112/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_llroundl.c.o
+[113/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log1p.c.o
+[114/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log10f.c.o
+[115/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log1pf.c.o
+[116/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log10l.c.o
+[117/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log1pl.c.o
+[118/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log10.c.o
+[119/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log2.c.o
+[120/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log2f.c.o
+[121/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logbl.c.o
+[122/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log.c.o
+[123/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logb.c.o
+[124/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_log2l.c.o
+[125/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logbf.c.o
+[126/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lrint.c.o
+[127/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logl.c.o
+[128/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lroundf.c.o
+[129/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lround.c.o
+[130/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lrintf.c.o
+[131/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_logf.c.o
+[132/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lrintl.c.o
+[133/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_lroundl.c.o
+[134/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_modf.c.o
+[135/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nan.c.o
+[136/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nanf.c.o
+[137/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_modfl.c.o
+[138/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nanl.c.o
+[139/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nearbyint.c.o
+[140/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nearbyintf.c.o
+[141/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_modff.c.o
+[142/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nearbyintl.c.o
+[143/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nexttowardl.c.o
+[144/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nextafter.c.o
+[145/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nextafterf.c.o
+[146/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nextafterl.c.o
+[147/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nexttoward.c.o
+[148/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_nexttowardf.c.o
+[149/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remainder.c.o
+[150/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remainderf.c.o
+[151/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___polevll.c.o
+[152/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remainderl.c.o
+[153/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_pow.c.o
+[154/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_powl.c.o
+[155/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2.c.o
+[156/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_powf.c.o
+[157/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2f.c.o
+[158/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2l.c.o
+[159/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remquo.c.o
+[160/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_rintl.c.o
+[161/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_rintf.c.o
+[162/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remquol.c.o
+[163/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_remquof.c.o
+[164/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_round.c.o
+[165/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_rint.c.o
+[166/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalb.c.o
+[167/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_roundl.c.o
+[168/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_roundf.c.o
+[169/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbf.c.o
+[170/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalblnf.c.o
+[171/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbln.c.o
+[172/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___signbit.c.o
+[173/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbnl.c.o
+[174/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___signbitf.c.o
+[175/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbnf.c.o
+[176/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalbn.c.o
+[177/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_scalblnl.c.o
+[178/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___signbitl.c.o
+[179/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___rem_pio2_large.c.o
+[180/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_signgam.c.o
+[181/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_significand.c.o
+[182/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___sin.c.o
+[183/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sin.c.o
+[184/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sincos.c.o
+[185/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_significandf.c.o
+[186/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___sindf.c.o
+[187/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sincosf.c.o
+[188/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sincosl.c.o
+[189/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinhf.c.o
+[190/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinf.c.o
+[191/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinhl.c.o
+[192/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___sinl.c.o
+[193/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinh.c.o
+[194/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sinl.c.o
+[195/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sqrtl.c.o
+[196/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sqrt.c.o
+[197/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___tan.c.o
+[198/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___tandf.c.o
+[199/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanf.c.o
+[200/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_sqrtf.c.o
+[201/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tan.c.o
+[202/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanh.c.o
+[203/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanl.c.o
+[204/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tgammaf.c.o
+[205/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanhf.c.o
+[206/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math___tanl.c.o
+[207/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tanhl.c.o
+[208/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tgamma.c.o
+[209/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_tgammal.c.o
+[210/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_trunc.c.o
+[211/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_truncf.c.o
+[212/372] Compiling C object options/ansi/libmlibc-musl-math.a.p/musl-generic-math_truncl.c.o
+[213/372] Compiling C++ object ld.a.p/options_internal_generic_inline-emitter.cpp.o
+[214/372] Compiling C++ object ld.a.p/options_internal_generic_essential.cpp.o
+[215/372] Compiling C++ object ld.a.p/options_internal_gcc_stack_protector.cpp.o
+[216/372] Compiling C++ object ld.a.p/sysdeps_cryolite_sysdeps.cpp.o
+[217/372] Compiling C++ object ld.a.p/options_internal_generic_debug.cpp.o
+[218/372] Compiling C++ object ld.a.p/options_internal_generic_frigg.cpp.o
+[219/372] Compiling C++ object libc.a.p/sysdeps_cryolite_entry.cpp.o
+[220/372] Compiling C++ object ld.a.p/options_internal_gcc_guard-abi.cpp.o
+[221/372] Compiling C object ld.a.p/options_rtld_x86_64_runtime.S.o
+[222/372] Compiling C++ object ld.a.p/options_internal_generic_ensure.cpp.o
+[223/372] Compiling C object libc.a.p/sysdeps_cryolite_threads.S.o
+[224/372] Compiling C++ object libc.a.p/sysdeps_cryolite_sysdeps.cpp.o
+[225/372] Compiling C++ object libc.a.p/sysdeps_cryolite_files.cpp.o
+[226/372] Compiling C++ object libc.a.p/sysdeps_cryolite_threads.cpp.o
+[227/372] Compiling C++ object libc.a.p/options_elf_generic_phdr.cpp.o
+[228/372] Compiling C++ object ld.a.p/options_internal_generic_allocator.cpp.o
+[229/372] Compiling C++ object libc.a.p/options_elf_generic_startup.cpp.o
+[230/372] Compiling C++ object ld.a.p/options_internal_generic_ubsan.cpp.o
+[231/372] Compiling C++ object libc.a.p/options_internal_generic_allocator.cpp.o
+[232/372] Compiling C++ object libc.a.p/options_internal_generic_debug.cpp.o
+[233/372] Compiling C++ object libc.a.p/options_internal_generic_ctype.cpp.o
+[234/372] Compiling C++ object ld.a.p/options_rtld_generic_main.cpp.o
+[235/372] Compiling C++ object libc.a.p/options_internal_generic_essential.cpp.o
+[236/372] Compiling C++ object libc.a.p/options_internal_generic_c-locale-defaults.cpp.o
+[237/372] Compiling C++ object libc.a.p/options_internal_generic_exiting.cpp.o
+[238/372] Compiling C++ object libc.a.p/options_internal_generic_charset.cpp.o
+[239/372] Compiling C++ object libc.a.p/options_internal_generic_inline-emitter.cpp.o
+[240/372] Compiling C++ object libc.a.p/options_internal_generic_charcode.cpp.o
+[241/372] Compiling C++ object libc.a.p/options_internal_generic_ensure.cpp.o
+[242/372] Compiling C++ object libc.a.p/options_internal_generic_frigg.cpp.o
+[243/372] Compiling C++ object libc.a.p/options_internal_generic_sigset.cpp.o
+[244/372] Compiling C++ object libc.a.p/options_internal_generic_getopt.cpp.o
+[245/372] Compiling C++ object libc.a.p/options_internal_generic_global-config.cpp.o
+[246/372] Compiling C++ object libc.a.p/options_internal_generic_strings.cpp.o
+[247/372] Compiling C++ object libc.a.p/options_internal_generic_search.cpp.o
+[248/372] Compiling C++ object libc.a.p/options_internal_generic_stdlib.cpp.o
+[249/372] Compiling C++ object libc.a.p/options_internal_gcc_stack_protector.cpp.o
+[250/372] Compiling C++ object libc.a.p/options_internal_gcc-extra_cxxabi.cpp.o
+[251/372] Compiling C++ object libc.a.p/options_internal_x86_64_assembly-asserts.cpp.o
+[252/372] Compiling C++ object libc.a.p/options_internal_gcc_guard-abi.cpp.o
+[253/372] Compiling C++ object libc.a.p/options_internal_x86_64_atomics.cpp.o
+[254/372] Compiling C++ object libc.a.p/options_internal_generic_wide.cpp.o
+[255/372] Compiling C++ object libc.a.p/options_internal_generic_ubsan.cpp.o
+[256/372] Compiling C object libc.a.p/options_internal_x86_64_setjmp.S.o
+[257/372] Compiling C++ object libc.a.p/options_ansi_generic_assert.cpp.o
+[258/372] Compiling C object libc.a.p/options_internal_x86_64_fenv.S.o
+[259/372] Compiling C object libc.a.p/options_ansi_generic_complex.c.o
+[260/372] Compiling C object libc.a.p/options_ansi_generic_complex_csinhf.c.o
+[261/372] Compiling C object libc.a.p/options_ansi_generic_complex_csqrt.c.o
+[262/372] Compiling C object libc.a.p/options_ansi_generic_complex_csinhl.c.o
+[263/372] Compiling C object libc.a.p/options_ansi_generic_complex_cacosh.c.o
+[264/372] Compiling C object libc.a.p/options_ansi_generic_complex_ccoshf.c.o
+[265/372] Compiling C object libc.a.p/options_ansi_generic_complex_ccoshl.c.o
+[266/372] Compiling C object libc.a.p/options_ansi_generic_complex_casinf.c.o
+[267/372] Compiling C object libc.a.p/options_ansi_generic_complex_cacoshl.c.o
+[268/372] Compiling C object libc.a.p/options_ansi_generic_complex_casinl.c.o
+[269/372] Compiling C object libc.a.p/options_ansi_generic_complex_csqrtl.c.o
+[270/372] Compiling C object libc.a.p/options_ansi_generic_complex_clogf.c.o
+[271/372] Compiling C object libc.a.p/options_ansi_generic_complex_csqrtf.c.o
+[272/372] Compiling C++ object libc.a.p/options_internal_generic_threads.cpp.o
+[273/372] Compiling C object libc.a.p/options_ansi_generic_complex_carg.c.o
+[274/372] Compiling C object libc.a.p/options_ansi_generic_complex_cimag.c.o
+[275/372] Compiling C object libc.a.p/options_ansi_generic_complex_catanh.c.o
+[276/372] Compiling C object libc.a.p/options_ansi_generic_complex_cproj.c.o
+[277/372] Compiling C object libc.a.p/options_ansi_generic_complex_cexp.c.o
+[278/372] Compiling C object libc.a.p/options_ansi_generic_complex_ccos.c.o
+[279/372] Compiling C object libc.a.p/options_ansi_generic_complex_crealf.c.o
+[280/372] Compiling C object libc.a.p/options_ansi_generic_complex_cephes_subr.c.o
+[281/372] Compiling C object libc.a.p/options_ansi_generic_complex_cabs.c.o
+[282/372] Compiling C object libc.a.p/options_ansi_generic_complex_casinhf.c.o
+[283/372] Compiling C object libc.a.p/options_ansi_generic_complex_csinh.c.o
+[284/372] Compiling C object libc.a.p/options_ansi_generic_complex_creal.c.o
+[285/372] Compiling C object libc.a.p/options_ansi_generic_complex_casinhl.c.o
+[286/372] Compiling C object libc.a.p/options_ansi_generic_complex_cephes_subrl.c.o
+[287/372] Compiling C object libc.a.p/options_ansi_generic_complex_conjf.c.o
+[288/372] Compiling C object libc.a.p/options_ansi_generic_complex_cephes_subrf.c.o
+[289/372] Compiling C object libc.a.p/options_ansi_generic_complex_conjl.c.o
+[290/372] Compiling C object libc.a.p/options_ansi_generic_complex_casin.c.o
+[291/372] Compiling C object libc.a.p/options_ansi_generic_complex_cpowf.c.o
+[292/372] Compiling C object libc.a.p/options_ansi_generic_complex_cpowl.c.o
+[293/372] Compiling C object libc.a.p/options_ansi_generic_complex_cacosl.c.o
+[294/372] Compiling C object libc.a.p/options_ansi_generic_complex_cacosf.c.o
+[295/372] Compiling C object libc.a.p/options_ansi_generic_complex_csinf.c.o
+[296/372] Compiling C object libc.a.p/options_ansi_generic_complex_csinl.c.o
+[297/372] Compiling C object libc.a.p/options_ansi_generic_complex_ctanh.c.o
+[298/372] Compiling C object libc.a.p/options_ansi_generic_complex_ctanhf.c.o
+[299/372] Compiling C object libc.a.p/options_ansi_generic_complex_cabsf.c.o
+[300/372] Compiling C object libc.a.p/options_ansi_generic_complex_cargf.c.o
+[301/372] Compiling C object libc.a.p/options_ansi_generic_complex_cpow.c.o
+[302/372] Compiling C object libc.a.p/options_ansi_generic_complex_ctanhl.c.o
+[303/372] Compiling C object libc.a.p/options_ansi_generic_complex_cprojf.c.o
+[304/372] Compiling C object libc.a.p/options_ansi_generic_complex_cprojl.c.o
+[305/372] Compiling C object libc.a.p/options_ansi_generic_complex_csin.c.o
+[306/372] Compiling C object libc.a.p/options_ansi_generic_complex_catan.c.o
+[307/372] Compiling C++ object libc.a.p/options_internal_generic_locale-defaults.cpp.o
+[308/372] Compiling C object libc.a.p/options_ansi_generic_complex_ctan.c.o
+[309/372] Compiling C object libc.a.p/options_ansi_generic_complex_ctanf.c.o
+[310/372] Compiling C object libc.a.p/options_ansi_generic_complex_clog.c.o
+[311/372] Compiling C object libc.a.p/options_ansi_generic_complex_ctanl.c.o
+[312/372] Compiling C object libc.a.p/options_ansi_generic_complex_catanl.c.o
+[313/372] Compiling C object libc.a.p/options_ansi_generic_complex_catanf.c.o
+[314/372] Compiling C object libc.a.p/options_ansi_generic_complex_cexpl.c.o
+[315/372] Compiling C object libc.a.p/options_ansi_generic_complex_cexpf.c.o
+[316/372] Compiling C object libc.a.p/options_ansi_generic_complex_cacos.c.o
+[317/372] Compiling C object libc.a.p/options_ansi_generic_complex_ccosh.c.o
+[318/372] Compiling C object libc.a.p/options_ansi_generic_complex_cimagf.c.o
+[319/372] Compiling C object libc.a.p/options_ansi_generic_complex_conj.c.o
+[320/372] Compiling C object libc.a.p/options_ansi_generic_complex_catanhf.c.o
+[321/372] Compiling C object libc.a.p/options_ansi_generic_complex_cacoshf.c.o
+[322/372] Compiling C object libc.a.p/options_ansi_generic_complex_catanhl.c.o
+[323/372] Compiling C object libc.a.p/options_ansi_generic_complex_casinh.c.o
+[324/372] Compiling C object libc.a.p/options_ansi_generic_complex_ccosf.c.o
+[325/372] Compiling C object libc.a.p/options_ansi_generic_complex_cabsl.c.o
+[326/372] Compiling C object libc.a.p/options_ansi_generic_complex_ccosl.c.o
+[327/372] Compiling C object libc.a.p/options_ansi_generic_complex_cargl.c.o
+[328/372] Compiling C++ object libc.a.p/options_ansi_generic_errno.cpp.o
+[329/372] Compiling C object libc.a.p/options_ansi_generic_complex_clogl.c.o
+[330/372] Compiling C++ object libc.a.p/options_ansi_generic_fenv.cpp.o
+[331/372] Compiling C++ object libc.a.p/options_ansi_generic_stdlib.cpp.o
+[332/372] Compiling C++ object ld.a.p/options_rtld_generic_linker.cpp.o
+[333/372] Compiling C++ object libc.a.p/options_ansi_generic_inttypes.cpp.o
+[334/372] Compiling C++ object libc.a.p/options_ansi_generic_locale.cpp.o
+[335/372] Compiling C++ object libc.a.p/options_ansi_generic_ctype.cpp.o
+[336/372] Compiling C++ object libc.a.p/options_ansi_generic_signal.cpp.o
+[337/372] Compiling C++ object libc.a.p/options_ansi_generic_uchar.cpp.o
+[338/372] Compiling C++ object libc.a.p/options_ansi_generic_threads.cpp.o
+[339/372] Compiling C++ object libc.a.p/options_ansi_generic_environment.cpp.o
+[340/372] Compiling C++ object libc.a.p/options_ansi_generic_wchar.cpp.o
+[341/372] Compiling C++ object libc.a.p/options_ansi_x86_64_strlen.cpp.o
+[342/372] Compiling C++ object libc.a.p/options_ansi_x86_64_strcmp.cpp.o
+[343/372] Compiling C object libc.a.p/options_ansi_x86_64_strlen-avx2.S.o
+[344/372] Compiling C++ object libc.a.p/options_ansi_generic_wctype.cpp.o
+[345/372] Compiling C++ object libc.a.p/options_lsb_generic_auxv.cpp.o
+[346/372] Compiling C++ object libc.a.p/options_lsb_generic_tls.cpp.o
+[347/372] Compiling C++ object libpthread.a.p/dummy-libs_libpthread_src_dummy.cpp.o
+[348/372] Compiling C++ object librt.a.p/dummy-libs_librt_src_dummy.cpp.o
+[349/372] Compiling C++ object libutil.a.p/dummy-libs_libutil_src_dummy.cpp.o
+[350/372] Compiling C++ object libm.a.p/dummy-libs_libm_src_dummy.cpp.o
+[351/372] Compiling C++ object libresolv.a.p/dummy-libs_libresolv_src_dummy.cpp.o
+[352/372] Compiling C++ object libdl.a.p/dummy-libs_libdl_src_dummy.cpp.o
+[353/372] Compiling C++ object libssp.a.p/dummy-libs_libssp_src_dummy.cpp.o
+[354/372] Compiling C++ object libssp_nonshared.a.p/dummy-libs_libssp_nonshared_src_shared-dummy.cpp.o
+[355/372] Linking static target options/ansi/libmlibc-musl-math.a
+[356/372] Linking static target ld.a
+[357/372] Linking static target libpthread.a
+[358/372] Generating sysdeps/cryolite/crt1 with a custom command
+[359/372] Linking static target libutil.a
+[360/372] Linking static target librt.a
+[361/372] Linking static target libm.a
+[362/372] Linking static target libresolv.a
+[363/372] Linking static target libdl.a
+[364/372] Linking static target libssp.a
+[365/372] Linking static target libssp_nonshared.a
+[366/372] Compiling C++ object libc.a.p/options_ansi_generic_file-io.cpp.o
+[367/372] Compiling C++ object libc.a.p/options_lsb_generic_dso_exit.cpp.o
+[368/372] Compiling C++ object libc.a.p/options_ansi_generic_string.cpp.o
+[369/372] Compiling C++ object libc.a.p/options_ansi_generic_time.cpp.o
+[370/372] Compiling C++ object libc.a.p/options_internal_generic_locale.cpp.o
+[371/372] Compiling C++ object libc.a.p/options_ansi_generic_stdio.cpp.o
+[372/372] Linking static target libc.a
+Installing subdir /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/auxv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/blkcnt_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/blksize_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/clockid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/dev_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/errno.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/fcntl.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/fsblkcnt_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/fsfilcnt_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/gid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/ino_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/limits.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/mode_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/nlink_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/pid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/resource.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/sched_param.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/seek-whence.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/sig-limits.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/signal.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/sigset_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/stat.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/suseconds_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/uid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/vm-flags.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/wait.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/bits/pthread_attr_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/bits/timeval.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/bits/ansi/timespec.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/mlibc/sysdeps.hpp to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/mlibc
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/thread-runtime.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/file-runtime.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/errno.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/file.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/memory.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/signal.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/time.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/types.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/file-protocol.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/native.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing sysdeps/cryolite/crt1.o to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libc.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libpthread.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing librt.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libutil.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libm.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libresolv.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libdl.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libssp.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing libssp_nonshared.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/lib
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/stdint.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/wchar_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/wchar.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/wint_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/wctrans_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/wctype_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/size_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/types.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/ensure.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/machine.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/mbstate.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/locale.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/locale-internals.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/nl_item.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/null.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/off_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/file.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/ssize_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/sigset_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/inline-definition.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/ether_addr.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/cpu_set.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/threads.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/winsize.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/search.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/getopt.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/reclen_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/timeval.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/pthread_types.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/pthread_attr_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/pthread_sizes.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/internal/include/bits/sysmacros.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/elf/include/elf.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/elf/include/link.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/alloca.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/assert.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/complex.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/ctype.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/errno.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/fenv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/inttypes.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/limits.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/locale.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/math.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/setjmp.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/signal.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/stdc-predef.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/stdio.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/stdlib.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/string.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/threads.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/time.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/uchar.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/wchar.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/wctype.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/bits/ansi/timespec.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/bits/ansi/time_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/bits/ansi/fenv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/bits/ansi/clock_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/ansi/include/bits/ansi/tm.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/source/options/lsb/include/sys/auxv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include/sys
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/meson/mlibc-config.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/sysroot/usr/include
+   Compiling compiler_builtins v0.1.160 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins)
+   Compiling core v0.0.0 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core)
+   Compiling alloc v0.0.0 (/home/entity27th/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc)
+   Compiling scopeguard v1.2.0
+   Compiling allocator-api2 v0.4.0
+   Compiling lock_api v0.4.14
+   Compiling talc v5.1.1
+   Compiling cryolite-allocator v0.1.0 (/home/entity27th/kryo/userspace/libc/allocator)
+    Finished `release` profile [optimized + debuginfo] target(s) in 20.24s
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-libc-release.elf: 6009008 -> 328160 bytes, runtime load data preserved; section metadata normalized; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/runtime-link-work/actual-provider-release/libc-probe

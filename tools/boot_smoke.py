@@ -106,6 +106,8 @@ def libc_checks(log, enabled):
             r"(?m)^LIBCSTDIO: buffer allocation failure and recovery OK runs=3$", log)) == 1,
         "libc_file_service": len(re.findall(
             r"(?m)^LIBCFILE: C Rust open read write seek and closure OK runs=3$", log)) == 1,
+        "libc_descriptors": len(re.findall(
+            r"(?m)^LIBCFD: shared descriptions dup flags and replacement OK runs=3$", log)) == 1,
     }
 
 

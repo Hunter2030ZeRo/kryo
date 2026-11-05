@@ -17,6 +17,9 @@ int __cryolite_file_write(int, const void *, size_t, ssize_t *);
 int __cryolite_file_seek(int, off_t, int, off_t *);
 int __cryolite_file_close(int);
 int __cryolite_file_isatty(int);
+int __cryolite_file_dup(int, int, int, int *);
+int __cryolite_file_dup2(int, int, int);
+int __cryolite_file_control(int, int, int, int *);
 
 #ifdef __cplusplus
 }

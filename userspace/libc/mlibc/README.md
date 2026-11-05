@@ -13,8 +13,8 @@ kind-specific rights and actual capability information before choosing optional
 role 1 DebugConsole WRITE authority. Logging uses escaped native diagnostics;
 these diagnostics do not implement stdout or stderr. An optional role 2 SEND EndpointGate supplies namespace authority. Without it,
 Open returns ENOSYS. The fallible descriptor registry reserves metadata before
-Open and pins records across operations and close. Descriptors 0..2 remain
-uninstalled. Valid regular files return ENOTTY from isatty; absent descriptors
+Open and pins records across operations and close. Descriptors 0..2 are initially
+uninstalled; explicit duplication can populate them. Valid regular files return ENOTTY from isatty; absent descriptors
 return EBADF. See the [file contract](../../../docs/decisions/0040-service-backed-files.md)
 for RPC limits, runtime scratch addresses and accepted-operation ownership.
 
@@ -31,6 +31,13 @@ environment, errno and compiler TLS are per thread. The final application thread
 exits through provider exit(0), including atexit/global cleanup. The initial
 thread has no native self-control grant and cannot be joined or detached through
 this profile. POSIX attributes, cancellation and dynamic TLS remain unsupported.
+
+Descriptor entries now share an open-description owner for the gate, request
+sequence, I/O lock and uncertain state. The private runtime hooks expose duplication, descriptor flags and filtered
+status queries. Fcntl/Dup2 tag adapters are guarded by the provider's POSIX
+option; the current ANSI build uses the private hooks. Actual status-mode changes remain unsupported. The process still has
+no exec/inheritance implementation or complete POSIX surface. See the
+[duplication contract](../../../docs/decisions/0042-descriptor-duplication.md).
 
 Private mappings accept null hints, anonymous private RW memory and offset zero.
 Each mapping owns one reservation containing a private metadata page followed by
@@ -72,7 +79,7 @@ native IPC failure rejects further I/O, so buffered cleanup cannot replay an
 uncertain write. Close remains available; undelivered failures may retry.
 `tests/file_runtime.py` runs the verbatim backend and native acceptance helper
 against host allocator/native-call doubles, including allocation failures,
-close/reuse interleavings and accepted-versus-undelivered cancellation. Its 30
+close/reuse interleavings and accepted-versus-undelivered cancellation. Its 46
 cases run at O0/O2 with ASan/UBSan; this evidence is separate from guest execution.
 
 The build disables stack-protector instrumentation. No AT_RANDOM entropy is

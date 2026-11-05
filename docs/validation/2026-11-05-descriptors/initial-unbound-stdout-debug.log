@@ -1,0 +1,200 @@
+CPU: x86-64-v3 hardware admitted cpu=0
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001decf000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007e000) bytes=512000
+MEM[1]: kind=0 [0x000000000007e000, 0x000000000009f000) bytes=135168
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001dd6c000) bytes=499564544
+MEM[7]: kind=5 [0x000000001dd6c000, 0x000000001ddec000) bytes=524288
+MEM[8]: kind=6 [0x000000001ddec000, 0x000000001de43000) bytes=356352
+MEM[9]: kind=0 [0x000000001de43000, 0x000000001de45000) bytes=8192
+MEM[10]: kind=6 [0x000000001de45000, 0x000000001de55000) bytes=65536
+MEM[11]: kind=0 [0x000000001de55000, 0x000000001de56000) bytes=4096
+MEM[12]: kind=5 [0x000000001de56000, 0x000000001de57000) bytes=4096
+MEM[13]: kind=6 [0x000000001de57000, 0x000000001de5e000) bytes=28672
+MEM[14]: kind=5 [0x000000001de5e000, 0x000000001de60000) bytes=8192
+MEM[15]: kind=6 [0x000000001de60000, 0x000000001de68000) bytes=32768
+MEM[16]: kind=5 [0x000000001de68000, 0x000000001de6a000) bytes=8192
+MEM[17]: kind=6 [0x000000001de6a000, 0x000000001de6e000) bytes=16384
+MEM[18]: kind=5 [0x000000001de6e000, 0x000000001de70000) bytes=8192
+MEM[19]: kind=6 [0x000000001de70000, 0x000000001de79000) bytes=36864
+MEM[20]: kind=5 [0x000000001de79000, 0x000000001de7b000) bytes=8192
+MEM[21]: kind=6 [0x000000001de7b000, 0x000000001de82000) bytes=28672
+MEM[22]: kind=5 [0x000000001de82000, 0x000000001de84000) bytes=8192
+MEM[23]: kind=6 [0x000000001de84000, 0x000000001de90000) bytes=49152
+MEM[24]: kind=5 [0x000000001de90000, 0x000000001de92000) bytes=8192
+MEM[25]: kind=6 [0x000000001de92000, 0x000000001de9e000) bytes=49152
+MEM[26]: kind=5 [0x000000001de9e000, 0x000000001dea0000) bytes=8192
+MEM[27]: kind=6 [0x000000001dea0000, 0x000000001dea6000) bytes=24576
+MEM[28]: kind=5 [0x000000001dea6000, 0x000000001dea8000) bytes=8192
+MEM[29]: kind=6 [0x000000001dea8000, 0x000000001dead000) bytes=20480
+MEM[30]: kind=5 [0x000000001dead000, 0x000000001deaf000) bytes=8192
+MEM[31]: kind=6 [0x000000001deaf000, 0x000000001deb1000) bytes=8192
+MEM[32]: kind=5 [0x000000001deb1000, 0x000000001deb3000) bytes=8192
+MEM[33]: kind=6 [0x000000001deb3000, 0x000000001deb6000) bytes=12288
+MEM[34]: kind=5 [0x000000001deb6000, 0x000000001deb8000) bytes=8192
+MEM[35]: kind=6 [0x000000001deb8000, 0x000000001deba000) bytes=8192
+MEM[36]: kind=5 [0x000000001deba000, 0x000000001debc000) bytes=8192
+MEM[37]: kind=6 [0x000000001debc000, 0x000000001dec0000) bytes=16384
+MEM[38]: kind=5 [0x000000001dec0000, 0x000000001decf000) bytes=61440
+MEM[39]: kind=6 [0x000000001decf000, 0x000000001e987000) bytes=11239424
+MEM[40]: kind=5 [0x000000001e987000, 0x000000001ff53000) bytes=22855680
+MEM[41]: kind=0 [0x000000001ff53000, 0x000000001ff74000) bytes=135168
+MEM[42]: kind=5 [0x000000001ff74000, 0x000000001ffdf000) bytes=438272
+MEM[43]: kind=1 [0x000000001ffdf000, 0x000000001ffe0000) bytes=4096
+MEM[44]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[45]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[46]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[47]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[48]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[49]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+FRAME metadata: start=0x7e000 end=0x82000 bytes=16384 bitmap_words=1907 summary_words=30 usable_frames=122033 managed_frames=122029
+MEM normalized: ranges=5 frames=122029
+AVAILABLE[0]: [0x0000000000082000, 0x000000000009f000) frames=29
+AVAILABLE[1]: [0x0000000000100000, 0x000000001dd6c000) frames=121964
+AVAILABLE[2]: [0x000000001de43000, 0x000000001de45000) frames=2
+AVAILABLE[3]: [0x000000001de55000, 0x000000001de56000) frames=1
+AVAILABLE[4]: [0x000000001ff53000, 0x000000001ff74000) frames=33
+FRAME: metadata reservation excluded
+PCI: function bus=0 slot=0 function=0 vendor=0x8086 device=0x29c0 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=1 function=0 vendor=0x1234 device=0x1111 class=0x03 command=0x0103 bars=6
+PCI: function bus=0 slot=2 function=0 vendor=0x8086 device=0x10d3 class=0x02 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=0 vendor=0x8086 device=0x2918 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=2 vendor=0x8086 device=0x2922 class=0x01 command=0x0107 bars=6
+PCI: function bus=0 slot=31 function=3 vendor=0x8086 device=0x2930 class=0x0c command=0x0103 bars=6
+PCI: inventory complete functions=6 virtio_block=0 command_unchanged=true
+HEAP: packed objects=128 bytes=64 backing_pages=8 baseline_pages=128 retained_pages=2
+HEAP: alignment/reuse/failure OK
+FRAME: ready total=122029 free=122027
+FRAME: alloc/release OK total=122029 free=122027
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=122027
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=13
+DMA: unpublished buffer zeroing and retirement OK pages=3
+CLOCK: HPET monotonic ready lapic_counts=622181 sample_ns=10172850
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+GATE: final process handle retirement wakes receiver without polling
+GATE: layout endpoint=312 object=328
+GATE: labels lifetime delegation quota and retirement OK
+GATE: queued send call and accepted timeout loans OK cases=3
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+REPLYCAPS: atomic grants quota timeout and retirement OK cases=6
+REPLYCAPS: legacy exchange register inputs preserved
+ELF: module validated bytes=13240 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=296 xsave=true avx=true
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=19
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: runtime-owned admission rollback and lifetime OK
+WAIT: pending thread retirement cancels word
+WAIT: expired word precedes wake admission
+WAIT: unbounded word idle preserves registration
+SMP: online=1 discovered=1 limit=255
+HEAP: concurrent allocation and retirement OK cpus=1
+USERDIAG: process=0x100000001 bytes=20 text=C native calls ready
+USERDIAG: process=0x100000001 bytes=60 text=\x0aPANIC\x0d\x1b\\\x00\x7f\x80ABC\x0aABI: startup and execution resources retired
+USERDIAG: process=0x100000001 bytes=256 text=DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+USERLOG: process=0x100000001 event=98 value=1
+USERDIAG: process=0x100000001 bytes=28 text=Rust diagnostic bridge ready
+USERLOG: process=0x100000001 event=100 value=1
+USERLOG: process=0x100000001 event=101 value=2
+USERLOG: process=0x100000001 event=102 value=1
+THREAD: created id=0x200000002 process=0x100000001
+THREAD: created id=0x300000002 process=0x100000001
+USERLOG: process=0x100000001 event=99 value=2
+USERLOG: process=0x100000001 event=94 value=1
+THREAD: created id=0x400000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+USERLOG: process=0x100000001 event=94 value=2
+USERLOG: process=0x100000001 event=97 value=1
+USERLOG: process=0x100000001 event=95 value=1
+THREAD: created id=0x500000002 process=0x100000001
+THREAD: created id=0x200000003 process=0x100000001
+THREAD: created id=0x600000002 process=0x100000001
+THREAD: created id=0x700000002 process=0x100000001
+THREAD: created id=0x800000002 process=0x100000001
+THREAD: created id=0x900000002 process=0x100000001
+THREAD: created id=0xa00000002 process=0x100000001
+THREAD: created id=0x300000003 process=0x100000001
+USERLOG: process=0x100000001 event=96 value=1
+USERLOG: process=0x100000001 event=90 value=0
+USERLOG: process=0x100000001 event=90 value=1
+USERLOG: process=0x100000001 event=90 value=2
+TLS: ELF template and thread isolation OK threads=3
+ABI: v3 SysV C C++ Rust stack and state OK preemptions=4
+ABI: startup and execution resources retired
+VM: private reserve commit retirement OK
+WAIT: private atomic park wake retirement OK threads=13 halt=true
+THREAD: runtime-owned stack TLS and rounding OK threads=2
+CABI: native C calls and diagnostic retirement OK
+CTHREAD: native C create join and backing retirement OK threads=2
+CIPC: C Rust capability and shared memory retirement OK
+CREPLY: C Rust capability reply retirement OK caps=2
+CGATE: C Rust labels closure and retirement OK
+USERDIAG: process=0x100000002 bytes=42 text=mlibc: Cryolite value=42 hex=2a float=3.25
+USERLOG: process=0x100000002 event=212 value=1
+USERLOG: process=0x100000002 event=212 value=1001
+USERLOG: process=0x100000002 event=212 value=10192
+USERLOG: process=0x100000002 event=212 value=6096
+USERLOG: process=0x100000002 event=212 value=4048
+USERLOG: process=0x100000002 event=212 value=3024
+USERLOG: process=0x100000002 event=212 value=2512
+USERLOG: process=0x100000002 event=212 value=2256
+USERLOG: process=0x100000002 event=212 value=2128
+USERLOG: process=0x100000002 event=212 value=2064
+USERLOG: process=0x100000002 event=212 value=2032
+USERLOG: process=0x100000002 event=212 value=2016
+USERLOG: process=0x100000002 event=212 value=2008
+USERLOG: process=0x100000002 event=212 value=2004
+USERLOG: process=0x100000002 event=212 value=2002
+USERLOG: process=0x100000002 event=212 value=2001
+USERLOG: process=0x100000002 event=212 value=2
+USERLOG: process=0x100000002 event=212 value=3
+USERLOG: process=0x100000002 event=212 value=4
+USERLOG: process=0x100000002 event=212 value=5
+USERLOG: process=0x100000002 event=212 value=6
+USERLOG: process=0x100000002 event=210 value=1
+USERLOG: process=0x100000002 event=214 value=1
+USERLOG: process=0x100000002 event=217 value=856
+
+PANIC
+file: kernel/image/src/runtime/libc.rs
+line: 0x00000000000000a7
+message: assertion `left != right` failed: Libc descriptor probe failed at stage 856
+  left: 217
+ right: 217

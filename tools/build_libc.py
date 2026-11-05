@@ -198,13 +198,13 @@ def main():
     artifact = build / "libc-probe"
     run(["clang", *FLAGS, "-O2", "-Wall", "-Wextra", "-Werror", "-nostdinc", "-isystem", sysroot / "usr/include",
          "-c", probe / "main.c", "-o", build / "probe.o"])
-    for name in ("allocator.c", "allocator_entry.S", "provider_threads.c", "provider_stdio.c", "provider_files.c"):
+    for name in ("allocator.c", "allocator_entry.S", "provider_threads.c", "provider_stdio.c", "provider_files.c", "provider_descriptors.c"):
         run(["clang", *FLAGS, "-O2", "-fno-builtin", "-nostdinc", "-isystem", sysroot / "usr/include",
              "-Wall", "-Wextra", "-Werror", "-c", probe / name, "-o", build / f"{name}.o"])
     run(["ld.lld", "--static", "--gc-sections", "--build-id=none", "-zmax-page-size=0x1000",
          "-T", probe / "linker.ld", configured / "sysdeps/cryolite/crt1.o", build / "probe.o",
          build / "allocator.c.o", build / "allocator_entry.S.o",
-         build / "provider_threads.c.o", build / "provider_stdio.c.o", build / "provider_files.c.o",
+         build / "provider_threads.c.o", build / "provider_stdio.c.o", build / "provider_files.c.o", build / "provider_descriptors.c.o",
          "--start-group", sysroot / "usr/lib/libc.a", allocator, "--end-group", "-o", artifact])
     assembly = subprocess.check_output(["objdump", "-d", "-M", "intel", str(artifact)], text=True)
     symbols = subprocess.check_output(["llvm-nm", str(artifact)], text=True)

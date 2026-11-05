@@ -35,6 +35,9 @@ pub(crate) fn check(
     kryo_hal::emergency_write_str("LIBCTHREAD: last exit callbacks and wait quota recovery OK\n");
     kryo_hal::emergency_write_str("LIBCSTDIO: buffer allocation failure and recovery OK runs=3\n");
     kryo_hal::emergency_write_str("LIBCFILE: C Rust open read write seek and closure OK runs=3\n");
+    kryo_hal::emergency_write_str(
+        "LIBCFD: shared descriptions dup flags and replacement OK runs=3\n",
+    );
 }
 
 fn run(
@@ -132,7 +135,7 @@ fn run(
         let owner = tasks.process_for(task).unwrap();
         tasks.wake(service.task).unwrap();
         let mut calls = CallStats::default();
-        let mut events = [false; 7];
+        let mut events = [false; 8];
         let mut status = None;
         let mut service_status = None;
         let mut snapshots = [None; 2];
@@ -161,6 +164,11 @@ fn run(
                 assert_ne!(event, 209, "Libc probe failed at stage {}", value);
                 assert_ne!(event, 211, "Libc stdio probe failed at stage {}", value);
                 assert_ne!(event, 215, "Libc file probe failed at stage {}", value);
+                assert_ne!(
+                    event, 217,
+                    "Libc descriptor probe failed at stage {}",
+                    value
+                );
                 let index = match event {
                     200..=202 => {
                         assert_eq!(value, 1, "Invalid libc completion event {}", event);
@@ -181,6 +189,10 @@ fn run(
                     214 => {
                         assert_eq!(value, 1, "Libc file operations did not finish");
                         Some(6)
+                    }
+                    216 => {
+                        assert_eq!(value, 1, "Libc descriptor operations did not finish");
+                        Some(7)
                     }
                     212 => None,
                     206 | 207 => {

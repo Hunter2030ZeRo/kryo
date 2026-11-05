@@ -1,0 +1,18 @@
+{
+  "copied_files": 1870,
+  "changed_in_clone": [],
+  "mainstage_drift": [],
+  "compiled_drift": [],
+  "case": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc",
+  "evidence_sha256": "103f24c266aea09108bd20fa45ea4259112bc1bb963b5828b35c790368d19d14",
+  "source_manifest_sha256": "eb96ec2e8f1c5d962be42d7f14ced91f21b02a1441ba9c68fef4c6ef36dc79e6",
+  "descriptor_markers": [
+    "USERLOG: process=0x100000002 event=216 value=1",
+    "USERLOG: process=0x100000002 event=216 value=1",
+    "USERLOG: process=0x100000002 event=216 value=1",
+    "LIBCFD: shared descriptions dup flags and replacement OK runs=3"
+  ],
+  "provider_fingerprint": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+  "elf_sha256": "d55946a3f62ca0cfc57973bdc53b9bc7784dcae3aae06106fb58161a1bda0e48",
+  "packaged_elf_matches_metadata": true
+}

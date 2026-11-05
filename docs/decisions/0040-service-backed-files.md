@@ -17,12 +17,13 @@ The libc descriptor table grows fallibly. Descriptor lookup uses a bounds-checke
 array; final-record unlink still scans a cold list. Table storage retires with
 its final record or operation pin. It reserves local publication state
 before remote Open and publishes only after validating the complete reply and
-gate kind/rights. Descriptors 0, 1 and 2 remain reserved for future inherited
-streams; they currently return EBADF. A short table lock protects publication
-and operation pins; it is not held across IPC. Each live or pinned record owns
-a separate reusable mapping slot and an operation lock. Close removes the
+gate kind/rights. Open allocates from descriptor 3 in this profile. Descriptors 0, 1 and 2
+are initially absent, but explicit duplication can populate them; inherited
+streams remain separate work. A short table lock protects publication
+and operation pins; it is not held across IPC. Each live or pinned open description owns
+a reusable mapping slot and an operation lock, shared by its descriptor aliases. Close removes the
 numerical descriptor immediately; an in-flight operation retains the old record
-and gate, independently of numerical descriptor reuse. Final release closes
+and gate, independently of numerical descriptor reuse. Final description release closes
 the gate. The server releases description state on GateClosed only after its
 accepted work no longer uses it.
 

@@ -1,0 +1,2 @@
+shared-descriptor-flags: ../file-runtime-host/shared-descriptor-flags.cpp:1437: int main(): Assertion `__cryolite_file_control(alias, F_GETFD, 0, &result) == 0 && result == FD_CLOEXEC' failed.
+[rtk] ../file-runtime-host/shared-descriptor-flags: process terminated by signal 6

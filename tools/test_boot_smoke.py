@@ -23,8 +23,9 @@ class PciEvidenceTests(unittest.TestCase):
         failures = "LIBCTHREAD: last exit callbacks and wait quota recovery OK\n"
         stdio = "LIBCSTDIO: buffer allocation failure and recovery OK runs=3\n"
         files = "LIBCFILE: C Rust open read write seek and closure OK runs=3\n"
+        descriptors = "LIBCFD: shared descriptions dup flags and replacement OK runs=3\n"
         self.assertEqual(libc_checks("", False), {})
-        self.assertTrue(all(libc_checks(ready + retired + threads + failures + stdio + files, True).values()))
+        self.assertTrue(all(libc_checks(ready + retired + threads + failures + stdio + files + descriptors, True).values()))
         for invalid in (ready, retired, ready + ready + retired,
                         ready + retired + retired, ready.replace("runs=3", "runs=2") + retired,
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired):
@@ -44,6 +45,13 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + marker):
             self.assertFalse(libc_checks(invalid, True)["libc_file_service"])
         self.assertTrue(libc_checks(marker, True)["libc_file_service"])
+
+    def test_descriptor_marker_requires_one_trusted_complete_record(self):
+        marker = "LIBCFD: shared descriptions dup flags and replacement OK runs=3\n"
+        for invalid in ("", marker + marker, marker.replace("runs=3", "runs=2"),
+                        "USERDIAG: process=0x1 bytes=0 text=" + marker):
+            self.assertFalse(libc_checks(invalid, True)["libc_descriptors"])
+        self.assertTrue(libc_checks(marker, True)["libc_descriptors"])
 
     def test_libc_has_separate_evidence_and_diagnostic_scope(self):
         self.assertNotEqual(run_label("debug", abi_probe=True),

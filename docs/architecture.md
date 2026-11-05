@@ -177,6 +177,12 @@ probe connects to a volatile Ring 3 validation peer; production VFS, inherited
 streams, public POSIX descriptors, durable storage and mounted BetAFS remain
 pending. [ADR 0040](decisions/0040-service-backed-files.md) defines this boundary.
 
+The accepted Rust std direction exposes Unix APIs over Cryolite-specific
+platform implementations and owned ABI bindings. Generic Unix startup and
+pthread paths cannot be enabled before their contracts exist. The bootstrap
+target remains std=false; [ADR 0041](decisions/0041-cryolite-rust-std.md) records
+the required subsystem dispatch and actual Ring 3 validation.
+
 ## Isolation and recovery
 
 Mappings retain their backing memory. Closing a handle or terminating a service does not reclaim memory still referenced by another mapping, request, or device.

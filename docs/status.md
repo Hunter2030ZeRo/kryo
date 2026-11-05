@@ -2,6 +2,15 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[Descriptor duplication](decisions/0042-descriptor-duplication.md) extends the
+static provider with shared open-description ownership, descriptor-local flags
+and atomic replacement. The [validation record](validation/2026-11-05-descriptors/README.md)
+covers real C/Rust service execution and host failure cutpoints. POSIX as a whole
+remains disabled; inherited streams, exec and Rust std remain pending.
+The [Rust std platform direction](decisions/0041-cryolite-rust-std.md) now selects
+Unix APIs with Cryolite-specific implementations. The bootstrap target cfg and
+std=false metadata have not been changed.
+
 [BetAFS boundary verification](validation/2026-11-05-betafs-boundary/README.md)
 checks the actual independent engine against native block/file contracts using
 an isolated host harness. Separate QEMU tests cover the current Ring 3 block

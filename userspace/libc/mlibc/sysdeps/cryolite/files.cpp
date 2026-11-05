@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <cryolite/file-protocol.h>
 #include <cryolite/file-runtime.h>
@@ -13,21 +14,25 @@ constexpr uintptr_t loan_start = 0x200000000000;
 constexpr uintptr_t loan_end = 0x210000000000;
 constexpr uint64_t file_rights = KRYO_RIGHT_SEND | KRYO_RIGHT_DUP | KRYO_RIGHT_TRANSFER;
 
-struct File {
-    File *next;
+struct Description {
+    Description *next;
     uint64_t handle;
     uint64_t request;
     uintptr_t window;
     size_t references;
-    int descriptor;
     int flags;
     alignas(4) uint32_t operation_lock;
-    bool published;
     bool poisoned;
 };
 
-File *files;
-File **descriptors;
+struct Descriptor {
+    Description *owner;
+    int flags;
+    bool published;
+};
+
+Description *files;
+Descriptor *descriptors;
 size_t descriptor_capacity;
 alignas(4) uint32_t table_lock;
 
@@ -94,13 +99,50 @@ void close_handle(uint64_t handle) {
         fail();
 }
 
-File *reserve_file(int flags, int *error) {
-    auto record = static_cast<File *>(calloc(1, sizeof(File)));
+// The caller holds the table lock; moving slots never moves a description.
+int ensure_capacity(size_t descriptor) {
+    constexpr size_t maximum = static_cast<size_t>(INT_MAX) + 1;
+    if (descriptor >= maximum)
+        return EMFILE;
+    if (descriptor < descriptor_capacity)
+        return 0;
+    auto capacity = descriptor_capacity ? descriptor_capacity : 8;
+    while (capacity <= descriptor)
+        capacity = capacity <= maximum / 2 ? capacity * 2 : maximum;
+    auto table = static_cast<Descriptor *>(realloc(descriptors, capacity * sizeof(Descriptor)));
+    if (!table)
+        return ENOMEM;
+    for (size_t index = descriptor_capacity; index < capacity; ++index)
+        table[index] = {};
+    descriptors = table;
+    descriptor_capacity = capacity;
+    return 0;
+}
+
+int reserve_slot(int minimum, int *out) {
+    size_t descriptor = static_cast<size_t>(minimum);
+    while (descriptor < descriptor_capacity && descriptors[descriptor].owner)
+        ++descriptor;
+    if (auto error = ensure_capacity(descriptor))
+        return error;
+    *out = static_cast<int>(descriptor);
+    return 0;
+}
+
+Descriptor *find_descriptor(int descriptor) {
+    if (descriptor < 0 || static_cast<size_t>(descriptor) >= descriptor_capacity)
+        return nullptr;
+    auto entry = &descriptors[descriptor];
+    return entry->owner && entry->published ? entry : nullptr;
+}
+
+Description *reserve_file(int flags, int *descriptor, int *error) {
+    auto record = static_cast<Description *>(calloc(1, sizeof(Description)));
     if (!record) {
         *error = ENOMEM;
         return nullptr;
     }
-    record->flags = flags;
+    record->flags = flags & (O_ACCMODE | O_APPEND | O_NONBLOCK | O_DSYNC | O_RSYNC | O_SYNC);
     record->references = 1;
     record->request = 1;
     lock(&table_lock);
@@ -119,47 +161,24 @@ File *reserve_file(int flags, int *error) {
             return nullptr;
         }
     }
-    size_t descriptor = 3;
-    while (descriptor < descriptor_capacity && descriptors[descriptor])
-        ++descriptor;
-    if (descriptor == descriptor_capacity || !descriptor_capacity) {
-        constexpr size_t maximum = static_cast<size_t>(INT_MAX) + 1;
-        auto capacity = descriptor_capacity ? descriptor_capacity * 2 : 8;
-        if (capacity > maximum)
-            capacity = maximum;
-        if (descriptor >= maximum) {
-            unlock(&table_lock);
-            free(record);
-            *error = EMFILE;
-            return nullptr;
-        }
-        auto table = static_cast<File **>(realloc(descriptors, capacity * sizeof(File *)));
-        if (!table) {
-            unlock(&table_lock);
-            free(record);
-            *error = ENOMEM;
-            return nullptr;
-        }
-        for (size_t index = descriptor_capacity; index < capacity; ++index)
-            table[index] = nullptr;
-        descriptors = table;
-        descriptor_capacity = capacity;
+    *error = reserve_slot(3, descriptor);
+    if (*error) {
+        unlock(&table_lock);
+        free(record);
+        return nullptr;
     }
-    record->descriptor = static_cast<int>(descriptor);
     record->window = window;
     record->next = files;
     files = record;
-    descriptors[descriptor] = record;
+    descriptors[*descriptor] = {record, flags & O_CLOEXEC ? FD_CLOEXEC : 0, false};
     unlock(&table_lock);
     return record;
 }
 
-File *pin_file(int descriptor) {
+Description *pin_file(int descriptor) {
     lock(&table_lock);
-    auto record = descriptor >= 3 && static_cast<size_t>(descriptor) < descriptor_capacity
-        ? descriptors[descriptor] : nullptr;
-    if (record && !record->published)
-        record = nullptr;
+    auto entry = find_descriptor(descriptor);
+    auto record = entry ? entry->owner : nullptr;
     if (record) {
         if (record->references == SIZE_MAX)
             fail();
@@ -169,7 +188,7 @@ File *pin_file(int descriptor) {
     return record;
 }
 
-void release_file(File *record) {
+void release_file(Description *record) {
     lock(&table_lock);
     if (--record->references) {
         unlock(&table_lock);
@@ -179,9 +198,7 @@ void release_file(File *record) {
     while (*link != record)
         link = &(*link)->next;
     *link = record->next;
-    if (descriptors[record->descriptor] == record)
-        descriptors[record->descriptor] = nullptr;
-    File **retired_table = nullptr;
+    Descriptor *retired_table = nullptr;
     if (!files) {
         retired_table = descriptors;
         descriptors = nullptr;
@@ -194,7 +211,7 @@ void release_file(File *record) {
 }
 
 struct Operation {
-    explicit Operation(File *record) : file{record} {
+    explicit Operation(Description *record) : file{record} {
         if (file)
             lock(&file->operation_lock);
     }
@@ -206,11 +223,11 @@ struct Operation {
         }
     }
 
-    File *file;
+    Description *file;
 };
 
 struct Loan {
-    explicit Loan(File *record) : file{record} {}
+    explicit Loan(Description *record) : file{record} {}
 
     int create() {
         auto result = kryo_memory_create(1);
@@ -244,12 +261,12 @@ struct Loan {
             output[index] = input[index];
     }
 
-    File *file;
+    Description *file;
     uint64_t handle = 0;
     bool mapped = false;
 };
 
-int next_request(File *file, uint64_t *id) {
+int next_request(Description *file, uint64_t *id) {
     if (file->poisoned)
         return EIO;
     if (file->request == UINT64_MAX)
@@ -265,7 +282,7 @@ void discard_grants(const kryo_ipc_result &reply) {
         close_handle(reply.handles[index]);
 }
 
-int validate_reply(File *file, const kryo_ipc_result &reply, uint64_t id, bool opening) {
+int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id, bool opening) {
     if (reply.status) {
         if (kryo_ipc_accepted(reply))
             file->poisoned = true;
@@ -375,7 +392,8 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
     if (length > KRYO_FILE_PAGE_SIZE)
         return ENAMETOOLONG;
     int error = 0;
-    auto file = reserve_file(flags, &error);
+    int reserved_descriptor;
+    auto file = reserve_file(flags, &reserved_descriptor, &error);
     if (!file)
         return error;
     {
@@ -393,14 +411,16 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
         }
     }
     if (error) {
+        lock(&table_lock);
+        descriptors[reserved_descriptor] = {};
+        unlock(&table_lock);
         release_file(file);
         return error;
     }
-    auto published_descriptor = file->descriptor;
     lock(&table_lock);
-    file->published = true;
+    descriptors[reserved_descriptor].published = true;
     unlock(&table_lock);
-    *descriptor = published_descriptor;
+    *descriptor = reserved_descriptor;
     return 0;
 }
 
@@ -437,17 +457,132 @@ extern "C" int __cryolite_file_seek(int descriptor, off_t offset, int whence, of
 
 extern "C" int __cryolite_file_close(int descriptor) {
     lock(&table_lock);
-    auto file = descriptor >= 3 && static_cast<size_t>(descriptor) < descriptor_capacity
-        ? descriptors[descriptor] : nullptr;
-    if (!file || !file->published) {
+    auto entry = find_descriptor(descriptor);
+    if (!entry) {
         unlock(&table_lock);
         return EBADF;
     }
-    file->published = false;
-    descriptors[descriptor] = nullptr;
+    auto file = entry->owner;
+    *entry = {};
     unlock(&table_lock);
     release_file(file);
     return 0;
+}
+
+extern "C" int __cryolite_file_dup(int descriptor, int minimum, int flags, int *out) {
+    lock(&table_lock);
+    auto entry = find_descriptor(descriptor);
+    if (!entry) {
+        unlock(&table_lock);
+        return EBADF;
+    }
+    if (minimum < 0 || (flags & ~FD_CLOEXEC)) {
+        unlock(&table_lock);
+        return EINVAL;
+    }
+    auto file = entry->owner;
+    if (file->references == SIZE_MAX) {
+        unlock(&table_lock);
+        return ENOMEM;
+    }
+    int result;
+    if (auto error = reserve_slot(minimum, &result)) {
+        unlock(&table_lock);
+        return error;
+    }
+    ++file->references;
+    descriptors[result] = {file, flags, true};
+    unlock(&table_lock);
+    *out = result;
+    return 0;
+}
+
+extern "C" int __cryolite_file_dup2(int descriptor, int flags, int destination) {
+    lock(&table_lock);
+    auto entry = find_descriptor(descriptor);
+    if (!entry || destination < 0) {
+        unlock(&table_lock);
+        return EBADF;
+    }
+    if ((flags & ~O_CLOEXEC) || (descriptor == destination && flags)) {
+        unlock(&table_lock);
+        return EINVAL;
+    }
+    if (descriptor == destination) {
+        unlock(&table_lock);
+        return 0;
+    }
+    auto file = entry->owner;
+    if (file->references == SIZE_MAX) {
+        unlock(&table_lock);
+        return ENOMEM;
+    }
+    if (auto error = ensure_capacity(static_cast<size_t>(destination))) {
+        unlock(&table_lock);
+        return error;
+    }
+    auto &target = descriptors[destination];
+    // An in-progress Open owns its unpublished numerical reservation.
+    if (target.owner && !target.published) {
+        unlock(&table_lock);
+        return EBUSY;
+    }
+    auto victim = target.owner;
+    ++file->references;
+    target = {file, flags & O_CLOEXEC ? FD_CLOEXEC : 0, true};
+    unlock(&table_lock);
+    if (victim)
+        release_file(victim);
+    return 0;
+}
+
+extern "C" int __cryolite_file_control(int descriptor, int command, int argument, int *out) {
+    if (command == F_DUPFD || command == F_DUPFD_CLOEXEC)
+        return __cryolite_file_dup(descriptor, argument,
+            command == F_DUPFD_CLOEXEC ? FD_CLOEXEC : 0, out);
+    lock(&table_lock);
+    auto entry = find_descriptor(descriptor);
+    if (!entry) {
+        unlock(&table_lock);
+        return EBADF;
+    }
+    int result = 0;
+    int error = 0;
+    switch (command) {
+        case F_GETFD:
+            result = entry->flags;
+            break;
+        case F_SETFD:
+            if (argument & ~FD_CLOEXEC)
+                error = EINVAL;
+            else
+                entry->flags = argument;
+            break;
+        case F_GETFL:
+            result = entry->owner->flags;
+            break;
+        case F_SETFL:
+            if (argument & ~0x1ffff)
+                error = EINVAL;
+            else if ((argument ^ entry->owner->flags)
+                    & (O_APPEND | O_NONBLOCK | O_DSYNC | O_RSYNC | O_SYNC))
+                error = ENOTSUP;
+            break;
+        case F_GETLK:
+        case F_SETLK:
+        case F_SETLKW:
+        case F_GETOWN:
+        case F_SETOWN:
+            error = ENOTSUP;
+            break;
+        default:
+            error = EINVAL;
+            break;
+    }
+    unlock(&table_lock);
+    if (!error)
+        *out = result;
+    return error;
 }
 
 extern "C" int __cryolite_file_isatty(int descriptor) {
@@ -483,5 +618,25 @@ int Sysdeps<Close>::operator()(int descriptor) {
 int Sysdeps<Isatty>::operator()(int descriptor) {
     return __cryolite_file_isatty(descriptor);
 }
+
+#if __MLIBC_POSIX_OPTION
+int Sysdeps<Dup2>::operator()(int descriptor, int flags, int destination) {
+    return __cryolite_file_dup2(descriptor, flags, destination);
+}
+
+int Sysdeps<Fcntl>::operator()(int descriptor, int command, va_list arguments, int *result) {
+    int argument = 0;
+    switch (command) {
+        case F_DUPFD:
+        case F_DUPFD_CLOEXEC:
+        case F_SETFD:
+        case F_SETFL:
+        case F_SETOWN:
+            argument = va_arg(arguments, int);
+            break;
+    }
+    return __cryolite_file_control(descriptor, command, argument, result);
+}
+#endif
 
 } // namespace mlibc

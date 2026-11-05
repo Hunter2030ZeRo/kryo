@@ -26,6 +26,22 @@ CASES = [
     "initial descriptor-table allocation failure precedes Open",
     "failed table growth preserves existing descriptors", "table growth preserves indexed lookup and hole reuse",
     "accepted write failure blocks automatic retry", "undelivered write failure remains retryable",
+    "aliases retain one gate through final descriptor close",
+    "descriptor flags are local and status flags exclude creation bits",
+    "F_DUPFD chooses the lowest available descriptor including standard slots",
+    "dup2 replaces a target atomically and clears descriptor flags",
+    "dup2 self duplication preserves flags and validates inputs",
+    "F_SETFL ignores immutable bits and rejects real status changes",
+    "descriptor control rejects invalid and unsupported commands",
+    "duplicate table growth failure preserves live descriptors",
+    "duplicate table growth and hole reuse preserve shared descriptions",
+    "dup2 cannot steal an unpublished Open reservation",
+    "dup2 replacement retains an in-flight target operation",
+    "closing aliases during RPC preserves the old description and window",
+    "accepted failure poisons every alias without replay",
+    "aliases share gate identity and request sequence",
+    "alias operations serialize access to their scratch mapping",
+    "duplicate publication never dereferences a concurrently closed description",
 ]
 
 PREFIX = r"""
@@ -48,6 +64,8 @@ static unsigned memories;
 static unsigned maps;
 static unsigned open_calls;
 static unsigned calls;
+static uint64_t last_rpc_handle;
+static uint64_t last_rpc_id;
 static unsigned gate_closes;
 static unsigned memory_closes;
 static unsigned park_calls;
@@ -174,9 +192,11 @@ static kryo_handle_info_result kryo_handle_info(uint64_t) {
         static_cast<uint64_t>(response_fault == 5 ? KRYO_RIGHT_SEND
             : KRYO_RIGHT_SEND | KRYO_RIGHT_DUP | KRYO_RIGHT_TRANSFER)};
 }
-static kryo_ipc_result kryo_ipc_call_exchange(uint64_t, kryo_message message,
+static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message message,
         const kryo_grant *grants, size_t count, size_t capacity) {
     ++calls;
+    last_rpc_handle = endpoint;
+    last_rpc_id = message.words[1];
     auto rpc_address = mapped_address;
     auto operation = message.words[0] & UINT32_MAX;
     if (operation == KRYO_FILE_OPEN)
@@ -278,11 +298,62 @@ static void reenter() {
     release_file(newer);
 }
 static void close_published() {
-    if (files && files->published) {
-        auto descriptor = files->descriptor;
-        during_unlock = nullptr;
-        assert(__cryolite_file_close(descriptor) == 0);
+    for (size_t descriptor = 0; descriptor < descriptor_capacity; ++descriptor) {
+        if (descriptors[descriptor].owner && descriptors[descriptor].published) {
+            during_unlock = nullptr;
+            assert(__cryolite_file_close(static_cast<int>(descriptor)) == 0);
+            return;
+        }
     }
+}
+static int busy_source;
+static int busy_target;
+static Description *busy_owner;
+static void try_reserved_target() {
+    busy_target = -1;
+    for (size_t index = 0; index < descriptor_capacity; ++index) {
+        if (descriptors[index].owner && !descriptors[index].published) {
+            busy_target = static_cast<int>(index);
+            busy_owner = descriptors[index].owner;
+            break;
+        }
+    }
+    assert(busy_target >= 0);
+    assert(__cryolite_file_dup2(busy_source, 0, busy_target) == EBUSY);
+    int result = 19;
+    assert(__cryolite_file_dup(busy_target, 0, 0, &result) == EBADF && result == 19);
+    assert(descriptors[busy_target].owner == busy_owner && !descriptors[busy_target].published);
+}
+static int replace_source;
+static int replace_target;
+static uint64_t replaced_gate;
+static void replace_active_target() {
+    auto before = gate_closes;
+    assert(__cryolite_file_dup2(replace_source, 0, replace_target) == 0);
+    assert(gate_closes == before);
+}
+static int active_source;
+static int active_alias;
+static int active_replacement;
+static uintptr_t active_window;
+static void close_active_aliases() {
+    auto before = gate_closes;
+    assert(__cryolite_file_close(active_source) == 0);
+    assert(__cryolite_file_close(active_alias) == 0);
+    assert(gate_closes == before);
+    active_replacement = opened();
+    assert(active_replacement == active_source);
+    auto current = pin_file(active_replacement);
+    assert(current->window != active_window);
+    release_file(current);
+}
+static uint32_t *shared_lock;
+static void release_shared_operation() { unlock(shared_lock); }
+static void close_all_published() {
+    during_unlock = nullptr;
+    for (size_t descriptor = 0; descriptor < descriptor_capacity; ++descriptor)
+        if (descriptors[descriptor].owner && descriptors[descriptor].published)
+            assert(__cryolite_file_close(static_cast<int>(descriptor)) == 0);
 }
 static uint32_t contended_word;
 static void release_other_owner() { unlock(&contended_word); }
@@ -516,8 +587,8 @@ int main() {
     assert(descriptor_capacity == 32);
     for (unsigned index = 0; index != 17; ++index) {
         old = pin_file(occupied[index]);
-        assert(old && descriptors[occupied[index]] == old
-            && old->descriptor == occupied[index]);
+        assert(old && descriptors[occupied[index]].owner == old
+            && descriptors[occupied[index]].published);
         release_file(old);
     }
     assert(__cryolite_file_close(occupied[2]) == 0);
@@ -552,7 +623,182 @@ int main() {
     assert(__cryolite_file_close(descriptor) == 0);
     clean();
 
-    assert(case_number == 30);
+    int alias = -1;
+    int result = -1;
+    descriptor = opened();
+    before = gate_closes;
+    assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0 && alias == descriptor + 1);
+    auto shared = pin_file(descriptor);
+    auto same = pin_file(alias);
+    assert(shared == same);
+    release_file(same); release_file(shared);
+    assert(__cryolite_file_close(descriptor) == 0 && gate_closes == before);
+    assert(__cryolite_file_read(alias, data, 1, &amount) == 0 && amount == 1);
+    assert(__cryolite_file_close(alias) == 0 && gate_closes == before + 1);
+    clean();
+
+    descriptor = opened(O_RDWR | O_CREAT | O_TRUNC | O_APPEND | O_CLOEXEC);
+    assert(__cryolite_file_control(descriptor, F_GETFD, 0, &result) == 0 && result == FD_CLOEXEC);
+    assert(__cryolite_file_control(descriptor, F_GETFL, 0, &result) == 0 && result == (O_RDWR | O_APPEND));
+    assert(__cryolite_file_control(descriptor, F_DUPFD, 3, &alias) == 0);
+    assert(__cryolite_file_control(alias, F_GETFD, 0, &result) == 0 && result == 0);
+    assert(__cryolite_file_control(alias, F_SETFD, FD_CLOEXEC, &result) == 0 && result == 0);
+    assert(__cryolite_file_control(descriptor, F_SETFD, 0, &result) == 0);
+    assert(__cryolite_file_control(alias, F_GETFD, 0, &result) == 0 && result == FD_CLOEXEC);
+    assert(__cryolite_file_control(descriptor, F_GETFD, 0, &result) == 0 && result == 0);
+    assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    clean();
+
+    descriptor = opened();
+    int standard[3];
+    for (int index = 0; index != 3; ++index) {
+        assert(__cryolite_file_control(descriptor, F_DUPFD, 0, &standard[index]) == 0);
+        assert(standard[index] == index);
+        assert(__cryolite_file_isatty(standard[index]) == ENOTTY);
+    }
+    assert(__cryolite_file_control(descriptor, F_DUPFD_CLOEXEC, 17, &alias) == 0 && alias == 17);
+    assert(__cryolite_file_control(alias, F_GETFD, 0, &result) == 0 && result == FD_CLOEXEC);
+    assert(__cryolite_file_close(standard[1]) == 0);
+    assert(__cryolite_file_dup(descriptor, 0, 0, &standard[1]) == 0 && standard[1] == 1);
+    for (auto fd : standard) assert(__cryolite_file_close(fd) == 0);
+    assert(__cryolite_file_close(alias) == 0 && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    auto victim = opened(O_RDONLY | O_CLOEXEC);
+    auto original = pin_file(descriptor);
+    before = gate_closes;
+    assert(__cryolite_file_dup2(descriptor, 0, victim) == 0 && gate_closes == before + 1);
+    same = pin_file(victim); assert(same == original); release_file(same); release_file(original);
+    assert(__cryolite_file_control(victim, F_GETFD, 0, &result) == 0 && result == 0);
+    assert(__cryolite_file_control(victim, F_GETFL, 0, &result) == 0 && result == O_RDWR);
+    assert(__cryolite_file_close(descriptor) == 0);
+    assert(__cryolite_file_write(victim, data, 1, &amount) == 0 && amount == 1);
+    assert(__cryolite_file_close(victim) == 0);
+    clean();
+
+    descriptor = opened(O_RDWR | O_CLOEXEC);
+    assert(__cryolite_file_dup2(descriptor, 0, descriptor) == 0);
+    assert(__cryolite_file_control(descriptor, F_GETFD, 0, &result) == 0 && result == FD_CLOEXEC);
+    assert(__cryolite_file_dup2(descriptor, O_CLOEXEC, descriptor) == EINVAL);
+    assert(__cryolite_file_dup2(descriptor, 1, 4) == EINVAL);
+    assert(__cryolite_file_dup2(descriptor, 0, -1) == EBADF);
+    assert(__cryolite_file_dup2(-1, 0, 4) == EBADF);
+    assert(__cryolite_file_dup(descriptor, -1, 0, &alias) == EINVAL);
+    assert(__cryolite_file_dup(descriptor, 0, 2, &alias) == EINVAL);
+    assert(__cryolite_file_dup(-1, 0, 0, &alias) == EBADF);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(O_RDWR);
+    assert(__cryolite_file_control(descriptor, F_SETFL, 3 | O_EXCL | O_DIRECTORY | O_CLOEXEC, &result) == 0);
+    for (int flag : {O_APPEND, O_NONBLOCK, O_SYNC, O_DSYNC, O_RSYNC})
+        assert(__cryolite_file_control(descriptor, F_SETFL, O_RDWR | flag, &result) == ENOTSUP);
+    assert(__cryolite_file_control(descriptor, F_SETFL, O_RDWR | 0x20000, &result) == EINVAL);
+    assert(__cryolite_file_control(descriptor, F_GETFL, 0, &result) == 0 && result == O_RDWR);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_RDWR | O_APPEND);
+    assert(__cryolite_file_control(descriptor, F_SETFL, O_RDONLY | O_APPEND | O_TRUNC, &result) == 0);
+    assert(__cryolite_file_control(descriptor, F_SETFL, O_RDWR, &result) == ENOTSUP);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); result = 123;
+    assert(__cryolite_file_control(descriptor, F_SETFD, 2, &result) == EINVAL && result == 123);
+    for (int command : {F_GETLK, F_SETLK, F_SETLKW, F_GETOWN, F_SETOWN})
+        assert(__cryolite_file_control(descriptor, command, 0, &result) == ENOTSUP && result == 123);
+    assert(__cryolite_file_control(descriptor, 99, 0, &result) == EINVAL && result == 123);
+    assert(__cryolite_file_control(-1, F_GETFD, 0, &result) == EBADF);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); before = gate_closes;
+    auto saved_capacity = descriptor_capacity;
+    table_allocation_failure = true; alias = 123;
+    assert(__cryolite_file_dup(descriptor, 17, 0, &alias) == ENOMEM && alias == 123);
+    assert(__cryolite_file_dup2(descriptor, 0, 17) == ENOMEM);
+    assert(descriptor_capacity == saved_capacity && gate_closes == before);
+    assert(__cryolite_file_seek(descriptor, 1, SEEK_SET, &position) == 0 && position == 1);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    int duplicated[17];
+    for (unsigned index = 0; index != 17; ++index) {
+        assert(__cryolite_file_dup(descriptor, 3, 0, &duplicated[index]) == 0);
+        assert(duplicated[index] == static_cast<int>(index + 4));
+    }
+    assert(descriptor_capacity == 32);
+    assert(__cryolite_file_close(duplicated[3]) == 0);
+    assert(__cryolite_file_dup(descriptor, 3, 0, &duplicated[3]) == 0 && duplicated[3] == 7);
+    for (auto fd : duplicated) assert(__cryolite_file_close(fd) == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    busy_source = opened(); busy_target = -1;
+    during_call = try_reserved_target;
+    descriptor = opened();
+    assert(descriptor == busy_target);
+    original = pin_file(busy_source); same = pin_file(descriptor); assert(same != original);
+    release_file(same); release_file(original);
+    assert(__cryolite_file_close(busy_source) == 0 && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    replace_source = opened(); replace_target = opened();
+    old = pin_file(replace_target); replaced_gate = old->handle; release_file(old);
+    before = gate_closes;
+    during_call = replace_active_target;
+    assert(__cryolite_file_read(replace_target, data, 1, &amount) == 0 && amount == 1);
+    assert(last_rpc_handle == replaced_gate && gate_closes == before + 1);
+    original = pin_file(replace_source); same = pin_file(replace_target); assert(original == same);
+    release_file(same); release_file(original);
+    assert(__cryolite_file_close(replace_source) == 0 && __cryolite_file_close(replace_target) == 0);
+    clean();
+
+    active_source = opened(); assert(__cryolite_file_dup(active_source, 3, 0, &active_alias) == 0);
+    old = pin_file(active_source); active_window = old->window; release_file(old);
+    before = gate_closes; during_call = close_active_aliases;
+    assert(__cryolite_file_read(active_source, data, 1, &amount) == 0 && amount == 1);
+    assert(gate_closes == before + 1);
+    assert(__cryolite_file_close(active_replacement) == 0);
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+    transport_failure = 1; transport_status = KRYO_STATUS_CANCELLED;
+    assert(__cryolite_file_write(descriptor, data, 1, &amount) == ECANCELED);
+    transport_failure = 0; before = calls;
+    assert(__cryolite_file_write(alias, data, 1, &amount) == EIO);
+    assert(__cryolite_file_read(alias, data, 1, &amount) == EIO);
+    assert(__cryolite_file_seek(alias, 0, SEEK_CUR, &position) == EIO && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+    assert(__cryolite_file_read(descriptor, data, 1, &amount) == 0);
+    auto first_handle = last_rpc_handle;
+    auto first_id = last_rpc_id;
+    assert(__cryolite_file_read(alias, data, 1, &amount) == 0);
+    assert(last_rpc_handle == first_handle && last_rpc_id == first_id + 1);
+    assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+    old = pin_file(descriptor); shared_lock = &old->operation_lock; lock(shared_lock);
+    same = pin_file(alias); before_park = park_calls; during_park = release_shared_operation;
+    { Operation operation{same}; assert(park_calls == before_park + 1); }
+    release_file(old);
+    assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    clean();
+
+    descriptor = opened(); during_unlock = close_all_published;
+    assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+    assert(__cryolite_file_close(descriptor) == EBADF && __cryolite_file_close(alias) == EBADF);
+    descriptor = opened(); victim = opened(); during_unlock = close_all_published;
+    assert(__cryolite_file_dup2(descriptor, 0, victim) == 0);
+    assert(__cryolite_file_close(descriptor) == EBADF && __cryolite_file_close(victim) == EBADF);
+    clean();
+
+    assert(case_number == 46);
     printf("file runtime: %u cases passed\n", case_number);
 }
 """
@@ -574,7 +820,7 @@ def main():
     protocol = protocol_path.read_text()
     public = (ROOT / "userspace/libc/abi/include/cryolite/file.h").read_text()
     flags = "\n".join(line for line in public.splitlines()
-                      if line.startswith("#define O_") or line.startswith("#define SEEK_"))
+                      if line.startswith(("#define O_", "#define SEEK_", "#define F_", "#define FD_")))
     header_at = PREFIX.index("static bool allocation_failure;")
     test = PREFIX[:header_at] + types + accepted_helper + protocol + flags + "\n" + PREFIX[header_at:] + body + SUFFIX
     test = test.replace("#include <assert.h>", "#include <assert.h>\n#include <initializer_list>")

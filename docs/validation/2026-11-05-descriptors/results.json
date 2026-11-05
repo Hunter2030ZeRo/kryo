@@ -1,0 +1,1203 @@
+{
+  "base_commit": "5303b3197dd282fb89993569a92d469fd6e03cc3",
+  "scope": "Implemented private descriptor backend and accepted std platform direction, not a Rust std port",
+  "python_tests": 38,
+  "c_cpp_checks": 43,
+  "file_runtime_cases": 46,
+  "stdio_cases": 25,
+  "source_files_matched": 1870,
+  "qemu": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc",
+      "evidence": {
+        "profile": "debug",
+        "cpu": "Haswell-noTSX",
+        "cpus": 1,
+        "memory": "512M",
+        "pci_probe": false,
+        "block_probe": false,
+        "block_readonly": false,
+        "abi_probe": true,
+        "libc_probe": true,
+        "memory_bytes": 536870912,
+        "rss_limit_bytes": 2147483648,
+        "peak_rss_bytes": 179679232,
+        "status": "passed",
+        "reason": "all boot markers observed",
+        "checks": {
+          "heap": true,
+          "growth": true,
+          "growth_oom": true,
+          "growth_retirement": true,
+          "frames": true,
+          "zeroing": true,
+          "paging": true,
+          "user_spaces": true,
+          "user_isolation": true,
+          "vm_rollback": true,
+          "preemption": true,
+          "capabilities": true,
+          "timer_drain": true,
+          "task_teardown": true,
+          "invalid_context": true,
+          "ipc": true,
+          "idle": true,
+          "shared_memory": true,
+          "cap_transfer": true,
+          "shared_fault": true,
+          "elf_native": true,
+          "extended_state": true,
+          "clock": true,
+          "deadlines": true,
+          "early_irq": true,
+          "launch": true,
+          "spawn": true,
+          "threads": true,
+          "thread_state": true,
+          "supervision": true,
+          "device_queue": true,
+          "device_expiry": true,
+          "device_retry": true,
+          "channel_creation": true,
+          "channel_retirement": true,
+          "native_services": true,
+          "startup_authority": true,
+          "startup_publication": true,
+          "supervisor_authority": true,
+          "relative_receive": true,
+          "resource_budgets": true,
+          "private_pending_cleanup": true,
+          "private_expiry_admission": true,
+          "private_untimed_idle": true,
+          "native_thread_rollback": true,
+          "reply_caps": true,
+          "legacy_exchange_registers": true,
+          "endpoint_gates": true,
+          "gate_loans": true,
+          "gate_process_retirement": true,
+          "device": true,
+          "heap_packing": true,
+          "heap_concurrent": true,
+          "client_budget_exhaustion": true,
+          "smp_online": true,
+          "smp_retired": true,
+          "smp_tlb": true,
+          "breakpoint": true,
+          "avx_context": true,
+          "cpu_baseline": true,
+          "native_abi": true,
+          "native_abi_retired": true,
+          "native_tls": true,
+          "native_private_vm": true,
+          "native_atomic_wait": true,
+          "native_runtime_threads": true,
+          "native_c_calls": true,
+          "native_c_threads": true,
+          "native_c_ipc": true,
+          "native_c_reply_caps": true,
+          "native_c_gates": true,
+          "native_c_diagnostics": true,
+          "libc_static_runtime": true,
+          "libc_retirement": true,
+          "libc_provider_threads": true,
+          "libc_thread_failures": true,
+          "libc_stdio_recovery": true,
+          "libc_file_service": true,
+          "libc_descriptors": true,
+          "frame_metadata": true,
+          "metadata_excluded": true,
+          "pci_inventory": true,
+          "dma_buffer_ownership": true
+        },
+        "mode": "boot-tests",
+        "logs": {
+          "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/build.stdout.log",
+          "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/build.stderr.log",
+          "debug": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/debug.log",
+          "stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/qemu.stdout.log",
+          "stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/qemu.stderr.log"
+        },
+        "guest_exit_verified": false,
+        "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+        "build_exit_code": 0,
+        "qemu_command": [
+          "qemu-system-x86_64",
+          "-M",
+          "q35,memory-backend=ram",
+          "-global",
+          "hpet.msi=on",
+          "-object",
+          "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+          "-overcommit",
+          "mem-lock=off",
+          "-accel",
+          "tcg,thread=multi",
+          "-smp",
+          "1",
+          "-m",
+          "512M",
+          "-display",
+          "none",
+          "-serial",
+          "none",
+          "-monitor",
+          "none",
+          "-no-reboot",
+          "-debugcon",
+          "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/debug.log",
+          "-cdrom",
+          "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-Haswell-noTSX-abi-libc/kryo.iso",
+          "-boot",
+          "d",
+          "-cpu",
+          "Haswell-noTSX"
+        ],
+        "qemu_pid": 1147,
+        "memory_observed": {
+          "metadata": {
+            "start": 516096,
+            "end": 532480,
+            "bytes": 16384,
+            "bitmap_words": 1907,
+            "summary_words": 30,
+            "usable_frames": 122033,
+            "managed_frames": 122029
+          },
+          "managed_frames": 122029,
+          "available": [
+            [
+              532480,
+              651264
+            ],
+            [
+              1048576,
+              500613120
+            ],
+            [
+              501493760,
+              501501952
+            ],
+            [
+              501567488,
+              501571584
+            ],
+            [
+              536162304,
+              536297472
+            ]
+          ],
+          "high_frames": [],
+          "tlb_backing": [
+            2097152,
+            2101248
+          ]
+        },
+        "boot_seconds": 40.469,
+        "qemu_stop": "host_sigterm",
+        "qemu_exit_code": 0,
+        "elapsed_seconds": 46.037
+      },
+      "provider_metadata": {
+        "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+        "profile": "debug",
+        "sources": {
+          "mlibc": {
+            "repository": "https://github.com/managarm/mlibc",
+            "revision": "07cfd943977737b8147c1289922c23479feef53d",
+            "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+            "archive_bytes": 966764
+          },
+          "frigg": {
+            "repository": "https://github.com/managarm/frigg",
+            "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+            "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+            "archive_bytes": 91405
+          },
+          "freestanding-c-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+            "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+            "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+            "archive_bytes": 12647
+          },
+          "freestanding-cxx-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+            "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+            "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+            "archive_bytes": 325796
+          },
+          "libsmarter": {
+            "repository": "https://github.com/managarm/libsmarter",
+            "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+            "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+            "archive_bytes": 4039
+          }
+        },
+        "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+        "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "source_inputs_sha256": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+        "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+        "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+        "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+        "codegen": {
+          "mmx": false,
+          "string_paths": "AVX2 without legacy dispatch"
+        },
+        "probe_sources": {
+          "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+          "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+          "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+          "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+          "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+          "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+          "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+          "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+        },
+        "allocator_sources": {
+          "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+          "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+          "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+          "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+          "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+          "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+          "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+        },
+        "image_sha256": "0f190160cedb78af2cd73eefd3b600e74800e2655f610f3de4c23d003d6cb301",
+        "image_bytes": 352680
+      },
+      "packaged_hashes_matched": true
+    },
+    {
+      "label": "release-max-smp4-abi-libc-block-ro",
+      "evidence": {
+        "profile": "release",
+        "cpu": "max",
+        "cpus": 4,
+        "memory": "512M",
+        "pci_probe": false,
+        "block_probe": true,
+        "block_readonly": true,
+        "abi_probe": true,
+        "libc_probe": true,
+        "memory_bytes": 536870912,
+        "rss_limit_bytes": 2147483648,
+        "peak_rss_bytes": 171065344,
+        "status": "passed",
+        "reason": "all boot markers observed",
+        "checks": {
+          "heap": true,
+          "growth": true,
+          "growth_oom": true,
+          "growth_retirement": true,
+          "frames": true,
+          "zeroing": true,
+          "paging": true,
+          "user_spaces": true,
+          "user_isolation": true,
+          "vm_rollback": true,
+          "preemption": true,
+          "capabilities": true,
+          "timer_drain": true,
+          "task_teardown": true,
+          "invalid_context": true,
+          "ipc": true,
+          "idle": true,
+          "shared_memory": true,
+          "cap_transfer": true,
+          "shared_fault": true,
+          "elf_native": true,
+          "extended_state": true,
+          "clock": true,
+          "deadlines": true,
+          "early_irq": true,
+          "launch": true,
+          "spawn": true,
+          "threads": true,
+          "thread_state": true,
+          "supervision": true,
+          "device_queue": true,
+          "device_expiry": true,
+          "device_retry": true,
+          "channel_creation": true,
+          "channel_retirement": true,
+          "native_services": true,
+          "startup_authority": true,
+          "startup_publication": true,
+          "supervisor_authority": true,
+          "relative_receive": true,
+          "resource_budgets": true,
+          "private_pending_cleanup": true,
+          "private_expiry_admission": true,
+          "private_untimed_idle": true,
+          "native_thread_rollback": true,
+          "reply_caps": true,
+          "legacy_exchange_registers": true,
+          "endpoint_gates": true,
+          "gate_loans": true,
+          "gate_process_retirement": true,
+          "device": true,
+          "heap_packing": true,
+          "heap_concurrent": true,
+          "client_budget_exhaustion": true,
+          "smp_online": true,
+          "smp_retired": true,
+          "smp_tlb": true,
+          "smp_parallel": true,
+          "smp_missing_ack": true,
+          "smp_wakeup": true,
+          "smp_fault_policy": true,
+          "breakpoint": true,
+          "avx_context": true,
+          "cpu_baseline": true,
+          "native_abi": true,
+          "native_abi_retired": true,
+          "native_tls": true,
+          "native_private_vm": true,
+          "native_atomic_wait": true,
+          "native_runtime_threads": true,
+          "native_c_calls": true,
+          "native_c_threads": true,
+          "native_c_ipc": true,
+          "native_c_reply_caps": true,
+          "native_c_gates": true,
+          "native_c_diagnostics": true,
+          "libc_static_runtime": true,
+          "libc_retirement": true,
+          "libc_provider_threads": true,
+          "libc_thread_failures": true,
+          "libc_stdio_recovery": true,
+          "libc_file_service": true,
+          "libc_descriptors": true,
+          "frame_metadata": true,
+          "metadata_excluded": true,
+          "pci_inventory": true,
+          "pci_storage_behind_bridge": true,
+          "block_driver": true,
+          "block_instance_0": true,
+          "block_instance_1": true,
+          "block_retirement_retry": true,
+          "block_ipc_cancelled": true,
+          "block_ipc_waiting": true,
+          "block_service_event_91": true,
+          "block_service_event_92": true,
+          "block_client_0": true,
+          "block_client_1": true,
+          "block_client_3": true,
+          "block_service_retired": true,
+          "dma_buffer_ownership": true
+        },
+        "mode": "boot-tests",
+        "logs": {
+          "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/build.stdout.log",
+          "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/build.stderr.log",
+          "debug": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/debug.log",
+          "stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/qemu.stdout.log",
+          "stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/qemu.stderr.log"
+        },
+        "guest_exit_verified": false,
+        "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+        "build_exit_code": 0,
+        "probe_disk_sha256": "e52ef8238e5c1b01eb5260f1562bf8b3798a67dee56a8c9e59d945834210ac0e",
+        "expected_disk_sha256": "e52ef8238e5c1b01eb5260f1562bf8b3798a67dee56a8c9e59d945834210ac0e",
+        "qemu_command": [
+          "qemu-system-x86_64",
+          "-M",
+          "q35,memory-backend=ram",
+          "-global",
+          "hpet.msi=on",
+          "-object",
+          "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+          "-overcommit",
+          "mem-lock=off",
+          "-accel",
+          "tcg,thread=multi",
+          "-smp",
+          "4",
+          "-m",
+          "512M",
+          "-display",
+          "none",
+          "-serial",
+          "none",
+          "-monitor",
+          "none",
+          "-no-reboot",
+          "-debugcon",
+          "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/debug.log",
+          "-cdrom",
+          "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/kryo.iso",
+          "-boot",
+          "d",
+          "-cpu",
+          "max",
+          "-device",
+          "pcie-root-port,id=storage-port,bus=pcie.0,chassis=1,slot=5",
+          "-drive",
+          "file=/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/release-max-smp4-abi-libc-block-ro/block-probe.raw,format=raw,if=none,id=probe-disk,readonly=on,cache=writeback",
+          "-device",
+          "virtio-blk-pci,drive=probe-disk,disable-legacy=on,bus=storage-port"
+        ],
+        "qemu_pid": 2978,
+        "memory_observed": {
+          "metadata": {
+            "start": 520192,
+            "end": 536576,
+            "bytes": 16384,
+            "bitmap_words": 1939,
+            "summary_words": 31,
+            "usable_frames": 124082,
+            "managed_frames": 124078
+          },
+          "managed_frames": 124078,
+          "available": [
+            [
+              536576,
+              651264
+            ],
+            [
+              1048576,
+              509157376
+            ]
+          ],
+          "high_frames": [],
+          "tlb_backing": [
+            2097152,
+            2101248
+          ]
+        },
+        "boot_seconds": 17.819,
+        "qemu_stop": "host_sigterm",
+        "qemu_exit_code": 0,
+        "elapsed_seconds": 105.557,
+        "probe_disk_unchanged": true,
+        "probe_disk_verified": true
+      },
+      "provider_metadata": {
+        "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+        "profile": "release",
+        "sources": {
+          "mlibc": {
+            "repository": "https://github.com/managarm/mlibc",
+            "revision": "07cfd943977737b8147c1289922c23479feef53d",
+            "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+            "archive_bytes": 966764
+          },
+          "frigg": {
+            "repository": "https://github.com/managarm/frigg",
+            "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+            "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+            "archive_bytes": 91405
+          },
+          "freestanding-c-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+            "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+            "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+            "archive_bytes": 12647
+          },
+          "freestanding-cxx-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+            "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+            "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+            "archive_bytes": 325796
+          },
+          "libsmarter": {
+            "repository": "https://github.com/managarm/libsmarter",
+            "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+            "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+            "archive_bytes": 4039
+          }
+        },
+        "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+        "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "source_inputs_sha256": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+        "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+        "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+        "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+        "codegen": {
+          "mmx": false,
+          "string_paths": "AVX2 without legacy dispatch"
+        },
+        "probe_sources": {
+          "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+          "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+          "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+          "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+          "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+          "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+          "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+          "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+        },
+        "allocator_sources": {
+          "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+          "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+          "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+          "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+          "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+          "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+          "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+        },
+        "image_sha256": "d55946a3f62ca0cfc57973bdc53b9bc7784dcae3aae06106fb58161a1bda0e48",
+        "image_bytes": 328160
+      },
+      "packaged_hashes_matched": true
+    },
+    {
+      "label": "debug-normal-max-smp4-abi-libc-block-rw",
+      "evidence": {
+        "profile": "debug",
+        "cpu": "max",
+        "cpus": 4,
+        "memory": "512M",
+        "pci_probe": false,
+        "block_probe": true,
+        "block_readonly": false,
+        "abi_probe": true,
+        "libc_probe": true,
+        "memory_bytes": 536870912,
+        "rss_limit_bytes": 2147483648,
+        "peak_rss_bytes": 175955968,
+        "status": "passed",
+        "reason": "all boot markers observed",
+        "checks": {
+          "device": true,
+          "native_services": true,
+          "smp_online": true,
+          "normal_supervisor": true,
+          "clock": true,
+          "manifest_publication": true,
+          "authority_and_restart": true,
+          "persistent_supervisor": true,
+          "client_budget_exhaustion": true,
+          "frame_metadata": true,
+          "cpu_baseline": true,
+          "native_abi": true,
+          "native_abi_retired": true,
+          "native_tls": true,
+          "native_private_vm": true,
+          "native_atomic_wait": true,
+          "native_runtime_threads": true,
+          "native_c_calls": true,
+          "native_c_threads": true,
+          "native_c_ipc": true,
+          "native_c_reply_caps": true,
+          "native_c_gates": true,
+          "native_c_diagnostics": true,
+          "libc_static_runtime": true,
+          "libc_retirement": true,
+          "libc_provider_threads": true,
+          "libc_thread_failures": true,
+          "libc_stdio_recovery": true,
+          "libc_file_service": true,
+          "libc_descriptors": true,
+          "pci_inventory": true,
+          "pci_storage_behind_bridge": true,
+          "block_driver": true,
+          "block_instance_0": true,
+          "block_instance_1": true,
+          "block_ipc_cancelled": true,
+          "block_ipc_waiting": true,
+          "block_service_event_91": true,
+          "block_service_event_92": true,
+          "block_client_0": true,
+          "block_client_1": true,
+          "block_client_3": true,
+          "dma_buffer_ownership": true
+        },
+        "mode": "normal",
+        "logs": {
+          "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/build.stdout.log",
+          "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/build.stderr.log",
+          "debug": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/debug.log",
+          "stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/qemu.stdout.log",
+          "stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/qemu.stderr.log"
+        },
+        "guest_exit_verified": false,
+        "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+        "build_exit_code": 0,
+        "probe_disk_sha256": "e52ef8238e5c1b01eb5260f1562bf8b3798a67dee56a8c9e59d945834210ac0e",
+        "expected_disk_sha256": "e1cde7798ebeb3da95a0eda998a207fb9a67c84f86a6f7035d801e7742542150",
+        "qemu_command": [
+          "qemu-system-x86_64",
+          "-M",
+          "q35,memory-backend=ram",
+          "-global",
+          "hpet.msi=on",
+          "-object",
+          "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+          "-overcommit",
+          "mem-lock=off",
+          "-accel",
+          "tcg,thread=multi",
+          "-smp",
+          "4",
+          "-m",
+          "512M",
+          "-display",
+          "none",
+          "-serial",
+          "none",
+          "-monitor",
+          "none",
+          "-no-reboot",
+          "-debugcon",
+          "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/debug.log",
+          "-cdrom",
+          "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/kryo.iso",
+          "-boot",
+          "d",
+          "-cpu",
+          "max",
+          "-device",
+          "pcie-root-port,id=storage-port,bus=pcie.0,chassis=1,slot=5",
+          "-drive",
+          "file=/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/kryo/build/smoke/debug-normal-max-smp4-abi-libc-block-rw/block-probe.raw,format=raw,if=none,id=probe-disk,readonly=off,cache=writeback",
+          "-device",
+          "virtio-blk-pci,drive=probe-disk,disable-legacy=on,bus=storage-port"
+        ],
+        "qemu_pid": 2386,
+        "memory_observed": {
+          "metadata": {
+            "start": 520192,
+            "end": 536576,
+            "bytes": 16384,
+            "bitmap_words": 1916,
+            "summary_words": 30,
+            "usable_frames": 122565,
+            "managed_frames": 122561
+          },
+          "managed_frames": 122561,
+          "available": [
+            [
+              536576,
+              651264
+            ],
+            [
+              1048576,
+              502792192
+            ],
+            [
+              504893440,
+              504901632
+            ],
+            [
+              505257984,
+              505262080
+            ],
+            [
+              536113152,
+              536252416
+            ]
+          ],
+          "high_frames": [],
+          "tlb_backing": null
+        },
+        "boot_seconds": 49.378,
+        "qemu_stop": "host_sigterm",
+        "qemu_exit_code": 0,
+        "elapsed_seconds": 89.243,
+        "probe_disk_unchanged": false,
+        "probe_disk_verified": true
+      },
+      "provider_metadata": {
+        "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+        "profile": "debug",
+        "sources": {
+          "mlibc": {
+            "repository": "https://github.com/managarm/mlibc",
+            "revision": "07cfd943977737b8147c1289922c23479feef53d",
+            "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+            "archive_bytes": 966764
+          },
+          "frigg": {
+            "repository": "https://github.com/managarm/frigg",
+            "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+            "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+            "archive_bytes": 91405
+          },
+          "freestanding-c-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+            "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+            "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+            "archive_bytes": 12647
+          },
+          "freestanding-cxx-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+            "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+            "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+            "archive_bytes": 325796
+          },
+          "libsmarter": {
+            "repository": "https://github.com/managarm/libsmarter",
+            "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+            "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+            "archive_bytes": 4039
+          }
+        },
+        "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+        "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "source_inputs_sha256": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+        "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+        "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+        "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+        "codegen": {
+          "mmx": false,
+          "string_paths": "AVX2 without legacy dispatch"
+        },
+        "probe_sources": {
+          "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+          "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+          "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+          "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+          "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+          "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+          "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+          "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+        },
+        "allocator_sources": {
+          "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+          "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+          "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+          "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+          "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+          "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+          "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+        },
+        "image_sha256": "0f190160cedb78af2cd73eefd3b600e74800e2655f610f3de4c23d003d6cb301",
+        "image_bytes": 352680
+      },
+      "packaged_hashes_matched": true
+    },
+    {
+      "label": "release-Haswell-noTSX-abi-libc",
+      "evidence": {
+        "profile": "release",
+        "cpu": "Haswell-noTSX",
+        "cpus": 1,
+        "memory": "512M",
+        "pci_probe": false,
+        "block_probe": false,
+        "block_readonly": false,
+        "abi_probe": true,
+        "libc_probe": true,
+        "memory_bytes": 536870912,
+        "rss_limit_bytes": 2147483648,
+        "peak_rss_bytes": 156446720,
+        "status": "passed",
+        "reason": "all boot markers observed",
+        "checks": {
+          "heap": true,
+          "growth": true,
+          "growth_oom": true,
+          "growth_retirement": true,
+          "frames": true,
+          "zeroing": true,
+          "paging": true,
+          "user_spaces": true,
+          "user_isolation": true,
+          "vm_rollback": true,
+          "preemption": true,
+          "capabilities": true,
+          "timer_drain": true,
+          "task_teardown": true,
+          "invalid_context": true,
+          "ipc": true,
+          "idle": true,
+          "shared_memory": true,
+          "cap_transfer": true,
+          "shared_fault": true,
+          "elf_native": true,
+          "extended_state": true,
+          "clock": true,
+          "deadlines": true,
+          "early_irq": true,
+          "launch": true,
+          "spawn": true,
+          "threads": true,
+          "thread_state": true,
+          "supervision": true,
+          "device_queue": true,
+          "device_expiry": true,
+          "device_retry": true,
+          "channel_creation": true,
+          "channel_retirement": true,
+          "native_services": true,
+          "startup_authority": true,
+          "startup_publication": true,
+          "supervisor_authority": true,
+          "relative_receive": true,
+          "resource_budgets": true,
+          "private_pending_cleanup": true,
+          "private_expiry_admission": true,
+          "private_untimed_idle": true,
+          "native_thread_rollback": true,
+          "reply_caps": true,
+          "legacy_exchange_registers": true,
+          "endpoint_gates": true,
+          "gate_loans": true,
+          "gate_process_retirement": true,
+          "device": true,
+          "heap_packing": true,
+          "heap_concurrent": true,
+          "client_budget_exhaustion": true,
+          "smp_online": true,
+          "smp_retired": true,
+          "smp_tlb": true,
+          "breakpoint": true,
+          "avx_context": true,
+          "cpu_baseline": true,
+          "native_abi": true,
+          "native_abi_retired": true,
+          "native_tls": true,
+          "native_private_vm": true,
+          "native_atomic_wait": true,
+          "native_runtime_threads": true,
+          "native_c_calls": true,
+          "native_c_threads": true,
+          "native_c_ipc": true,
+          "native_c_reply_caps": true,
+          "native_c_gates": true,
+          "native_c_diagnostics": true,
+          "libc_static_runtime": true,
+          "libc_retirement": true,
+          "libc_provider_threads": true,
+          "libc_thread_failures": true,
+          "libc_stdio_recovery": true,
+          "libc_file_service": true,
+          "libc_descriptors": true,
+          "frame_metadata": true,
+          "metadata_excluded": true,
+          "pci_inventory": true,
+          "dma_buffer_ownership": true
+        },
+        "mode": "boot-tests",
+        "logs": {
+          "build_stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/build.stdout.log",
+          "build_stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/build.stderr.log",
+          "debug": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/debug.log",
+          "stdout": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/qemu.stdout.log",
+          "stderr": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/qemu.stderr.log"
+        },
+        "guest_exit_verified": false,
+        "scope": "QEMU TCG boot markers; host termination does not prove guest exit",
+        "build_exit_code": 0,
+        "qemu_command": [
+          "qemu-system-x86_64",
+          "-M",
+          "q35,memory-backend=ram",
+          "-global",
+          "hpet.msi=on",
+          "-object",
+          "memory-backend-ram,id=ram,size=512M,prealloc=off,reserve=off",
+          "-overcommit",
+          "mem-lock=off",
+          "-accel",
+          "tcg,thread=multi",
+          "-smp",
+          "1",
+          "-m",
+          "512M",
+          "-display",
+          "none",
+          "-serial",
+          "none",
+          "-monitor",
+          "none",
+          "-no-reboot",
+          "-debugcon",
+          "file:/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/debug.log",
+          "-cdrom",
+          "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc/kryo.iso",
+          "-boot",
+          "d",
+          "-cpu",
+          "Haswell-noTSX"
+        ],
+        "qemu_pid": 2960,
+        "memory_observed": {
+          "metadata": {
+            "start": 516096,
+            "end": 532480,
+            "bytes": 16384,
+            "bitmap_words": 1943,
+            "summary_words": 31,
+            "usable_frames": 124289,
+            "managed_frames": 124285
+          },
+          "managed_frames": 124285,
+          "available": [
+            [
+              532480,
+              651264
+            ],
+            [
+              1048576,
+              510001152
+            ]
+          ],
+          "high_frames": [],
+          "tlb_backing": [
+            2097152,
+            2101248
+          ]
+        },
+        "boot_seconds": 11.874,
+        "qemu_stop": "host_sigterm",
+        "qemu_exit_code": 0,
+        "elapsed_seconds": 101.63
+      },
+      "provider_metadata": {
+        "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+        "profile": "release",
+        "sources": {
+          "mlibc": {
+            "repository": "https://github.com/managarm/mlibc",
+            "revision": "07cfd943977737b8147c1289922c23479feef53d",
+            "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+            "archive_bytes": 966764
+          },
+          "frigg": {
+            "repository": "https://github.com/managarm/frigg",
+            "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+            "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+            "archive_bytes": 91405
+          },
+          "freestanding-c-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+            "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+            "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+            "archive_bytes": 12647
+          },
+          "freestanding-cxx-hdrs": {
+            "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+            "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+            "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+            "archive_bytes": 325796
+          },
+          "libsmarter": {
+            "repository": "https://github.com/managarm/libsmarter",
+            "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+            "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+            "archive_bytes": 4039
+          }
+        },
+        "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+        "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+        "source_inputs_sha256": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+        "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+        "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+        "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+        "codegen": {
+          "mmx": false,
+          "string_paths": "AVX2 without legacy dispatch"
+        },
+        "probe_sources": {
+          "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+          "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+          "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+          "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+          "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+          "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+          "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+          "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+        },
+        "allocator_sources": {
+          "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+          "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+          "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+          "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+          "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+          "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+          "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+        },
+        "image_sha256": "d55946a3f62ca0cfc57973bdc53b9bc7784dcae3aae06106fb58161a1bda0e48",
+        "image_bytes": 328160
+      },
+      "packaged_hashes_matched": true
+    }
+  ],
+  "archived_files": [
+    {
+      "path": "actual-verification.json",
+      "sha256": "57d90c035e9e45203bd21f9db13d9a32ade751ef15a527ab1d9357b3a96123af"
+    },
+    {
+      "path": "review.json",
+      "sha256": "1d5a8e097fa080a1cd54748a0a5ba1a359e9ea22400171006b0e62e39ba53bb2"
+    },
+    {
+      "path": "rust-std-inventory.json",
+      "sha256": "6fbe6e14210188563c3070893882c8f19a468d68b77b07be5ddb73fa0fde9a95"
+    },
+    {
+      "path": "host-file-runtime.json",
+      "sha256": "0bb05957684992767366cd198a69d2163d4031ceb8a31b1be1d084cb914ee60f"
+    },
+    {
+      "path": "host-file-O0.log",
+      "sha256": "5d09da247da3981c2e0045cb981ac07c3ca45f00cccdd60ba1dc163af2660b27"
+    },
+    {
+      "path": "host-file-O2.log",
+      "sha256": "5d09da247da3981c2e0045cb981ac07c3ca45f00cccdd60ba1dc163af2660b27"
+    },
+    {
+      "path": "actual-python.log",
+      "sha256": "32c05d7625c072a5fd20100c1bd77920a76cb6ba073b2a7b98f12445ed30636a"
+    },
+    {
+      "path": "actual-headers.log",
+      "sha256": "71f93b8fd58b26373f586ffa871f661bc9e36306d128c0bd911c50ed622f58ae"
+    },
+    {
+      "path": "actual-fmt.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "actual-normal-build.log",
+      "sha256": "82c9655ccb3531b0a0e96c576ec9243c0374d85d7f472ae156624544d7fa422c"
+    },
+    {
+      "path": "actual-all-build.log",
+      "sha256": "3c9f4aefab7173c6866671ffa41c13cde9db6ff5a48b6c39de23d74a866624bf"
+    },
+    {
+      "path": "actual-clippy.log",
+      "sha256": "445cefcf46871f13cc224d4503d1ebc974169367b3b26839db202b26e602b3b9"
+    },
+    {
+      "path": "actual-file-runtime.log",
+      "sha256": "c9ed6ab1c621e5ac88ac5fe82c87060a6aa37474eded98bc18fc20c7b4f6ce7d"
+    },
+    {
+      "path": "actual-libc-debug.log",
+      "sha256": "ee45e90ed24d669ecb7b45b35975dfd20c5e58511aaf60d43e40db0ae1737a50"
+    },
+    {
+      "path": "actual-libc-release.log",
+      "sha256": "b453f04e353e8c2f1f850c62048e3158bc18449a433ed49b1a6b6c6973889ace"
+    },
+    {
+      "path": "actual-stdio.log",
+      "sha256": "b3143bf34894a3fe2b6605bfa7285d04773d1f822af76f29450e7fa4d02929b9"
+    },
+    {
+      "path": "stdio-evidence.json",
+      "sha256": "562b61374d95cfa8d3b79510eb961e916a0a808baf5e946273defa4e12ce6579"
+    },
+    {
+      "path": "stdio-O0-compile.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stdio-O0-run.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stdio-O2-compile.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "stdio-O2-run.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "negative-controls.json",
+      "sha256": "982aeb6bddc2fe72e1ecf6c784568742f67fffd207622fb4686de16e2bf24c98"
+    },
+    {
+      "path": "missing-alias-owner.log",
+      "sha256": "ae378a739fbee989d6eced9a3f9cb0fcea3f7bf73daeba56b8f9d90a6fc386f5"
+    },
+    {
+      "path": "shared-descriptor-flags.log",
+      "sha256": "f5d1df13ec952f67625c26c2d4e9556f5cbf352dba3fddc9321d3fcdf9bc0926"
+    },
+    {
+      "path": "initial-provider-tag-failure.log",
+      "sha256": "832bfdb5f86c4cf4d5318662254df0db0d2cc612bbd320577c43be509fdb075a"
+    },
+    {
+      "path": "independent-boundary.json",
+      "sha256": "f4fe4b7386585de4e9e30cf25d492a0f99cb6464f02beccb9c637f217f252fa4"
+    },
+    {
+      "path": "initial-unbound-stdout-debug.log",
+      "sha256": "91326261a269d35d58914970272452ecdc18f71ff306964cb81c60aced361ca5"
+    },
+    {
+      "path": "initial-unbound-stdout-evidence.json",
+      "sha256": "38fa3cebc4e7075a40320618ddd75226a46338c7ee171842eb51e0d0a8afa86d"
+    },
+    {
+      "path": "initial-unbound-stdout-libc-probe.build.json",
+      "sha256": "7581294e92a0253c3157d707355aefd47c4efb68cc50df76e778fc6ae5200931"
+    },
+    {
+      "path": "debug-Haswell-noTSX-abi-libc-debug.log",
+      "sha256": "26e9da1d20297f94fd880fe4dd1d9b5a81f480ad9e2f409fb8623b0b0d96c37c"
+    },
+    {
+      "path": "debug-Haswell-noTSX-abi-libc-evidence.json",
+      "sha256": "e3caf8fb7259ae9cd91662f813cdc4f390d6520845bf156b348978e54eebdea4"
+    },
+    {
+      "path": "debug-Haswell-noTSX-abi-libc-libc-probe.build.json",
+      "sha256": "b917178bf6d553a33ab4aba418fa920157e4363f47756d539cc0ce2bade83e47"
+    },
+    {
+      "path": "debug-Haswell-noTSX-abi-libc-abi-probe.build.json",
+      "sha256": "49c34244e1d6d211508d76419d665177ebc39541bb872a56052ca6e39e5aea88"
+    },
+    {
+      "path": "release-max-smp4-abi-libc-block-ro-debug.log",
+      "sha256": "1364cf73d67406d4d8fb41282cb9583c2f41855a1aed6eb82122cbc40478da7a"
+    },
+    {
+      "path": "release-max-smp4-abi-libc-block-ro-evidence.json",
+      "sha256": "d92903000ebff7b6938870212ae70ce4a12b9796e21fd34d207d789298100052"
+    },
+    {
+      "path": "release-max-smp4-abi-libc-block-ro-libc-probe.build.json",
+      "sha256": "b33dda18d4010feb12dc05fe5e0a62d7cbc89ee0526c6673b16f6031e532d765"
+    },
+    {
+      "path": "release-max-smp4-abi-libc-block-ro-abi-probe.build.json",
+      "sha256": "c84d85cb2d83b2b1fc3cfb8fd3b4ea260fe8a0c29b0dd1dd71b45e356bdaa0ac"
+    },
+    {
+      "path": "debug-normal-max-smp4-abi-libc-block-rw-debug.log",
+      "sha256": "bf88a44daf1cab928a985ed2d95ad3e60541ef7638d379f0826be0e32db4a5be"
+    },
+    {
+      "path": "debug-normal-max-smp4-abi-libc-block-rw-evidence.json",
+      "sha256": "7018af572599c560fc559f2046c979cae2b5578287d15ef5c73d56d176f2feb2"
+    },
+    {
+      "path": "debug-normal-max-smp4-abi-libc-block-rw-libc-probe.build.json",
+      "sha256": "b917178bf6d553a33ab4aba418fa920157e4363f47756d539cc0ce2bade83e47"
+    },
+    {
+      "path": "debug-normal-max-smp4-abi-libc-block-rw-abi-probe.build.json",
+      "sha256": "49c34244e1d6d211508d76419d665177ebc39541bb872a56052ca6e39e5aea88"
+    },
+    {
+      "path": "release-Haswell-noTSX-abi-libc-debug.log",
+      "sha256": "365ad54687731fe97558a31ae3e7f9cd79b6b65a8063b55ef0981beb5e46a4fc"
+    },
+    {
+      "path": "release-Haswell-noTSX-abi-libc-evidence.json",
+      "sha256": "103f24c266aea09108bd20fa45ea4259112bc1bb963b5828b35c790368d19d14"
+    },
+    {
+      "path": "release-Haswell-noTSX-abi-libc-libc-probe.build.json",
+      "sha256": "b33dda18d4010feb12dc05fe5e0a62d7cbc89ee0526c6673b16f6031e532d765"
+    },
+    {
+      "path": "release-Haswell-noTSX-abi-libc-abi-probe.build.json",
+      "sha256": "d9f11c5b1c069a878942d7921be15ee1bfcdd3a2958c5b75161edcbdad162a7a"
+    }
+  ]
+}

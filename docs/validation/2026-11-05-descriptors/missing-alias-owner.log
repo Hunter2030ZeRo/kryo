@@ -1,0 +1,2 @@
+missing-alias-owner: ../file-runtime-host/missing-alias-owner.cpp:1424: int main(): Assertion `__cryolite_file_close(descriptor) == 0 && gate_closes == before' failed.
+[rtk] ../file-runtime-host/missing-alias-owner: process terminated by signal 6

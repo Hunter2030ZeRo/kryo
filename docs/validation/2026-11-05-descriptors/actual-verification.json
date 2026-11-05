@@ -1,0 +1,311 @@
+{
+  "scope": "Actual source hashes, provider/kernel builds and targeted checks; guest matrix uses identical staged code",
+  "source_files_matched": 1870,
+  "checks": [
+    {
+      "name": "python",
+      "arguments": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools"
+      ],
+      "exit_code": 0,
+      "log": "actual-python.log",
+      "log_sha256": "32c05d7625c072a5fd20100c1bd77920a76cb6ba073b2a7b98f12445ed30636a"
+    },
+    {
+      "name": "headers",
+      "arguments": [
+        "python3",
+        "tools/check_c_headers.py",
+        "--outputdir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-headers"
+      ],
+      "exit_code": 0,
+      "log": "actual-headers.log",
+      "log_sha256": "71f93b8fd58b26373f586ffa871f661bc9e36306d128c0bd911c50ed622f58ae"
+    },
+    {
+      "name": "fmt",
+      "arguments": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "log": "actual-fmt.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "normal-build",
+      "arguments": [
+        "cargo",
+        "build",
+        "-p",
+        "kryo",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-kernel-target",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "log": "actual-normal-build.log",
+      "log_sha256": "82c9655ccb3531b0a0e96c576ec9243c0374d85d7f472ae156624544d7fa422c"
+    },
+    {
+      "name": "all-build",
+      "arguments": [
+        "cargo",
+        "build",
+        "-p",
+        "kryo",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-kernel-target",
+        "--locked",
+        "--offline",
+        "--all-features"
+      ],
+      "exit_code": 0,
+      "log": "actual-all-build.log",
+      "log_sha256": "3c9f4aefab7173c6866671ffa41c13cde9db6ff5a48b6c39de23d74a866624bf"
+    },
+    {
+      "name": "clippy",
+      "arguments": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-features",
+        "--target-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-kernel-target",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "log": "actual-clippy.log",
+      "log_sha256": "445cefcf46871f13cc224d4503d1ebc974169367b3b26839db202b26e602b3b9"
+    },
+    {
+      "name": "file-runtime",
+      "arguments": [
+        "python3",
+        "userspace/libc/mlibc/tests/file_runtime.py",
+        "--output-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-file-runtime"
+      ],
+      "exit_code": 0,
+      "log": "actual-file-runtime.log",
+      "log_sha256": "c9ed6ab1c621e5ac88ac5fe82c87060a6aa37474eded98bc18fc20c7b4f6ce7d"
+    },
+    {
+      "name": "libc-debug",
+      "arguments": [
+        "python3",
+        "tools/build_libc.py",
+        "--profile",
+        "debug",
+        "--build-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-provider-debug",
+        "--source-cache",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/dependency-cache",
+        "--output",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-libc-debug.elf"
+      ],
+      "exit_code": 0,
+      "log": "actual-libc-debug.log",
+      "log_sha256": "ee45e90ed24d669ecb7b45b35975dfd20c5e58511aaf60d43e40db0ae1737a50"
+    },
+    {
+      "name": "libc-release",
+      "arguments": [
+        "python3",
+        "tools/build_libc.py",
+        "--profile",
+        "release",
+        "--build-dir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-provider-release",
+        "--source-cache",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/continuation-work/dependency-cache",
+        "--output",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-libc-release.elf"
+      ],
+      "exit_code": 0,
+      "log": "actual-libc-release.log",
+      "log_sha256": "b453f04e353e8c2f1f850c62048e3158bc18449a433ed49b1a6b6c6973889ace"
+    },
+    {
+      "name": "stdio",
+      "arguments": [
+        "python3",
+        "userspace/libc/mlibc/tests/stdio_fallibility.py",
+        "--source",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-provider-debug/source",
+        "--outputdir",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/runtime-link-work/actual-stdio-fallibility"
+      ],
+      "exit_code": 0,
+      "log": "actual-stdio.log",
+      "log_sha256": "b3143bf34894a3fe2b6605bfa7285d04773d1f822af76f29450e7fa4d02929b9"
+    }
+  ],
+  "libc_builds": [
+    {
+      "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+      "profile": "debug",
+      "sources": {
+        "mlibc": {
+          "repository": "https://github.com/managarm/mlibc",
+          "revision": "07cfd943977737b8147c1289922c23479feef53d",
+          "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+          "archive_bytes": 966764
+        },
+        "frigg": {
+          "repository": "https://github.com/managarm/frigg",
+          "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+          "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+          "archive_bytes": 91405
+        },
+        "freestanding-c-hdrs": {
+          "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+          "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+          "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+          "archive_bytes": 12647
+        },
+        "freestanding-cxx-hdrs": {
+          "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+          "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+          "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+          "archive_bytes": 325796
+        },
+        "libsmarter": {
+          "repository": "https://github.com/managarm/libsmarter",
+          "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+          "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+          "archive_bytes": 4039
+        }
+      },
+      "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+      "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "source_inputs_sha256": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+      "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+      "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+      "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+      "codegen": {
+        "mmx": false,
+        "string_paths": "AVX2 without legacy dispatch"
+      },
+      "probe_sources": {
+        "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+        "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+        "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+        "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+        "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+        "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+        "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+        "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+      },
+      "allocator_sources": {
+        "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+        "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+        "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+        "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+        "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+        "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+        "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+      },
+      "image_sha256": "890518919c718b1239e90c1ae06b642dbd89d134601e4bafd04fe71c65d23b74",
+      "image_bytes": 352680
+    },
+    {
+      "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+      "profile": "release",
+      "sources": {
+        "mlibc": {
+          "repository": "https://github.com/managarm/mlibc",
+          "revision": "07cfd943977737b8147c1289922c23479feef53d",
+          "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+          "archive_bytes": 966764
+        },
+        "frigg": {
+          "repository": "https://github.com/managarm/frigg",
+          "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+          "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+          "archive_bytes": 91405
+        },
+        "freestanding-c-hdrs": {
+          "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+          "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+          "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+          "archive_bytes": 12647
+        },
+        "freestanding-cxx-hdrs": {
+          "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+          "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+          "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+          "archive_bytes": 325796
+        },
+        "libsmarter": {
+          "repository": "https://github.com/managarm/libsmarter",
+          "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+          "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+          "archive_bytes": 4039
+        }
+      },
+      "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+      "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+      "source_inputs_sha256": "6764b5b79097ff8bef16415b5708a180c7c74ad94b993e86e72fca1786cbad1e",
+      "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+      "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+      "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+      "codegen": {
+        "mmx": false,
+        "string_paths": "AVX2 without legacy dispatch"
+      },
+      "probe_sources": {
+        "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+        "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+        "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+        "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+        "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+        "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+        "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+        "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+      },
+      "allocator_sources": {
+        "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+        "userspace/libc/allocator/Cargo.toml": "b6551147028a0479e93f9c8ad6d3f6136225fbc2b1a1c991f5e4028feb42960a",
+        "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+        "userspace/libc/allocator/src/lib.rs": "9e4c5a6d45b4592856c93a4f5ca6864aa150bdb928b4f7d957219bbc63e3f09c",
+        "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+        "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+        "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+      },
+      "image_sha256": "d55946a3f62ca0cfc57973bdc53b9bc7784dcae3aae06106fb58161a1bda0e48",
+      "image_bytes": 328160
+    }
+  ],
+  "python_tests": 38,
+  "c_cpp_checks": 43,
+  "file_runtime_cases": 46,
+  "stdio_cases": 25,
+  "limits": "No Rust std build or native BetAFS execution is claimed; unchanged core tests are not recounted",
+  "documentation_followup": {
+    "docs/architecture.md": "ad7766690a6e67d13b1d70330449bc56443273cd603a803edaaf4b6000679f63",
+    "docs/decisions/0040-service-backed-files.md": "ec91e645d9a4f6c7fca18cbac5378c11f9895deba47e5f1a3d4ed603f67c9963",
+    "docs/decisions/0041-cryolite-rust-std.md": "20aee004735131a4e687ea57d09cb7cce348d5451e8551234ac0f450fbe85f81",
+    "docs/decisions/0042-descriptor-duplication.md": "6ac5661dee47495c908edeb9d60038817b57f22a1f661b71f1cef66585a59583",
+    "docs/status.md": "0266be351395e35e0febe944e6e470792ba1a5f8a2e5f3c98d0cb7591eb93665",
+    "userspace/libc/mlibc/README.md": "fc3dc2933849473a74fc0483c3563284337a441a675a0a1ff523e577fe1038f2"
+  },
+  "documentation_followup_note": "Final wording only; executable inputs unchanged after actual checks"
+}
