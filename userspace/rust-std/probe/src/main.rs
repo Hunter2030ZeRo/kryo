@@ -3,9 +3,11 @@
 
 extern crate cryolite_allocator as _;
 
+mod dirs_locks;
 mod file_ops;
 mod files;
 mod namespace;
+mod persistent;
 mod random;
 
 use std::alloc::{Layout, alloc, dealloc};
@@ -191,6 +193,12 @@ fn main() {
     }));
     if std::env::args_os()
         .nth(1)
+        .is_some_and(|argument| persistent::run(argument.as_bytes()))
+    {
+        return;
+    }
+    if std::env::args_os()
+        .nth(1)
         .is_some_and(|argument| argument.as_bytes() == b"abort")
     {
         event(227, 1);
@@ -205,6 +213,7 @@ fn main() {
         .nth(2)
         .is_some_and(|argument| argument.as_bytes() == b"concurrent");
     file_ops::check_file_ops(concurrent);
+    dirs_locks::check_dirs_locks(concurrent);
     synchronization();
     thread_lifecycle();
     monotonic_time();

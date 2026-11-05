@@ -39,6 +39,9 @@ pub(crate) fn check(
     kryo_hal::emergency_write_str("RUSTSTD: process and backing retirement OK\n");
     kryo_hal::emergency_write_str("RUSTSTDFILE: read write seek clones and closure OK runs=2\n");
     kryo_hal::emergency_write_str("RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2\n");
+    kryo_hal::emergency_write_str("RUSTSTDDIR: snapshots cursors and closure OK runs=2\n");
+    kryo_hal::emergency_write_str("RUSTSTDLOCK: ownership and retirement OK runs=2\n");
+    kryo_hal::emergency_write_str("RUSTSTDLOCK: blocking wait and wake OK runs=1\n");
     kryo_hal::emergency_write_str("RUSTSTDFILEOPS: concurrent aliases OK runs=1\n");
     kryo_hal::emergency_write_str("RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n");
     kryo_hal::emergency_write_str(
@@ -175,6 +178,9 @@ fn run(
         let mut file_quota_recovered = false;
         let mut random_seen = false;
         let mut path_seen = false;
+        let mut directories_locks_seen = false;
+        let mut lock_wait_seen = false;
+        let mut lock_wake_seen = false;
         let mut abort_seen = false;
         let mut contention_started = false;
         let mut contention_finished = false;
@@ -297,6 +303,20 @@ fn run(
                         assert_eq!(account.count(Resource::Waits), 0);
                         path_seen = true;
                     }
+                    238 if !abort => {
+                        assert!(!directories_locks_seen, "Duplicate directory/lock event");
+                        directories_locks_seen = true;
+                    }
+                    239 if instance == 1 => {
+                        assert!(!lock_wait_seen, "Duplicate blocking lock event");
+                        assert_eq!(account.count(Resource::Waits), 1);
+                        lock_wait_seen = true;
+                    }
+                    240 if instance == 1 => {
+                        assert!(lock_wait_seen && !lock_wake_seen);
+                        assert_eq!(account.count(Resource::Waits), 0);
+                        lock_wake_seen = true;
+                    }
                     _ => panic!("Unexpected Rust std event {}", event),
                 }
             }
@@ -344,6 +364,8 @@ fn run(
             );
             assert!(files_seen, "Missing Rust std file completion event");
             assert!(path_seen, "Missing Rust std path metadata event");
+            assert!(directories_locks_seen, "Missing directory/lock event");
+            assert_eq!(lock_wait_seen && lock_wake_seen, instance == 1);
             assert!(
                 metadata_seen && file_ops_seen,
                 "Missing Rust file operations event"
@@ -357,7 +379,7 @@ fn run(
             if abort {
                 0
             } else if instance == 1 {
-                7
+                8
             } else {
                 6
             },
@@ -369,7 +391,7 @@ fn run(
             if abort {
                 1
             } else if instance == 1 {
-                9
+                10
             } else {
                 8
             },

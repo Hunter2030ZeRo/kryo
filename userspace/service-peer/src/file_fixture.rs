@@ -3,7 +3,10 @@
 
 #[cfg(not(test))]
 use core::sync::atomic::{AtomicBool, Ordering};
-use kryo_interfaces::file::{self, FileType, Info, LookupPolicy, OpenOptions, Status, SyncScope};
+use kryo_interfaces::file::{
+    self, DirectoryEntry, FileType, Info, LockMode, LockOptions, LookupPolicy, OpenOptions, Status,
+    SyncScope,
+};
 #[cfg(not(test))]
 use kryo_interfaces::file::{Operation, Request};
 #[cfg(not(test))]
@@ -21,6 +24,7 @@ const LINK_LIMIT: usize = 40;
 enum File {
     Probe,
     ReadOnly,
+    Root,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,6 +77,33 @@ struct Description {
     file: File,
     position: u64,
     options: OpenOptions,
+    held: Option<LockMode>,
+}
+
+#[derive(Clone, Copy)]
+struct DirectorySnapshot {
+    entries: [Option<DirectoryEntry<'static>>; 5],
+    position: usize,
+}
+
+#[cfg(not(test))]
+type ReplyToken = sys::ReplyToken;
+#[cfg(test)]
+type ReplyToken = u64;
+
+#[derive(Clone, Copy)]
+struct PendingLock {
+    label: u64,
+    file: File,
+    mode: LockMode,
+    id: u64,
+    reply: ReplyToken,
+}
+
+#[derive(Clone, Copy)]
+struct LockGrant {
+    pending: PendingLock,
+    previous: Option<LockMode>,
 }
 
 struct State {
@@ -80,6 +111,8 @@ struct State {
     length: usize,
     exists: bool,
     descriptions: [Option<Description>; OPEN_LIMIT],
+    directories: [Option<DirectorySnapshot>; OPEN_LIMIT],
+    pending: [Option<PendingLock>; OPEN_LIMIT],
     next_label: u64,
     namespace_open: bool,
     opens: usize,
@@ -96,6 +129,8 @@ impl State {
             length: 0,
             exists: false,
             descriptions: [None; OPEN_LIMIT],
+            directories: [None; OPEN_LIMIT],
+            pending: [None; OPEN_LIMIT],
             next_label: file::NAMESPACE_LABEL + 1,
             namespace_open: true,
             opens: 0,
@@ -112,13 +147,15 @@ impl State {
             .position(|entry| entry.is_some_and(|entry| entry.label == label))
     }
 
-    fn retire(&mut self, label: u64) {
+    fn retire(&mut self, label: u64) -> Option<PendingLock> {
         if label == file::NAMESPACE_LABEL {
             self.namespace_open = false;
         } else if let Some(slot) = self.description(label) {
             self.descriptions[slot] = None;
+            self.directories[slot] = None;
             self.closures += 1;
         }
+        self.cancel_pending(label)
     }
 
     fn complete(&self) -> bool {
@@ -137,6 +174,7 @@ impl State {
         match file {
             File::Probe => self.length,
             File::ReadOnly => READ_ONLY_BYTES.len(),
+            File::Root => 0,
         }
     }
 
@@ -144,13 +182,18 @@ impl State {
         match file {
             File::Probe => &self.bytes[..self.length],
             File::ReadOnly => READ_ONLY_BYTES,
+            File::Root => &[],
         }
     }
 
     fn info(&self, file: File) -> Info {
         Info {
             size: self.size(file) as u64,
-            kind: FileType::Regular,
+            kind: if file == File::Root {
+                FileType::Directory
+            } else {
+                FileType::Regular
+            },
             readonly: file == File::ReadOnly,
         }
     }
@@ -180,7 +223,12 @@ impl State {
         }
         let file = match resolve(path, LookupPolicy::Follow)? {
             Node::File(file) => file,
-            Node::Directory => return Err(Status::Unsupported),
+            Node::Directory => {
+                if options.flags != file::READ_ONLY {
+                    return Err(Status::IsDirectory);
+                }
+                return Ok(File::Root);
+            }
             Node::Link(_) => unreachable!(),
         };
         let exists = file == File::ReadOnly || self.exists;
@@ -209,6 +257,9 @@ impl State {
     }
 
     fn write_at(&mut self, file: File, position: u64, input: &[u8]) -> Result<usize, Status> {
+        if file == File::Root {
+            return Err(Status::IsDirectory);
+        }
         if file == File::ReadOnly {
             return Err(Status::Denied);
         }
@@ -229,6 +280,9 @@ impl State {
     }
 
     fn set_len(&mut self, file: File, length: u64) -> Result<(), Status> {
+        if file == File::Root {
+            return Err(Status::IsDirectory);
+        }
         if file == File::ReadOnly {
             return Err(Status::Denied);
         }
@@ -246,6 +300,168 @@ impl State {
     fn sync(&self, _file: File, _scope: SyncScope) -> Result<(), Status> {
         // This RAM backend has no storage barrier to complete.
         Err(Status::Unsupported)
+    }
+
+    fn directory_snapshot(&self) -> DirectorySnapshot {
+        let mut entries = [None; 5];
+        let mut count = 0;
+        for (name, path) in [
+            (b"probe".as_slice(), b"/probe".as_slice()),
+            (b"readonly", b"/readonly"),
+            (b"probe-link", b"/probe-link"),
+            (b"dangling", b"/dangling"),
+            (b"cycle", b"/cycle"),
+        ] {
+            if let Ok(info) = self.path_info(path, LookupPolicy::NoFollow) {
+                entries[count] = Some(DirectoryEntry { info, name });
+                count += 1;
+            }
+        }
+        DirectorySnapshot {
+            entries,
+            position: 0,
+        }
+    }
+
+    fn directory_entry(&self, slot: usize) -> Result<Option<DirectoryEntry<'static>>, Status> {
+        let snapshot = self.directories[slot]
+            .as_ref()
+            .ok_or(Status::NotDirectory)?;
+        Ok(snapshot.entries.get(snapshot.position).copied().flatten())
+    }
+
+    fn advance_directory(&mut self, slot: usize) {
+        if let Some(snapshot) = self.directories[slot].as_mut()
+            && snapshot.position < snapshot.entries.len()
+            && snapshot.entries[snapshot.position].is_some()
+        {
+            snapshot.position += 1;
+        }
+    }
+
+    fn conflicts(&self, label: u64, file: File, mode: LockMode) -> bool {
+        self.descriptions.iter().flatten().any(|other| {
+            other.label != label
+                && other.file == file
+                && other
+                    .held
+                    .is_some_and(|held| held == LockMode::Exclusive || mode == LockMode::Exclusive)
+        })
+    }
+
+    fn remove_pending(&mut self, index: usize) -> PendingLock {
+        let pending = self.pending[index].take().unwrap();
+        self.pending[index..].rotate_left(1);
+        self.pending[OPEN_LIMIT - 1] = None;
+        pending
+    }
+
+    fn cancel_pending(&mut self, label: u64) -> Option<PendingLock> {
+        self.pending
+            .iter()
+            .position(|pending| pending.is_some_and(|p| p.label == label))
+            .map(|index| self.remove_pending(index))
+    }
+
+    fn request_lock(
+        &mut self,
+        label: u64,
+        options: LockOptions,
+        id: u64,
+        reply: ReplyToken,
+    ) -> Result<Option<LockGrant>, Status> {
+        let slot = self.description(label).ok_or(Status::BadFile)?;
+        let description = self.descriptions[slot].unwrap();
+        if self
+            .pending
+            .iter()
+            .flatten()
+            .any(|pending| pending.label == label)
+        {
+            return Err(if options.nonblocking {
+                Status::WouldBlock
+            } else {
+                Status::Deadlock
+            });
+        }
+        let pending = PendingLock {
+            label,
+            file: description.file,
+            mode: options.mode,
+            id,
+            reply,
+        };
+        let queued = self
+            .pending
+            .iter()
+            .flatten()
+            .any(|waiter| waiter.file == description.file);
+        let compatible = !self.conflicts(label, description.file, options.mode);
+        let existing = description.held;
+        if existing == Some(options.mode)
+            || (existing == Some(LockMode::Exclusive) && options.mode == LockMode::Shared)
+            || (compatible && !queued)
+        {
+            self.descriptions[slot].as_mut().unwrap().held = Some(options.mode);
+            return Ok(Some(LockGrant {
+                pending,
+                previous: existing,
+            }));
+        }
+        if options.nonblocking {
+            return Err(Status::WouldBlock);
+        }
+        // An upgrade may not sleep while retaining a lock needed by an earlier waiter.
+        if existing == Some(LockMode::Shared) {
+            return Err(Status::Deadlock);
+        }
+        let free = self
+            .pending
+            .iter()
+            .position(Option::is_none)
+            .ok_or(Status::NoSpace)?;
+        self.pending[free] = Some(pending);
+        Ok(None)
+    }
+
+    fn next_lock(&mut self) -> Option<LockGrant> {
+        for index in 0..OPEN_LIMIT {
+            let Some(pending) = self.pending[index] else {
+                break;
+            };
+            if self.pending[..index]
+                .iter()
+                .flatten()
+                .any(|earlier| earlier.file == pending.file)
+                || self.conflicts(pending.label, pending.file, pending.mode)
+            {
+                continue;
+            }
+            let Some(slot) = self.description(pending.label) else {
+                self.remove_pending(index);
+                return self.next_lock();
+            };
+            self.remove_pending(index);
+            let previous = self.descriptions[slot]
+                .as_mut()
+                .unwrap()
+                .held
+                .replace(pending.mode);
+            return Some(LockGrant { pending, previous });
+        }
+        None
+    }
+
+    fn rollback_lock(&mut self, grant: LockGrant) {
+        if let Some(slot) = self.description(grant.pending.label) {
+            self.descriptions[slot].as_mut().unwrap().held = grant.previous;
+        }
+    }
+
+    fn unlock(&mut self, label: u64) -> Result<Option<PendingLock>, Status> {
+        let slot = self.description(label).ok_or(Status::BadFile)?;
+        self.descriptions[slot].as_mut().unwrap().held = None;
+        Ok(self.cancel_pending(label))
     }
 }
 
@@ -287,6 +503,18 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
     }
     // The sole successful claim owns this fixture's storage for process lifetime.
     let state = unsafe { &mut *core::ptr::addr_of_mut!(STATE) };
+    let result = serve_inner(endpoint, state);
+    if result.is_err() {
+        while let Some(pending) = state.pending[0] {
+            state.remove_pending(0);
+            let _ = send_status(endpoint, pending.reply, pending.id, Status::Unavailable);
+        }
+    }
+    result
+}
+
+#[cfg(not(test))]
+fn serve_inner(endpoint: Handle, state: &mut State) -> Result<(), u64> {
     loop {
         let incoming = sys::receive(endpoint, 2).map_err(|_| 240u64)?;
         if incoming.event == ReceiveEvent::GateClosed {
@@ -296,7 +524,10 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
             {
                 return Err(241);
             }
-            state.retire(incoming.label);
+            if let Some(pending) = state.retire(incoming.label) {
+                send_status(endpoint, pending.reply, pending.id, Status::Unavailable)?;
+            }
+            progress_locks(endpoint, state)?;
             if state.complete() {
                 if !state.checked() {
                     return Err(242);
@@ -312,12 +543,21 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
             continue;
         };
         let count = handles.iter().flatten().count();
-        let result = Request::decode(
+        let request = Request::decode(
             incoming.message,
             incoming.label == file::NAMESPACE_LABEL,
             count,
-        )
-        .and_then(|request| execute(endpoint, state, incoming.label, request, handles[0]));
+        );
+        if let Ok(request) = request
+            && matches!(request.operation, Operation::Lock | Operation::Unlock)
+        {
+            close_all(handles)?;
+            handle_lock(endpoint, state, incoming.label, request, reply)?;
+            progress_locks(endpoint, state)?;
+            continue;
+        }
+        let result = request
+            .and_then(|request| execute(endpoint, state, incoming.label, request, handles[0]));
         // All accepted CPU accesses end before grants close and the response publishes.
         close_all(handles)?;
         let (status, completion) = match result {
@@ -341,6 +581,7 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
         if let Err(error) = delivered {
             if let Some(slot) = completion.opened {
                 state.descriptions[slot] = None;
+                state.directories[slot] = None;
             }
             if !matches!(error, sys::Error::Kernel(-9 | -7)) {
                 // A capability reply can fail preflight while its token remains live.
@@ -364,6 +605,72 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
 }
 
 #[cfg(not(test))]
+fn send_status(endpoint: Handle, reply: ReplyToken, id: u64, status: Status) -> Result<(), u64> {
+    match sys::reply(endpoint, reply, file::response(id, status, 0)) {
+        Ok(()) | Err(sys::Error::Kernel(-9 | -7)) => Ok(()),
+        Err(_) => Err(244),
+    }
+}
+
+#[cfg(not(test))]
+fn deliver_lock(endpoint: Handle, state: &mut State, grant: LockGrant) -> Result<(), u64> {
+    let pending = grant.pending;
+    match sys::reply(
+        endpoint,
+        pending.reply,
+        file::response(pending.id, Status::Ok, 0),
+    ) {
+        Ok(()) => Ok(()),
+        Err(error) => {
+            state.rollback_lock(grant);
+            if matches!(error, sys::Error::Kernel(-9 | -7)) {
+                return Ok(());
+            }
+            // Unexpected preflight failures may leave a live token; reject rather than
+            // retaining an advisory lock whose acquisition was never acknowledged.
+            send_status(endpoint, pending.reply, pending.id, Status::Unavailable)?;
+            Err(244)
+        }
+    }
+}
+
+#[cfg(not(test))]
+fn progress_locks(endpoint: Handle, state: &mut State) -> Result<(), u64> {
+    while let Some(grant) = state.next_lock() {
+        deliver_lock(endpoint, state, grant)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(test))]
+fn handle_lock(
+    endpoint: Handle,
+    state: &mut State,
+    label: u64,
+    request: Request,
+    reply: ReplyToken,
+) -> Result<(), u64> {
+    if request.operation == Operation::Unlock {
+        let status = match state.unlock(label) {
+            Ok(canceled) => {
+                if let Some(pending) = canceled {
+                    send_status(endpoint, pending.reply, pending.id, Status::Unavailable)?;
+                }
+                Status::Ok
+            }
+            Err(status) => status,
+        };
+        return send_status(endpoint, reply, request.id, status);
+    }
+    let options = LockOptions::decode(request.argument).map_err(|_| 244u64)?;
+    match state.request_lock(label, options, request.id, reply) {
+        Ok(Some(grant)) => deliver_lock(endpoint, state, grant),
+        Ok(None) => Ok(()),
+        Err(status) => send_status(endpoint, reply, request.id, status),
+    }
+}
+
+#[cfg(not(test))]
 fn execute(
     endpoint: Handle,
     state: &mut State,
@@ -371,7 +678,7 @@ fn execute(
     request: Request,
     memory: Option<Handle>,
 ) -> Result<Completion, Status> {
-    if request.operation == Operation::Open {
+    if matches!(request.operation, Operation::Open | Operation::OpenDir) {
         return open(endpoint, state, request, memory.ok_or(Status::Malformed)?);
     }
     if request.operation == Operation::PathInfo {
@@ -392,6 +699,9 @@ fn execute(
             Completion::value(position)
         }
         Operation::Read | Operation::ReadAt => {
+            if description.file == File::Root {
+                return Err(Status::IsDirectory);
+            }
             if !description.options.readable() {
                 return Err(Status::Denied);
             }
@@ -421,6 +731,9 @@ fn execute(
             Completion::value(bytes as u64)
         }
         Operation::Write | Operation::WriteAt => {
+            if description.file == File::Root {
+                return Err(Status::IsDirectory);
+            }
             if !description.options.writable() || description.file == File::ReadOnly {
                 return Err(Status::Denied);
             }
@@ -457,6 +770,9 @@ fn execute(
         }
         Operation::Info => Completion::info(state.info(description.file)),
         Operation::SetLen => {
+            if description.file == File::Root {
+                return Err(Status::IsDirectory);
+            }
             if !description.options.writable() {
                 return Err(Status::Denied);
             }
@@ -467,7 +783,22 @@ fn execute(
             state.sync(description.file, SyncScope::try_from(request.argument)?)?;
             Completion::value(0)
         }
-        Operation::Open | Operation::PathInfo => unreachable!(),
+        Operation::NextDir => {
+            let entry = state.directory_entry(slot)?;
+            let mut snapshot = [0; file::DIR_HEADER_SIZE + file::DIR_NAME_MAX];
+            let length = match entry {
+                Some(entry) => entry.encode(&mut snapshot)?,
+                None => 0,
+            };
+            copy_to(memory.ok_or(Status::Malformed)?, &snapshot[..length])?;
+            state.advance_directory(slot);
+            Completion::value(length as u64)
+        }
+        Operation::Open
+        | Operation::OpenDir
+        | Operation::PathInfo
+        | Operation::Lock
+        | Operation::Unlock => unreachable!(),
     };
     state.descriptions[slot] = Some(description);
     Ok(result)
@@ -480,11 +811,22 @@ fn open(
     request: Request,
     memory: Handle,
 ) -> Result<Completion, Status> {
-    let options = OpenOptions::decode(request.argument)?;
+    let options = if request.operation == Operation::OpenDir {
+        OpenOptions {
+            flags: file::READ_ONLY,
+            mode: 0,
+        }
+    } else {
+        OpenOptions::decode(request.argument)?
+    };
     let mut path = [0; PAGE];
     let path = &mut path[..request.length as usize];
     copy_from(memory, 0, path)?;
     let file = state.open_file(path, options)?;
+    if request.operation == Operation::OpenDir && file != File::Root {
+        return Err(Status::NotDirectory);
+    }
+    let directory = (file == File::Root).then(|| state.directory_snapshot());
     let slot = state
         .descriptions
         .iter()
@@ -505,7 +847,9 @@ fn open(
         file,
         position: 0,
         options,
+        held: None,
     });
+    state.directories[slot] = directory;
     Ok(Completion {
         value: 0,
         attributes: 0,
@@ -559,6 +903,15 @@ fn copy_from(memory: Handle, offset: u64, output: &mut [u8]) -> Result<(), Statu
 }
 
 #[cfg(not(test))]
+fn copy_to(memory: Handle, input: &[u8]) -> Result<(), Status> {
+    map(memory, true)?;
+    for (index, byte) in input.iter().enumerate() {
+        unsafe { (LOAN as *mut u8).add(index).write_volatile(*byte) };
+    }
+    unmap()
+}
+
+#[cfg(not(test))]
 fn close_all(handles: [Option<Handle>; 2]) -> Result<(), u64> {
     let mut failed = false;
     for handle in handles.into_iter().flatten() {
@@ -570,6 +923,247 @@ fn close_all(handles: [Option<Handle>; 2]) -> Result<(), u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn description(state: &mut State, slot: usize, file: File) -> u64 {
+        let label = slot as u64 + 2;
+        state.descriptions[slot] = Some(Description {
+            label,
+            file,
+            position: 0,
+            options: OpenOptions {
+                flags: file::READ_WRITE,
+                mode: 0,
+            },
+            held: None,
+        });
+        label
+    }
+
+    fn lock(
+        state: &mut State,
+        label: u64,
+        mode: LockMode,
+        nonblocking: bool,
+    ) -> Result<Option<LockGrant>, Status> {
+        state.request_lock(
+            label,
+            LockOptions { mode, nonblocking },
+            label + 100,
+            label + 1000,
+        )
+    }
+
+    fn held(state: &State, label: u64) -> Option<LockMode> {
+        state.descriptions[state.description(label).unwrap()]
+            .unwrap()
+            .held
+    }
+
+    #[test]
+    fn directory_snapshots_cache_nofollow_entries_without_creating_missing_files() {
+        let mut state = State::new();
+        state.directories[0] = Some(state.directory_snapshot());
+        let first = state.directory_entry(0).unwrap().unwrap();
+        assert_eq!(first.name, b"readonly");
+        assert!(first.info.readonly);
+        assert!(!state.exists);
+        state.exists = true;
+        state.write_at(File::Probe, 0, b"before").unwrap();
+        state.directories[1] = Some(state.directory_snapshot());
+        state.set_len(File::Probe, 1).unwrap();
+        let probe = state.directory_entry(1).unwrap().unwrap();
+        assert_eq!(probe.name, b"probe");
+        assert_eq!(probe.info.size, 6);
+        assert_eq!(probe.info.kind, FileType::Regular);
+        state.advance_directory(1);
+        assert_eq!(state.directory_entry(0).unwrap().unwrap().name, b"readonly");
+        let mut names = [b"".as_slice(); 4];
+        for name in &mut names {
+            let entry = state.directory_entry(0).unwrap().unwrap();
+            *name = entry.name;
+            if entry.name != b"readonly" {
+                assert_eq!(entry.info.kind, FileType::Symlink);
+                assert!(entry.info.readonly);
+            }
+            state.advance_directory(0);
+        }
+        assert_eq!(
+            names,
+            [b"readonly".as_slice(), b"probe-link", b"dangling", b"cycle"]
+        );
+        assert_eq!(state.directory_entry(0), Ok(None));
+        state.advance_directory(0);
+        assert_eq!(state.directory_entry(0), Ok(None));
+        assert_eq!(state.directory_entry(2), Err(Status::NotDirectory));
+        assert!(state.descriptions.iter().all(Option::is_none));
+    }
+
+    #[test]
+    fn directory_open_and_mutation_have_distinct_type_errors() {
+        let state = State::new();
+        let read = OpenOptions {
+            flags: file::READ_ONLY,
+            mode: 0,
+        };
+        assert_eq!(state.open_file(b"/", read), Ok(File::Root));
+        for flags in [
+            file::WRITE_ONLY,
+            file::READ_WRITE,
+            file::APPEND,
+            file::CREATE,
+        ] {
+            assert_eq!(
+                state.open_file(b"/", OpenOptions { flags, mode: 0 }),
+                Err(Status::IsDirectory)
+            );
+        }
+        assert_eq!(state.info(File::Root).kind, FileType::Directory);
+        let mut state = state;
+        assert_eq!(state.write_at(File::Root, 0, b""), Err(Status::IsDirectory));
+        assert_eq!(state.set_len(File::Root, 0), Err(Status::IsDirectory));
+    }
+
+    #[test]
+    fn lock_queue_preserves_writer_fairness_and_independent_file_progress() {
+        let mut state = state();
+        let a = description(&mut state, 0, File::Probe);
+        let b = description(&mut state, 1, File::Probe);
+        let c = description(&mut state, 2, File::Probe);
+        let d = description(&mut state, 3, File::ReadOnly);
+        assert!(
+            lock(&mut state, a, LockMode::Shared, false)
+                .unwrap()
+                .is_some()
+        );
+        assert!(
+            lock(&mut state, b, LockMode::Exclusive, false)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            lock(&mut state, c, LockMode::Shared, false)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            lock(&mut state, d, LockMode::Exclusive, false)
+                .unwrap()
+                .is_some()
+        );
+        assert!(state.next_lock().is_none());
+        state.unlock(a).unwrap();
+        let writer = state.next_lock().unwrap();
+        assert_eq!(writer.pending.label, b);
+        assert!(state.next_lock().is_none());
+        state.unlock(b).unwrap();
+        assert_eq!(state.next_lock().unwrap().pending.label, c);
+        assert_eq!(held(&state, c), Some(LockMode::Shared));
+        assert_eq!(held(&state, d), Some(LockMode::Exclusive));
+    }
+
+    #[test]
+    fn lock_upgrades_reject_deadlock_without_releasing_shared_ownership() {
+        let mut state = state();
+        let a = description(&mut state, 0, File::Probe);
+        let b = description(&mut state, 1, File::Probe);
+        lock(&mut state, a, LockMode::Shared, false).unwrap();
+        lock(&mut state, b, LockMode::Shared, false).unwrap();
+        assert!(matches!(
+            lock(&mut state, a, LockMode::Exclusive, false),
+            Err(Status::Deadlock)
+        ));
+        assert!(matches!(
+            lock(&mut state, a, LockMode::Exclusive, true),
+            Err(Status::WouldBlock)
+        ));
+        assert_eq!(held(&state, a), Some(LockMode::Shared));
+        assert!(state.pending.iter().all(Option::is_none));
+        state.unlock(b).unwrap();
+        let upgrade = lock(&mut state, a, LockMode::Exclusive, false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(held(&state, a), Some(LockMode::Exclusive));
+        state.rollback_lock(upgrade);
+        assert_eq!(held(&state, a), Some(LockMode::Shared));
+        lock(&mut state, a, LockMode::Exclusive, false).unwrap();
+        let downgrade = lock(&mut state, a, LockMode::Shared, false)
+            .unwrap()
+            .unwrap();
+        state.rollback_lock(downgrade);
+        assert_eq!(held(&state, a), Some(LockMode::Exclusive));
+        let repeat = lock(&mut state, a, LockMode::Exclusive, false)
+            .unwrap()
+            .unwrap();
+        state.rollback_lock(repeat);
+        assert_eq!(held(&state, a), Some(LockMode::Exclusive));
+    }
+
+    #[test]
+    fn queued_shared_batch_and_canceled_grants_do_not_strand_locks() {
+        let mut state = state();
+        let a = description(&mut state, 0, File::Probe);
+        let b = description(&mut state, 1, File::Probe);
+        let c = description(&mut state, 2, File::Probe);
+        let d = description(&mut state, 3, File::Probe);
+        lock(&mut state, a, LockMode::Exclusive, false).unwrap();
+        for (label, mode) in [
+            (b, LockMode::Shared),
+            (c, LockMode::Shared),
+            (d, LockMode::Exclusive),
+        ] {
+            assert!(lock(&mut state, label, mode, false).unwrap().is_none());
+        }
+        assert!(matches!(
+            lock(&mut state, b, LockMode::Shared, true),
+            Err(Status::WouldBlock)
+        ));
+        assert!(matches!(
+            lock(&mut state, b, LockMode::Shared, false),
+            Err(Status::Deadlock)
+        ));
+        state.retire(a);
+        let first = state.next_lock().unwrap();
+        assert_eq!(first.pending.label, b);
+        state.rollback_lock(first);
+        assert_eq!(held(&state, b), None);
+        assert_eq!(state.next_lock().unwrap().pending.label, c);
+        assert!(state.next_lock().is_none());
+        state.retire(c);
+        let writer = state.next_lock().unwrap();
+        assert_eq!(writer.pending.label, d);
+        state.rollback_lock(writer);
+        assert!(state.next_lock().is_none());
+        assert_eq!(held(&state, d), None);
+    }
+
+    #[test]
+    fn closing_or_unlocking_pending_owner_returns_its_exact_reply_token() {
+        let mut state = state();
+        let a = description(&mut state, 0, File::Probe);
+        let b = description(&mut state, 1, File::Probe);
+        let c = description(&mut state, 2, File::Probe);
+        lock(&mut state, a, LockMode::Exclusive, false).unwrap();
+        lock(&mut state, b, LockMode::Exclusive, false).unwrap();
+        lock(&mut state, c, LockMode::Shared, false).unwrap();
+        let canceled = state.unlock(b).unwrap().unwrap();
+        assert_eq!(
+            (canceled.label, canceled.id, canceled.reply),
+            (b, b + 100, b + 1000)
+        );
+        let closed = state.retire(c).unwrap();
+        assert_eq!(closed.reply, c + 1000);
+        assert!(state.pending.iter().all(Option::is_none));
+        state.retire(a);
+        assert!(
+            lock(&mut state, b, LockMode::Exclusive, true)
+                .unwrap()
+                .is_some()
+        );
+        assert!(matches!(
+            lock(&mut state, c, LockMode::Shared, true),
+            Err(Status::BadFile)
+        ));
+    }
 
     fn state() -> State {
         let mut state = State::new();
@@ -829,7 +1423,7 @@ mod tests {
         assert!(!state.exists);
         assert_eq!(state.open_file(b"/dangling", create), Err(Status::NotFound));
         assert_eq!(state.open_file(b"/cycle", read), Err(Status::SymlinkLoop));
-        assert_eq!(state.open_file(b"/", read), Err(Status::Unsupported));
+        assert_eq!(state.open_file(b"/", read), Ok(File::Root));
         assert_eq!(state.open_file(b"/denied", read), Err(Status::Denied));
         state.exists = true;
         assert_eq!(state.open_file(b"/probe-link", read), Ok(File::Probe));

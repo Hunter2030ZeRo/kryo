@@ -29,6 +29,7 @@ pub(crate) struct Transport<'objects> {
     direct: DirectMap,
     pending: Option<Pending<'objects>>,
     started: bool,
+    completed_flushes: u64,
     #[cfg(feature = "boot-tests")]
     retirement_failures: u8,
 }
@@ -40,6 +41,9 @@ struct Pending<'objects> {
 }
 
 impl<'objects> Transport<'objects> {
+    pub(crate) fn completed_flushes(&self) -> u64 {
+        self.completed_flushes
+    }
     pub(crate) fn has_pending(&self) -> bool {
         self.pending.is_some()
     }
@@ -103,6 +107,7 @@ impl<'objects> Transport<'objects> {
             direct,
             pending: None,
             started: false,
+            completed_flushes: 0,
             #[cfg(feature = "boot-tests")]
             retirement_failures: 0,
         })
@@ -201,6 +206,26 @@ impl<'objects> Transport<'objects> {
             return Ok(0);
         };
         let pending = self.pending.take().unwrap();
+        let flush_completed = match pending.plan.buffers() {
+            [header, status]
+                if header.bytes == 16
+                    && !header.device_writable
+                    && status.bytes == 1
+                    && status.device_writable
+                    && length == 1 =>
+            {
+                let header_address =
+                    self.cpu + queue::BOUNCE_OFFSET + u64::from(header.bounce_offset);
+                let status_address =
+                    self.cpu + queue::BOUNCE_OFFSET + u64::from(status.bounce_offset);
+                // The used-ring acquire ended device access to this owned chain.
+                unsafe {
+                    u32::from_le((header_address as *const u32).read_unaligned()) == 4
+                        && (status_address as *const u8).read() == 0
+                }
+            }
+            _ => false,
+        };
         for buffer in pending
             .plan
             .buffers()
@@ -218,6 +243,9 @@ impl<'objects> Transport<'objects> {
             .borrow_mut()
             .acknowledge()
             .map_err(map_error)?;
+        if flush_completed {
+            self.completed_flushes = self.completed_flushes.saturating_add(1);
+        }
         Ok(kryo_interfaces::virtio::COMPLETE | u64::from(length))
     }
 

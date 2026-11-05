@@ -15,6 +15,12 @@ struct cryolite_file_info {
     uint32_t flags;
 };
 
+struct cryolite_dir_entry {
+    struct cryolite_file_info info;
+    uint32_t name_length;
+    uint8_t name[255];
+};
+
 /* Pinned provider hooks, not the public POSIX interface. */
 uint64_t __cryolite_file_namespace(void);
 int __cryolite_file_open(const char *, int, mode_t, int *);
@@ -24,8 +30,12 @@ int __cryolite_file_pread(int, void *, size_t, off_t, ssize_t *);
 int __cryolite_file_pwrite(int, const void *, size_t, off_t, ssize_t *);
 int __cryolite_file_info(int, struct cryolite_file_info *);
 int __cryolite_file_stat(const char *, int, struct cryolite_file_info *);
+int __cryolite_dir_open(const char *, int *);
+int __cryolite_dir_next(int, struct cryolite_dir_entry *, int *);
 int __cryolite_file_resize(int, off_t);
 int __cryolite_file_sync(int, int);
+int __cryolite_file_lock(int, int, int);
+int __cryolite_file_unlock(int);
 int __cryolite_file_seek(int, off_t, int, off_t *);
 int __cryolite_file_close(int);
 int __cryolite_file_isatty(int);

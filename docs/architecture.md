@@ -141,7 +141,9 @@ A boot-minted device grant now connects restricted 32-bit MMIO operations to a s
 
 The native ABI is independent of Linux and NT. ICE-Linux and ICE-NT each translate their own ABI into native mechanisms and services. Neither compatibility layer depends on the other. macOS/XNU compatibility is deferred.
 
-BetAFS is an independent storage project. `userspace/filesystems/betafs/` is reserved for its Kryo adapter; the storage engine is not duplicated here.
+BetAFS is an independent storage project. `userspace/filesystems/betafs/` contains
+its native Ring 3 adapter; the engine and codecs are linked from verified build
+copies of the independent project.
 
 The bootstrap retains read-only conventional PCI snapshots and constrained DMA
 frame owners. An opt-in Ring 3 VirtIO block driver now submits actual read/write/
@@ -151,8 +153,11 @@ hardware descriptors remain privileged. [ADR 0018](decisions/0018-mediated-virti
 defines the mediated transport and reset-before-release contract. Completion is
 currently polled, with storage IRQ completion still pending.
 
-The [BetAFS adapter contract](../userspace/filesystems/betafs/README.md) preserves
-4096-byte blocks and durable flush. BetAFS keeps its normal Ring 3 std dependency.
+The [BetAFS adapter](../userspace/filesystems/betafs/README.md) preserves
+4096-byte blocks, checked volume bounds and durable flush. Both file sync scopes
+invoke the actual engine barrier. Directory snapshots and advisory locks retain
+open-description ownership; storage failure drains queued requests. BetAFS keeps
+its normal Ring 3 std dependency, including its real compression codecs.
 Cryolite needs a native platform contract, libc, C++ runtime/library support and
 Rust target/std platform support as separate deliverables.
 [ADR 0019](decisions/0019-native-runtime-and-standard-libraries.md) defines their
@@ -173,16 +178,18 @@ The static ANSI mlibc adapter now has service-backed FILE hooks. Namespace
 startup authority is optional; each Open returns a separate authenticated gate
 while the service owns its cursor and access/append state. Local descriptor pins
 retain active operations through close and numerical reuse. The optional libc
-probe connects to a volatile Ring 3 validation peer; production VFS, inherited
-streams, public POSIX descriptors, durable storage and mounted BetAFS remain
-pending. [ADR 0040](decisions/0040-service-backed-files.md) defines this boundary.
+probe connects to a volatile Ring 3 validation peer; the separate BetAFS adapter
+supplies the storage-backed implementation. Production VFS routing, inherited
+streams and public POSIX descriptor entry points remain pending.
+[ADR 0040](decisions/0040-service-backed-files.md) defines the original boundary.
 
 The experimental Rust std profile now supplies native allocation, threads,
 TLS destruction, futex synchronization and monotonic time in Ring 3. A separate
 restricted Unix-family target uses Cryolite-specific implementations and owned
 ABI bindings. Basic std File operations now use the service-backed descriptor contract; the
 Unix extension surface includes byte strings, descriptor ownership and open
-options. Metadata, positioned I/O, durability and general hosted APIs remain pending. Generic Unix startup and
+options. Metadata, positioned I/O, directory iteration, locks and synchronization
+now reach the native file services. General hosted APIs remain pending. Generic Unix startup and
 pthread paths cannot be enabled before their contracts exist. The bootstrap
 target remains std=false; [ADR 0041](decisions/0041-cryolite-rust-std.md) records
 the required subsystem dispatch and actual Ring 3 validation. The restricted

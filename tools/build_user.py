@@ -48,7 +48,7 @@ def load_image(path, *, normalize_sections=False):
     return entry, segments
 
 
-def package_image(artifact, output, *, mapped_headers=False):
+def package_image(artifact, output, *, mapped_headers=False, maximum_bytes=1 << 20):
     objcopy = shutil.which("llvm-objcopy") or shutil.which("objcopy")
     if objcopy is None:
         raise RuntimeError("Boot image packaging requires llvm-objcopy or objcopy")
@@ -59,8 +59,8 @@ def package_image(artifact, output, *, mapped_headers=False):
     if load_image(artifact, normalize_sections=mapped_headers) != load_image(output, normalize_sections=mapped_headers):
         raise RuntimeError(f"Debug stripping changed executable load data: {output}")
     size = output.stat().st_size
-    if size > 1 << 20:
-        raise ValueError(f"Boot module exceeds the one-MiB limit: {output} ({size} bytes)")
+    if size > maximum_bytes:
+        raise ValueError(f"Boot module exceeds the {maximum_bytes}-byte limit: {output} ({size} bytes)")
     comparison = "runtime load data preserved; section metadata normalized" if mapped_headers else "entry/load data preserved"
     print(f"{output}: {artifact.stat().st_size} -> {size} bytes, {comparison}; symbols: {artifact}")
 

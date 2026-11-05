@@ -50,6 +50,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--betafs-root", type=Path, required=True)
     parser.add_argument("--outputdir", type=Path, required=True)
+    parser.add_argument("--frontend", action="store_true",
+                        help="test the native frontend against host transport doubles")
     arguments = parser.parse_args()
     betafs = arguments.betafs_root.resolve(strict=True)
     output = arguments.outputdir.resolve()
@@ -70,14 +72,19 @@ def main():
     status = git(betafs, "status", "--porcelain=v1").decode()
     project = output / "fixture"
     (project / "src").mkdir(parents=True, exist_ok=True)
-    (project / "src/lib.rs").write_bytes(HARNESS.read_bytes())
+    harness = ROOT / "userspace/filesystems/betafs/tests/frontend.rs" if arguments.frontend else HARNESS
+    if not arguments.frontend:
+        (project / "src/lib.rs").write_bytes(harness.read_bytes())
     quoted = lambda path: json.dumps(str(path), ensure_ascii=False)
     manifest = [
         '[package]', 'name = "kryo-betafs-contract"', 'version = "0.0.0"',
-        'edition = "2024"', 'publish = false', '', '[workspace]', 'resolver = "3"', '', '[dependencies]',
+        'edition = "2024"', 'publish = false', '', '[workspace]', 'resolver = "3"', '',
+        *(['[lib]', f'path = {quoted(harness)}', ''] if arguments.frontend else []),
+        '[dependencies]',
         *[f'{name} = {{ path = {quoted(betafs / "crates" / name)} }}'
           for name in ("betafs-block", "betafs-core", "betafs-tree")],
         f'kryo-interfaces = {{ path = {quoted(ROOT / "interfaces")} }}', '',
+        *([f'kryo-libsys = {{ path = {quoted(ROOT / "userspace/libsys")} }}', ''] if arguments.frontend else []),
     ]
     (project / "Cargo.toml").write_text("\n".join(manifest))
     # Cargo may update only this isolated lock to add the verifier package.
@@ -89,11 +96,16 @@ def main():
     environment["CARGO_NET_OFFLINE"] = "true"
     commands = []
     result = {
-        "scope": "Actual host BetAFS engine over a fault-injected Kryo wire model; not native IPC, guest BetAFS, DMA or physical durability evidence",
+        "scope": ("Actual native frontend and BetAFS engine against host transport/reply doubles; no guest IPC or physical durability evidence"
+                  if arguments.frontend else
+                  "Actual host BetAFS engine over a fault-injected Kryo wire model; not native IPC, guest BetAFS, DMA or physical durability evidence"),
         "betafs_root": str(betafs), "betafs_head": git(betafs, "rev-parse", "HEAD").decode().strip(),
         "betafs_dirty_status": status, "betafs_source_before": before,
         "seed_lock_sha256": digest(betafs / "Cargo.lock"),
-        "harness_sha256": digest(HARNESS), "verifier_sha256": digest(Path(__file__)),
+        "harness_sha256": digest(harness), "verifier_sha256": digest(Path(__file__)),
+        "frontend_sources": ({p.relative_to(ROOT).as_posix(): digest(p)
+                              for directory in (ROOT / "userspace/filesystems/betafs/src", ROOT / "userspace/libsys/src")
+                              for p in sorted(directory.rglob("*.rs"))} if arguments.frontend else {}),
         "interface_sources": {str(p.relative_to(ROOT)): digest(p)
                               for p in sorted((ROOT / "interfaces").rglob("*"))
                               if p.is_file() and p.suffix in (".rs", ".toml")},
@@ -128,8 +140,9 @@ def main():
         text = run("tests", ["cargo", "test", "--manifest-path", project / "Cargo.toml", "--target", HOST,
                               "--locked", "--offline", "--", "--test-threads=1"], True)
         result["tests"] = re.findall(r"(?m)^test ([\w:]+) \.\.\. ok$", text)
-        if len(result["tests"]) != 15:
-            raise RuntimeError("Expected all fifteen contract tests")
+        expected = 16 if arguments.frontend else 15
+        if len(result["tests"]) != expected:
+            raise RuntimeError(f"Expected all {expected} tests")
         result["status"] = "passed"
     except (RuntimeError, OSError) as error:
         result["error"] = str(error)
@@ -138,9 +151,10 @@ def main():
         result["betafs_source_after"] = after
         result["betafs_unchanged"] = before == after and status == git(betafs, "status", "--porcelain=v1").decode()
         result["verification_inputs_unchanged"] = (
-            result["harness_sha256"] == digest(HARNESS)
+            result["harness_sha256"] == digest(harness)
             and result["verifier_sha256"] == digest(Path(__file__))
             and all(digest(ROOT / name) == value for name, value in result["interface_sources"].items())
+            and all(digest(ROOT / name) == value for name, value in result["frontend_sources"].items())
         )
         if not result["verification_inputs_unchanged"]:
             result["status"] = "failed"

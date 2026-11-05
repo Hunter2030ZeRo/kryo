@@ -1,0 +1,30 @@
+
+running 16 tests
+test locks::tests::upgrades_and_canceled_replies_preserve_prior_ownership ... ok
+test locks::tests::growable_owners_and_fifo_writer_fairness_have_no_fixture_open_limit ... ok
+test locks::tests::duplicate_pending_owner_is_rejected_and_close_returns_exact_token ... ok
+test block::tests::accepted_write_failure_retains_uncertain_media_and_blocks_further_calls ... ok
+test block::tests::rejected_call_and_range_error_do_not_touch_media_or_poison_session ... ok
+test block::tests::malformed_read_keeps_output_private_and_poisoned_session_never_retries ... ok
+test server::tests::untraced_server_sync_executes_real_barrier_and_propagates_failure ... ok
+test block::tests::actual_engine_mutation_failure_does_not_retry_accepted_partial_storage_work ... ok
+test server::tests::actual_directory_snapshots_cache_inode_metadata_and_readonly_policy ... ok
+test server::tests::uncertain_engine_commit_or_block_session_poisons_future_work ... ok
+test block::tests::actual_engine_format_rejects_existing_superblocks_without_reformatting ... ok
+test server::tests::failed_last_unpin_retains_closed_description_and_poisoned_owner_record ... ok
+test server::tests::accepted_storage_failure_rejects_pending_locks_without_another_message ... ok
+test server::tests::byte_component_lookup_is_rooted_and_does_not_require_utf8 ... ok
+test block::tests::actual_engine_reopens_after_barrier_and_never_addresses_marker_block ... ok
+test server::tests::description_storage_grows_and_successful_final_close_balances_actual_pins ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling betafs-service-host-tests v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/service-host)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.57s
+     Running unittests ../kryo/userspace/filesystems/betafs/tests/frontend.rs (../review-service-target/x86_64-unknown-linux-gnu/debug/build/betafs-service-host-tests/ce12b817e656998e/out/betafs_service_host_tests-ce12b817e656998e)
+   Doc-tests betafs_service_host_tests

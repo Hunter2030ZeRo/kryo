@@ -1,100 +1,85 @@
-# BetAFS service boundary
+# Native BetAFS service
 
-BetAFS remains an independent Ring 3 filesystem service. Kryo supplies memory,
-capabilities, execution and IPC; it does not link the filesystem engine into
-Ring 0. This directory records the adapter boundary. There is no executable
-BetAFS service or mounted filesystem here.
+This adapter runs the independent BetAFS engine in Ring 3 and serves the native
+file protocol. Kryo supplies execution, capabilities, memory and block IPC.
+The engine and compression algorithms remain in their original project; the
+build uses verified copies without modifying that working tree.
 
-## Block transport
+## Service contract
 
-The current `betafs_block::BlockDevice: Send` interface uses:
+Startup requires service 60, instance 1 and four exact grants:
 
-```rust
-fn block_count(&self) -> u64;
-fn read_block(&self, id: u64, block: &mut [u8; 4096]) -> std::io::Result<()>;
-fn write_block(&mut self, id: u64, block: &[u8; 4096]) -> std::io::Result<()>;
-fn sync(&mut self) -> std::io::Result<()>;
+| Role | Kind | Rights |
+| --- | --- | --- |
+| 1 | DebugConsole | WRITE + DUP |
+| 10 | Endpoint | RECEIVE + CONTROL |
+| 20 | Endpoint | SEND, block reads |
+| 21 | Endpoint | SEND, block writes and flush |
+
+Clients receive namespace gates. Each open description owns an inode pin,
+cursor, access/append state and advisory lock identity. Final gate closure
+unpins the inode after accepted work ends. Failed final-unpin keeps its closed
+record reachable; uncertain storage results quarantine the session and reject
+pending lock requests. Mutations are not automatically replayed.
+
+The adapter implements open/create, byte reads/writes, positioned I/O, seek,
+descriptor/path metadata, resize, directory snapshots, advisory locks and
+synchronization. Byte components use the engine lookup API. The current engine
+supports files and directories; symlinks, general mount routing, cwd handling
+and namespace mutation RPCs remain separate work.
+
+Sync Data and Sync All both use FileSystem::sync, including a completed block
+FLUSH. This provides a stronger full-filesystem barrier for the data-only
+request. Read-only directory handles can synchronize namespace state.
+Compression uses the engine default. All engine codecs are built: Raw, Zstd,
+LZ4 and OpenZL. The native codec probe requires actual codec selection and
+decoding, then reopens engine files encoded with each codec.
+
+## Storage ownership
+
+BlockDevice uses fixed 4096-byte units. The serialized adapter validates exact
+counts, request IDs, service instance and statuses. Only the device transport
+converts block IDs to 512-byte sectors. Fresh backing per request remains owned
+through accepted/canceled operations; it is not reused after uncertain delivery.
+
+The current validation layout assigns a whole disposable scratch disk and uses
+physical blocks 1 through N-1 for the filesystem. Block zero retains the
+existing scratch marker. Capacity and offset addition are checked. General
+device admission and partition policy remain future service-manager work.
+
+Startup argument bit 0 explicitly selects format of zero superblocks and seeds
+the validation namespace; otherwise the service opens an existing filesystem.
+Bit 1 enables validation-only barrier events. Normal synchronization adds no
+debug syscalls. Open never falls back to format. A production launcher must
+deliberately assign storage and phase.
+
+## Build and verification
+
+Use the pinned Cryolite Rust/C toolchains, rust-src and offline dependencies.
+Build tools create their own copies of the engine, platform sources and required
+registry packages. They verify archives, source bytes and lock resolution before
+building. OpenZL receives scoped cross-build recipe changes for its C API;
+algorithm sources stay unchanged. Installed toolchains and registry sources
+are not patched. The executable uses its own ELF link address and a bounded
+larger initial stack.
+
+```sh
+rtk proxy python3 tools/build_betafs.py --betafs-source /path/to/betafs --source-cache /path/to/libc/cache --manifest-path userspace/filesystems/betafs/Cargo.toml --build-dir build/betafs-service --output build/betafs-service.elf
+rtk proxy python3 tools/check_betafs.py --betafs-root /path/to/betafs --outputdir build/betafs-frontend-check --frontend
+rtk proxy python3 tools/boot_betafs.py --betafs-source /path/to/betafs --source-cache /path/to/libc/cache --outputdir build/betafs-two-boot --profile release --cpu max --cpus 4 --normal
 ```
 
-The version-one native block protocol already provides Info, Read, Write and
-Flush with fixed 4096-byte blocks. Pass a BetAFS block ID unchanged in the IPC
-request. The device transport alone converts it to eight 512-byte sectors with
-checked arithmetic. Multiplying in both layers would address the wrong data.
-Validate instance, request ID, status and the complete result: 4096 for data,
-zero for Flush. Capacity is a block count; Info bit 63 is the read-only flag.
+The committed manifest is an input template for the build tool. The generated
+manifest supplies verified engine and platform dependencies in an owned build
+directory. Builds preserve the external working tree, including existing edits.
 
-Successful sync must make every preceding write durable. A submission, IPC
-reply or interrupt alone is insufficient; the current writable VirtIO service
-requires FLUSH support and checks its completion. QEMU tests establish this
-command path, not physical power-loss durability. Failed writes/barriers can
-leave partial or uncertain media. Preserve the engine's CommitUncertain and
-NeedsReopen behavior rather than turning them into a retryable success.
+The boot verifier creates one owned disk, formats/writes/synchronizes in the
+first guest, kills QEMU after completion and opens the same disk in a second
+guest. It never recreates the disk between boots or reformats an existing test
+output. Kernel checks pair each service sync with a new successful VirtIO FLUSH.
+Separate clients test blocked lock recovery after the owner process is stopped.
 
-Read-your-writes and accepted buffer ownership must survive error paths. An
-accepted cancellation does not roll back a write or end its loan. Fresh backing
-per request avoids reusing RAM still owned by a service; an alternative requires
-an explicit completion barrier. Never send Rust pointers or std::io::Error
-representations over IPC. Read and write grants carry only their required
-memory rights. Resource accounting follows actual retirement.
-
-The trait requires Send, not Sync. A serialized service can retain its block
-session in RefCell while read_block uses &self; parallel access needs a separate
-synchronization contract. No additional kernel filesystem interface is required
-by this storage boundary.
-
-## File service
-
-The native regular-file protocol can be translated to the existing engine API:
-
-| Native operation | BetAFS API |
-| --- | --- |
-| Open lookup/create | lookup, create_file_with_attributes, metadata |
-| Read | read_at |
-| Write | write_at |
-| Truncate on Open | truncate |
-| Open-description lifetime | pin_inode, unpin_inode |
-| Storage barrier | FileSystem::sync |
-
-Resolve byte components with lookup and *_at methods; converting every native
-path through UTF-8 resolve would reject valid byte names. The service owns
-cursor, append serialization and access checks. Stored UID/GID/mode fields do
-not authorize the requesting client. One accepted four-KiB Write fits the
-engine's 64-KiB transaction bound. Separate Open calls have separate cursors;
-duplicated gates retain the same description. Final gate closure permits unpin
-only after accepted work finishes; failed last-unpin retains its owner.
-
-File and block messages have different word layouts and status registries.
-Translate them explicitly. The current file protocol does not implement
-stat, directory operations, fsync, inherited streams or a complete VFS.
-Adding those services is separate from validating this boundary.
-
-## Native execution gates
-
-The engine keeps std. The current Cryolite target is a freestanding bootstrap
-with std=false; a native Rust standard-library platform and the codec C/FFI
-runtime remain required. The inspected engine unconditionally compiles its Unix
-FileDevice backend using std::os::unix::fs::FileExt. A future native build needs
-a compatible Unix platform surface or separation of that host-image backend.
-The current codec manifest also includes Zstd, LZ4 and OpenZL unconditionally;
-selecting Raw at runtime does not skip their build dependencies.
-
-The configured Ring 3 block IPC service exists, but its transport deliberately
-requires the fixed CRYOLITE-BLOCK-PROBE-V1 marker in block zero. It admits disposable
-scratch disks, not arbitrary BetAFS-formatted media. General device assignment
-and image admission are still needed. Compatibility verification must preserve
-that guard rather than overwrite a filesystem superblock with the test marker.
-
-## Verification scope
-
-`tools/check_betafs.py` checks an explicitly selected local engine tree without
-modifying it. Its isolated host harness links the actual engine and native wire
-definitions, exercises real filesystem operations through a host block-transport
-model, and records source/lock hashes. Native QEMU block-service tests are a
-separate result. Neither result alone establishes BetAFS execution inside Kryo.
-See the [validation record](../../../docs/validation/2026-11-05-betafs-boundary/README.md).
-
-[Runtime direction](../../../docs/decisions/0019-native-runtime-and-standard-libraries.md),
-[block IPC](../../../docs/decisions/0020-initial-block-service.md) and
-[file descriptions](../../../docs/decisions/0040-service-backed-files.md)
-define the existing contracts. BetAFS is not rewritten as no_std or copied into
-this repository.
+Host fault injection, guest execution and physical hardware are separate proof
+boundaries. QEMU verifies the implemented flush/reopen path; hardware power-loss
+and performance measurements remain pending. See [ADR 0049](../../../docs/decisions/0049-native-betafs-durability.md)
+and the [validation record](../../../docs/validation/2026-11-05-durable-files/README.md).

@@ -24,7 +24,11 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
     super::abi::check(pool, direct, &memory, &mut region);
     super::libc::check(pool, direct, &memory, &mut region);
     super::rust_std::check(pool, direct, &memory, &mut region);
-    super::transport::run(pool, direct, &memory, &mut region);
+    if super::betafs::phase().is_some() {
+        super::betafs::check(pool, direct, &memory, &mut region);
+    } else {
+        super::transport::run(pool, direct, &memory, &mut region);
+    }
     super::devices::probe(pool, direct, &memory, &mut region, false);
     super::channel_probe::run(pool, direct, &memory, &mut region);
     let objects = Objects::growing();
@@ -43,16 +47,20 @@ pub(crate) fn run(pool: &'static BootFramePool, direct: DirectMap, physical_end:
         initial.budgets.len(),
         initial.resources.len()
     ));
-    let mut block = super::block_service::start(
-        pool,
-        direct,
-        &memory,
-        &mut region,
-        &objects,
-        &mut tasks,
-        &mut ipc,
-        false,
-    );
+    let mut block = if super::betafs::phase().is_none() {
+        super::block_service::start(
+            pool,
+            direct,
+            &memory,
+            &mut region,
+            &objects,
+            &mut tasks,
+            &mut ipc,
+            false,
+        )
+    } else {
+        None
+    };
     loop {
         if let Some(block) = &mut block {
             block.observe(

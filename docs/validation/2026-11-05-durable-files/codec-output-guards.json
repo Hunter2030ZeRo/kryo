@@ -1,0 +1,32 @@
+{
+  "scope": "actual build-tool output admission before source copying/compiler/output writes",
+  "cases": [
+    {
+      "case": 0,
+      "exit_code": 1,
+      "no_build_mutation": true
+    },
+    {
+      "case": 1,
+      "exit_code": 1,
+      "no_build_mutation": true
+    },
+    {
+      "case": 2,
+      "exit_code": 1,
+      "no_build_mutation": true
+    },
+    {
+      "case": 3,
+      "exit_code": 1,
+      "no_build_mutation": true
+    },
+    {
+      "case": 4,
+      "exit_code": 1,
+      "no_build_mutation": true
+    }
+  ],
+  "source_unchanged": true,
+  "tool_sha256": "561fd54422c6b680f4334f1d6ac558cfbefe48e8104aed2ab91b137cba0331ac"
+}

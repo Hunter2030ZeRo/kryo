@@ -65,7 +65,7 @@ MARKERS = {
     "gate_loans": "GATE: queued send call and accepted timeout loans OK cases=3",
     "gate_process_retirement": "GATE: final process handle retirement wakes receiver without polling",
 }
-FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP)(?=\s|$)")
+FAULT = re.compile(r"(?m)^(PANIC|#PF|#GP|#DF)(?=\s|$)")
 
 
 def cpu_checks(log, cpus):
@@ -137,6 +137,12 @@ def std_checks(log, enabled, cpu=None):
             r"(?m)^RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1$", log)) == 1,
         "rust_std_path_metadata": len(re.findall(
             r"(?m)^RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2$", log)) == 1,
+        "rust_std_directories": len(re.findall(
+            r"(?m)^RUSTSTDDIR: snapshots cursors and closure OK runs=2$", log)) == 1,
+        "rust_std_locks": len(re.findall(
+            r"(?m)^RUSTSTDLOCK: ownership and retirement OK runs=2$", log)) == 1,
+        "rust_std_lock_wait": len(re.findall(
+            r"(?m)^RUSTSTDLOCK: blocking wait and wake OK runs=1$", log)) == 1,
         "rust_std_random": random_check,
     }
 

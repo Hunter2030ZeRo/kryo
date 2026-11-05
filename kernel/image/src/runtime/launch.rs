@@ -9,7 +9,9 @@ use kryo_core::resource::{Budget, Charge, Resource};
 use kryo_interfaces::syscall::Error;
 
 const USER_STACK: u64 = 0x80_0000;
+const LARGE_USER_STACK: u64 = 0x2000_0000;
 const STACK_PAGES: u64 = 4;
+const MAX_STACK_PAGES: u64 = 256;
 const TLS: u64 = 0x90_0000;
 const MAX_IMAGE_PAGES: usize = 32;
 const MAX_NATIVE_IMAGE_PAGES: usize = 4096;
@@ -23,6 +25,7 @@ pub(crate) struct NativeImage<'a> {
 struct Image<'a> {
     bytes: &'a [u8],
     arguments: Option<NativeImage<'a>>,
+    stack_pages: u64,
 }
 
 pub(crate) struct PendingLoad<'kernel, 'objects> {
@@ -108,6 +111,7 @@ pub(crate) fn prepare_budgeted<'kernel, 'objects>(
         Image {
             bytes,
             arguments: None,
+            stack_pages: STACK_PAGES,
         },
         account,
     )
@@ -126,6 +130,36 @@ pub(crate) fn prepare_native<'kernel, 'objects>(
     image: NativeImage<'_>,
     account: Option<Budget>,
 ) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
+    prepare_native_with_stack(
+        pool,
+        direct,
+        memory,
+        region,
+        first_slot,
+        image,
+        account,
+        STACK_PAGES,
+    )
+}
+
+#[expect(
+    clippy::result_large_err,
+    reason = "Failed preparation retains mapping owners"
+)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Trusted launch selects the initial user stack budget"
+)]
+pub(crate) fn prepare_native_with_stack<'kernel, 'objects>(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &'kernel RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+    first_slot: usize,
+    image: NativeImage<'_>,
+    account: Option<Budget>,
+    stack_pages: u64,
+) -> Result<Resources<'kernel, 'objects>, LoadFailure<'kernel, 'objects>> {
     prepare_image(
         pool,
         direct,
@@ -135,6 +169,7 @@ pub(crate) fn prepare_native<'kernel, 'objects>(
         Image {
             bytes: image.bytes,
             arguments: Some(image),
+            stack_pages,
         },
         account,
     )
@@ -159,6 +194,14 @@ fn prepare_image<'kernel, 'objects>(
         thread_charge: None,
     };
     let result = (|| {
+        if !(STACK_PAGES..=MAX_STACK_PAGES).contains(&request.stack_pages) {
+            return Err(Error::InvalidArgument);
+        }
+        let stack_base = if request.stack_pages == STACK_PAGES {
+            USER_STACK
+        } else {
+            LARGE_USER_STACK
+        };
         pending.thread_charge = account
             .as_ref()
             .map(|budget| budget.try_charge(Resource::Threads, 1))
@@ -174,7 +217,10 @@ fn prepare_image<'kernel, 'objects>(
         let image = ElfImage::<8>::parse(request.bytes, LoadLimits { max_pages })
             .map_err(|_| Error::InvalidArgument)?;
         for page in image.pages() {
-            if super::threads::reserved_address(page.address()) {
+            if super::threads::reserved_address(page.address())
+                || (stack_base - 4096..stack_base + request.stack_pages * 4096)
+                    .contains(&page.address())
+            {
                 return Err(Error::InvalidArgument);
             }
         }
@@ -207,10 +253,12 @@ fn prepare_image<'kernel, 'objects>(
         let native = request.arguments.is_some();
         let stack_pointer = if let Some(arguments) = request.arguments {
             let headers = native_headers.expect("Native ELF metadata validation invariant");
+            let lower_pages = request.stack_pages - STACK_PAGES;
+            let argument_base = stack_base + lower_pages * 4096;
             let mut stack = [0u8; STACK_PAGES as usize * 4096];
             let pointer = build_initial_stack(
                 &mut stack,
-                USER_STACK,
+                argument_base,
                 arguments.argv,
                 arguments.envp,
                 &[
@@ -237,10 +285,15 @@ fn prepare_image<'kernel, 'objects>(
                 ],
             )
             .map_err(|_| Error::InvalidArgument)?;
+            for index in 0..lower_pages {
+                space
+                    .map_page(stack_base + index * 4096, Permissions::ReadWrite, &[])
+                    .map_err(|_| Error::OutOfResources)?;
+            }
             for (index, page) in stack.as_chunks::<4096>().0.iter().enumerate() {
                 space
                     .map_page(
-                        USER_STACK + index as u64 * 4096,
+                        argument_base + index as u64 * 4096,
                         Permissions::ReadWrite,
                         page,
                     )

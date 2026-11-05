@@ -1,0 +1,156 @@
+CPU: x86-64-v3 hardware admitted cpu=0
+BOOT: hhdm=0xffff800000000000 kernel_phys=0x000000001de72000 kernel_virt=0xffffffff80000000
+MEM[0]: kind=5 [0x0000000000001000, 0x000000000007e000) bytes=512000
+MEM[1]: kind=0 [0x000000000007e000, 0x000000000009f000) bytes=135168
+MEM[2]: kind=1 [0x000000000009fc00, 0x00000000000a0000) bytes=1024
+MEM[3]: kind=1 [0x00000000000f0000, 0x00000000000f6000) bytes=24576
+MEM[4]: kind=8 [0x00000000000f6000, 0x00000000000f7000) bytes=4096
+MEM[5]: kind=1 [0x00000000000f7000, 0x0000000000100000) bytes=36864
+MEM[6]: kind=0 [0x0000000000100000, 0x000000001d43f000) bytes=489943040
+MEM[7]: kind=5 [0x000000001d43f000, 0x000000001d4bf000) bytes=524288
+MEM[8]: kind=6 [0x000000001d4bf000, 0x000000001d4c0000) bytes=4096
+MEM[9]: kind=0 [0x000000001d4c0000, 0x000000001d4c2000) bytes=8192
+MEM[10]: kind=6 [0x000000001d4c2000, 0x000000001d4c3000) bytes=4096
+MEM[11]: kind=0 [0x000000001d4c3000, 0x000000001d4c4000) bytes=4096
+MEM[12]: kind=5 [0x000000001d4c4000, 0x000000001d4c5000) bytes=4096
+MEM[13]: kind=6 [0x000000001d4c5000, 0x000000001d906000) bytes=4460544
+MEM[14]: kind=5 [0x000000001d906000, 0x000000001d908000) bytes=8192
+MEM[15]: kind=6 [0x000000001d908000, 0x000000001dd62000) bytes=4562944
+MEM[16]: kind=5 [0x000000001dd62000, 0x000000001dd64000) bytes=8192
+MEM[17]: kind=6 [0x000000001dd64000, 0x000000001ddf3000) bytes=585728
+MEM[18]: kind=5 [0x000000001ddf3000, 0x000000001ddf5000) bytes=8192
+MEM[19]: kind=6 [0x000000001ddf5000, 0x000000001ddfc000) bytes=28672
+MEM[20]: kind=5 [0x000000001ddfc000, 0x000000001ddfe000) bytes=8192
+MEM[21]: kind=6 [0x000000001ddfe000, 0x000000001de06000) bytes=32768
+MEM[22]: kind=5 [0x000000001de06000, 0x000000001de08000) bytes=8192
+MEM[23]: kind=6 [0x000000001de08000, 0x000000001de0c000) bytes=16384
+MEM[24]: kind=5 [0x000000001de0c000, 0x000000001de0e000) bytes=8192
+MEM[25]: kind=6 [0x000000001de0e000, 0x000000001de17000) bytes=36864
+MEM[26]: kind=5 [0x000000001de17000, 0x000000001de19000) bytes=8192
+MEM[27]: kind=6 [0x000000001de19000, 0x000000001de20000) bytes=28672
+MEM[28]: kind=5 [0x000000001de20000, 0x000000001de22000) bytes=8192
+MEM[29]: kind=6 [0x000000001de22000, 0x000000001de2e000) bytes=49152
+MEM[30]: kind=5 [0x000000001de2e000, 0x000000001de30000) bytes=8192
+MEM[31]: kind=6 [0x000000001de30000, 0x000000001de41000) bytes=69632
+MEM[32]: kind=5 [0x000000001de41000, 0x000000001de43000) bytes=8192
+MEM[33]: kind=6 [0x000000001de43000, 0x000000001de49000) bytes=24576
+MEM[34]: kind=5 [0x000000001de49000, 0x000000001de4b000) bytes=8192
+MEM[35]: kind=6 [0x000000001de4b000, 0x000000001de50000) bytes=20480
+MEM[36]: kind=5 [0x000000001de50000, 0x000000001de52000) bytes=8192
+MEM[37]: kind=6 [0x000000001de52000, 0x000000001de54000) bytes=8192
+MEM[38]: kind=5 [0x000000001de54000, 0x000000001de56000) bytes=8192
+MEM[39]: kind=6 [0x000000001de56000, 0x000000001de59000) bytes=12288
+MEM[40]: kind=5 [0x000000001de59000, 0x000000001de5b000) bytes=8192
+MEM[41]: kind=6 [0x000000001de5b000, 0x000000001de5d000) bytes=8192
+MEM[42]: kind=5 [0x000000001de5d000, 0x000000001de5f000) bytes=8192
+MEM[43]: kind=6 [0x000000001de5f000, 0x000000001de63000) bytes=16384
+MEM[44]: kind=5 [0x000000001de63000, 0x000000001de72000) bytes=61440
+MEM[45]: kind=6 [0x000000001de72000, 0x000000001e93b000) bytes=11309056
+MEM[46]: kind=5 [0x000000001e93b000, 0x000000001ff47000) bytes=23117824
+MEM[47]: kind=0 [0x000000001ff47000, 0x000000001ff68000) bytes=135168
+MEM[48]: kind=5 [0x000000001ff68000, 0x000000001ffdc000) bytes=475136
+MEM[49]: kind=1 [0x000000001ffdc000, 0x000000001ffe0000) bytes=16384
+MEM[50]: kind=8 [0x000000001ffe0000, 0x000000001ffe3000) bytes=12288
+MEM[51]: kind=1 [0x000000001ffe3000, 0x0000000020000000) bytes=118784
+MEM[52]: kind=1 [0x00000000b0000000, 0x00000000c0000000) bytes=268435456
+MEM[53]: kind=7 [0x00000000fd000000, 0x00000000fd3e8000) bytes=4096000
+MEM[54]: kind=1 [0x00000000fed1c000, 0x00000000fed20000) bytes=16384
+MEM[55]: kind=1 [0x00000000fffc0000, 0x0000000100000000) bytes=262144
+FRAME metadata: start=0x7e000 end=0x82000 bytes=16384 bitmap_words=1871 summary_words=30 usable_frames=119684 managed_frames=119680
+MEM normalized: ranges=5 frames=119680
+AVAILABLE[0]: [0x0000000000082000, 0x000000000009f000) frames=29
+AVAILABLE[1]: [0x0000000000100000, 0x000000001d43f000) frames=119615
+AVAILABLE[2]: [0x000000001d4c0000, 0x000000001d4c2000) frames=2
+AVAILABLE[3]: [0x000000001d4c3000, 0x000000001d4c4000) frames=1
+AVAILABLE[4]: [0x000000001ff47000, 0x000000001ff68000) frames=33
+FRAME: metadata reservation excluded
+PCI: function bus=0 slot=0 function=0 vendor=0x8086 device=0x29c0 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=1 function=0 vendor=0x1234 device=0x1111 class=0x03 command=0x0103 bars=6
+PCI: function bus=0 slot=2 function=0 vendor=0x8086 device=0x10d3 class=0x02 command=0x0103 bars=6
+PCI: function bus=0 slot=3 function=0 vendor=0x1b36 device=0x000c class=0x06 command=0x0103 bars=2
+PCI: function bus=0 slot=31 function=0 vendor=0x8086 device=0x2918 class=0x06 command=0x0103 bars=6
+PCI: function bus=0 slot=31 function=2 vendor=0x8086 device=0x2922 class=0x01 command=0x0107 bars=6
+PCI: function bus=0 slot=31 function=3 vendor=0x8086 device=0x2930 class=0x0c command=0x0103 bars=6
+PCI: function bus=1 slot=0 function=0 vendor=0x1af4 device=0x1042 class=0x01 command=0x0107 bars=6
+PCI: inventory complete functions=8 virtio_block=1 command_unchanged=true
+HEAP: packed objects=128 bytes=64 backing_pages=8 baseline_pages=128 retained_pages=2
+HEAP: alignment/reuse/failure OK
+FRAME: ready total=119680 free=119678
+FRAME: alloc/release OK total=119680 free=119678
+RAM: zero OK
+PAGING: map/unmap OK cycles=128 free=119678
+VM: alias preparation rollback OK
+USER: separate address spaces OK
+USER fault: kernel-read vector=14 error=0x5 address=0xffffffff80000000
+USER fault: hhdm-read vector=14 error=0x5 address=0xffff800000200000
+USER fault: rx-write vector=14 error=0x7 address=0x400000
+USER fault: ro-write vector=14 error=0x7 address=0x600000
+USER fault: nx-execute vector=14 error=0x15 address=0x600000
+USER fault: stack-guard vector=14 error=0x6 address=0x7ffff8
+USER fault: privileged-cli vector=13 error=0x0 address=0x0
+USER fault: invalid-opcode vector=6 error=0x0 address=0x0
+USER fault: unsupported-fpu vector=7 error=0x0 address=0x0
+USER fault: port-io vector=13 error=0x0 address=0x0
+USER fault: syscall vector=6
+USER fault: sysenter vector=13
+DMA: unpublished buffer zeroing and retirement OK pages=3
+CLOCK: HPET monotonic ready lapic_counts=622909 sample_ns=10180810
+TIMER: preemption OK switches=8
+CAP: checks OK denied=3 stale=1
+TASK rejected: InvalidAddress
+TASK: invalid saved state isolated
+GATE: final process handle retirement wakes receiver without polling
+GATE: layout endpoint=312 object=328
+GATE: labels lifetime delegation quota and retirement OK
+GATE: queued send call and accepted timeout loans OK cases=3
+IPC: rendezvous and lifetime OK cases=8
+IDLE: halt and wake OK cases=3
+SHARED: mapping and lifetime OK pages=3
+TRANSFER: commit and rollback OK cases=2
+SHARED: read-only fault isolated vector=14 error=7
+REPLYCAPS: atomic grants quota timeout and retirement OK cases=6
+REPLYCAPS: legacy exchange register inputs preserved
+ELF: module validated bytes=13240 pages=4 entry=0x400000
+ELF: native execution OK tasks=2 preemptions=244 xsave=true avx=true
+STATE: x87 SIMD TLS isolation OK
+TIME: early IRQ ignored until deadline
+TIME: deadlines and wakeup OK cases=11 idle=17
+PROCESS: entry stack creation failed error=Paging(AlreadyMapped) cleanup=None
+LAUNCH: rejection and rollback OK cases=9
+SPAWN: publication rollback OK cases=5
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: lifecycle and isolation OK cases=9
+THREAD: created id=0x100000002 process=0x100000001
+THREAD: created id=0x100000003 process=0x100000001
+THREAD: runtime-owned admission rollback and lifetime OK
+WAIT: pending thread retirement cancels word
+WAIT: expired word precedes wake admission
+WAIT: unbounded word idle preserves registration
+SMP: online=1 discovered=1 limit=255
+HEAP: concurrent allocation and retirement OK cpus=1
+USERLOG: process=0x100000001 event=300 value=15
+BETAFS: native Raw Zstd LZ4 OpenZL and engine checks OK
+USERLOG: process=0x100000001 event=91 value=1
+USERLOG: process=0x100000002 event=310 value=1
+USERLOG: process=0x100000002 event=312 value=1
+USERLOG: process=0x100000002 event=311 value=1
+USERLOG: process=0x100000002 event=312 value=2
+USERLOG: process=0x100000002 event=311 value=2
+USERLOG: process=0x100000002 event=312 value=3
+USERLOG: process=0x100000002 event=311 value=3
+USERLOG: process=0x100000003 event=320 value=1
+USERLOG: process=0x100000004 event=324 value=1
+USERLOG: process=0x100000005 event=325 value=1
+
+PANIC
+file: kernel/image/src/runtime/betafs.rs
+line: 0x00000000000001ed
+message: assertion `left == right` failed
+  left: None
+ right: Some(ExitStatus { reason: Stopped, code: 91 })

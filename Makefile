@@ -6,6 +6,10 @@ BLOCK_PROBE ?= 0
 ABI_PROBE ?= 0
 LIBC_PROBE ?= 0
 STD_PROBE ?= 0
+BETAFS_PROBE ?= 0
+BETAFS_PHASE ?= format
+BETAFS_PREBUILT ?= 0
+BETAFS_SOURCE ?= $(CRYOLITE_BETAFS_SOURCE)
 FEATURE_FLAGS := $(if $(strip $(FEATURES)),--features "$(FEATURES)")
 
 BUILD_DIR := build
@@ -27,6 +31,8 @@ BLOCK_CLIENT_ELF := $(BUILD_DIR)/block-client.elf
 ABI_ELF := $(BUILD_DIR)/abi-probe.elf
 LIBC_ELF := $(BUILD_DIR)/libc-probe.elf
 STD_ELF := $(BUILD_DIR)/rust-std-probe.elf
+BETAFS_ELF := $(BUILD_DIR)/betafs-service.elf
+CODECS_ELF := $(BUILD_DIR)/betafs-codecs.elf
 
 CARGO_TARGET_DIR ?= target
 KERNEL := $(CARGO_TARGET_DIR)/$(TARGET)/$(PROFILE)/kryo
@@ -38,7 +44,7 @@ MEMORY ?= 512M
 QEMU := qemu-system-x86_64
 QEMU_FLAGS := -M q35,memory-backend=ram -object memory-backend-ram,id=ram,size=$(MEMORY),prealloc=off,reserve=off -overcommit mem-lock=off -global hpet.msi=on -m $(MEMORY) -smp $(CPUS) -cpu $(CPU) -serial stdio -no-reboot -debugcon "file:$(BUILD_DIR)/debug.log"
 
-.PHONY: all kernel user abi libc rust-std iso run check test smoke clean
+.PHONY: all kernel user abi libc rust-std betafs iso image run check test smoke clean
 
 all: iso
 
@@ -54,7 +60,13 @@ libc:
 rust-std:
 	python3 tools/build_std.py --profile "$(PROFILE)" --build-dir "$(BUILD_DIR)/rust-std" --output "$(STD_ELF)"
 
-user: $(if $(filter 1,$(ABI_PROBE)),abi) $(if $(filter 1,$(LIBC_PROBE)),libc) $(if $(filter 1,$(STD_PROBE)),rust-std)
+betafs:
+ifneq ($(BETAFS_PREBUILT),1)
+	python3 tools/build_betafs.py --betafs-source "$(BETAFS_SOURCE)" --profile "$(PROFILE)" --build-dir "$(BUILD_DIR)/betafs-codecs" --manifest-path userspace/filesystems/betafs/native-check/Cargo.toml --output "$(CODECS_ELF)"
+	python3 tools/build_betafs.py --betafs-source "$(BETAFS_SOURCE)" --profile "$(PROFILE)" --build-dir "$(BUILD_DIR)/betafs-service" --manifest-path userspace/filesystems/betafs/Cargo.toml --output "$(BETAFS_ELF)"
+endif
+
+user: $(if $(filter 1,$(ABI_PROBE)),abi) $(if $(filter 1,$(LIBC_PROBE)),libc) $(if $(filter 1,$(STD_PROBE) $(BETAFS_PROBE)),rust-std) $(if $(filter 1,$(BETAFS_PROBE)),betafs)
 	python3 tools/build_user.py --profile "$(PROFILE)" --output "$(USER_ELF)"
 	python3 tools/build_user.py --program init --profile "$(PROFILE)" --output "$(INIT_ELF)"
 	python3 tools/build_user.py --program bootstrap-worker --profile "$(PROFILE)" --output "$(WORKER_ELF)"
@@ -70,6 +82,9 @@ user: $(if $(filter 1,$(ABI_PROBE)),abi) $(if $(filter 1,$(LIBC_PROBE)),libc) $(
 	python3 tools/build_user.py --program block-client --profile "$(PROFILE)" --output "$(BLOCK_CLIENT_ELF)"
 
 iso: kernel user
+	$(MAKE) image
+
+image:
 	rm -rf "$(ISO_ROOT)"
 	mkdir -p "$(ISO_ROOT)/boot/limine"
 	mkdir -p "$(ISO_ROOT)/EFI/BOOT"
@@ -101,7 +116,13 @@ ifeq ($(STD_PROBE),1)
 	cp "$(STD_ELF)" "$(ISO_ROOT)/boot/rust-std-probe.elf"
 	python3 -c 'from pathlib import Path; c=Path("$(ISO_ROOT)/boot/limine/limine.conf"); c.write_text(c.read_text()+"\tmodule_path: boot():/boot/rust-std-probe.elf\n\tmodule_cmdline: kryo-rust-std-probe\n")'
 endif
-ifeq ($(BLOCK_PROBE),1)
+ifeq ($(BETAFS_PROBE),1)
+	cp "$(STD_ELF)" "$(ISO_ROOT)/boot/rust-std-probe.elf"
+	cp "$(BETAFS_ELF)" "$(ISO_ROOT)/boot/betafs-service.elf"
+	cp "$(CODECS_ELF)" "$(ISO_ROOT)/boot/betafs-codecs.elf"
+	python3 tools/package_betafs.py --iso-root "$(ISO_ROOT)" --phase "$(BETAFS_PHASE)"
+endif
+ifneq ($(filter 1,$(BLOCK_PROBE) $(BETAFS_PROBE)),)
 	python3 -c 'from pathlib import Path; p=Path("$(ISO_ROOT)/boot"); (p/"block-probe.enabled").write_bytes(b"KRYO-BLOCK-PROBE-V1\n"); c=p/"limine/limine.conf"; c.write_text(c.read_text()+"\tmodule_path: boot():/boot/block-probe.enabled\n\tmodule_cmdline: kryo-block-probe-enabled\n")'
 endif
 

@@ -28,6 +28,10 @@ pub enum Operation {
     SetLen = 8,
     Sync = 9,
     PathInfo = 10,
+    OpenDir = 11,
+    NextDir = 12,
+    Lock = 13,
+    Unlock = 14,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,6 +43,36 @@ pub enum FileType {
 }
 
 pub const READONLY: u32 = 1;
+pub const DIR_HEADER_SIZE: usize = 24;
+pub const DIR_NAME_MAX: usize = 255;
+pub const LOCK_TRY: u64 = 0x100;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u64)]
+pub enum LockMode {
+    Shared = 1,
+    Exclusive = 2,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LockOptions {
+    pub mode: LockMode,
+    pub nonblocking: bool,
+}
+
+impl LockOptions {
+    pub fn decode(word: u64) -> Result<Self, Status> {
+        let mode = match word & !LOCK_TRY {
+            1 => LockMode::Shared,
+            2 => LockMode::Exclusive,
+            _ => return Err(Status::Malformed),
+        };
+        Ok(Self {
+            mode,
+            nonblocking: word & LOCK_TRY != 0,
+        })
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Info {
@@ -77,6 +111,64 @@ impl Info {
 
     pub const fn response(self, id: u64) -> [u64; 4] {
         [id, Status::Ok as u64, self.size, self.attributes()]
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DirectoryEntry<'a> {
+    pub info: Info,
+    pub name: &'a [u8],
+}
+
+impl<'a> DirectoryEntry<'a> {
+    pub fn decode(bytes: &'a [u8]) -> Result<Self, Status> {
+        if bytes.len() < DIR_HEADER_SIZE || bytes.len() > DIR_HEADER_SIZE + DIR_NAME_MAX {
+            return Err(Status::Malformed);
+        }
+        let size = u64::from_le_bytes(bytes[0..8].try_into().unwrap());
+        let attributes = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        let length = u16::from_le_bytes(bytes[16..18].try_into().unwrap()) as usize;
+        if length == 0
+            || length > DIR_NAME_MAX
+            || bytes.len() != DIR_HEADER_SIZE + length
+            || bytes[18..DIR_HEADER_SIZE].iter().any(|byte| *byte != 0)
+        {
+            return Err(Status::Malformed);
+        }
+        let entry = Self {
+            info: Info::decode(size, attributes)?,
+            name: &bytes[DIR_HEADER_SIZE..],
+        };
+        entry.validate_name()?;
+        Ok(entry)
+    }
+
+    fn validate_name(self) -> Result<(), Status> {
+        if self.name.is_empty()
+            || self.name.len() > DIR_NAME_MAX
+            || self.name.contains(&0)
+            || self.name.contains(&b'/')
+            || matches!(self.name, b"." | b"..")
+        {
+            Err(Status::Malformed)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn encode(self, bytes: &mut [u8]) -> Result<usize, Status> {
+        self.validate_name()?;
+        Info::decode(self.info.size, self.info.attributes())?;
+        let length = DIR_HEADER_SIZE + self.name.len();
+        if bytes.len() < length {
+            return Err(Status::Range);
+        }
+        bytes[..DIR_HEADER_SIZE].fill(0);
+        bytes[0..8].copy_from_slice(&self.info.size.to_le_bytes());
+        bytes[8..16].copy_from_slice(&self.info.attributes().to_le_bytes());
+        bytes[16..18].copy_from_slice(&(self.name.len() as u16).to_le_bytes());
+        bytes[DIR_HEADER_SIZE..length].copy_from_slice(self.name);
+        Ok(length)
     }
 }
 
@@ -135,6 +227,10 @@ pub enum Status {
     TooManyOpen = 11,
     BadFile = 12,
     SymlinkLoop = 13,
+    WouldBlock = 14,
+    Deadlock = 15,
+    NotDirectory = 16,
+    IsDirectory = 17,
 }
 
 pub const fn header(operation: Operation) -> u64 {
@@ -195,9 +291,18 @@ impl Request {
             8 => Operation::SetLen,
             9 => Operation::Sync,
             10 => Operation::PathInfo,
+            11 => Operation::OpenDir,
+            12 => Operation::NextDir,
+            13 => Operation::Lock,
+            14 => Operation::Unlock,
             _ => return Err(Status::Malformed),
         };
-        if namespace != matches!(operation, Operation::Open | Operation::PathInfo) {
+        if namespace
+            != matches!(
+                operation,
+                Operation::Open | Operation::PathInfo | Operation::OpenDir
+            )
+        {
             return Err(Status::Denied);
         }
         let expected = match operation {
@@ -206,8 +311,15 @@ impl Request {
             | Operation::Write
             | Operation::ReadAt
             | Operation::WriteAt
-            | Operation::PathInfo => 1,
-            Operation::Seek | Operation::Info | Operation::SetLen | Operation::Sync => 0,
+            | Operation::PathInfo
+            | Operation::OpenDir
+            | Operation::NextDir => 1,
+            Operation::Seek
+            | Operation::Info
+            | Operation::SetLen
+            | Operation::Sync
+            | Operation::Lock
+            | Operation::Unlock => 0,
         };
         if capabilities != expected {
             return Err(Status::Malformed);
@@ -272,6 +384,30 @@ impl Request {
                     return Err(Status::Range);
                 }
             }
+            Operation::OpenDir => {
+                if message[2] != 0 {
+                    return Err(Status::Malformed);
+                }
+                if message[3] == 0 || message[3] > PAGE_SIZE {
+                    return Err(Status::Range);
+                }
+            }
+            Operation::NextDir => {
+                if message[2] != 0 || message[3] != PAGE_SIZE {
+                    return Err(Status::Malformed);
+                }
+            }
+            Operation::Lock => {
+                LockOptions::decode(message[2])?;
+                if message[3] != 0 {
+                    return Err(Status::Malformed);
+                }
+            }
+            Operation::Unlock => {
+                if message[2] != 0 || message[3] != 0 {
+                    return Err(Status::Malformed);
+                }
+            }
         }
         Ok(Self {
             operation,
@@ -307,6 +443,126 @@ pub fn seek_position(current: u64, size: u64, offset: i64, whence: u64) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn directories_and_locks_require_exact_authority_and_shapes() {
+        for (op, namespace, argument, length, caps) in [
+            (Operation::OpenDir, true, 0, 1, 1),
+            (Operation::NextDir, false, 0, PAGE_SIZE, 1),
+            (Operation::Lock, false, 1, 0, 0),
+            (Operation::Lock, false, 2 | LOCK_TRY, 0, 0),
+            (Operation::Unlock, false, 0, 0, 0),
+        ] {
+            let message = [header(op), 1, argument, length];
+            assert!(Request::decode(message, namespace, caps).is_ok());
+            assert_eq!(
+                Request::decode(message, !namespace, caps),
+                Err(Status::Denied)
+            );
+            for count in 0..=2 {
+                if count != caps {
+                    assert_eq!(
+                        Request::decode(message, namespace, count),
+                        Err(Status::Malformed)
+                    );
+                }
+            }
+        }
+        for (op, namespace, argument, length, caps, error) in [
+            (Operation::OpenDir, true, 1, 1, 1, Status::Malformed),
+            (Operation::OpenDir, true, 0, 0, 1, Status::Range),
+            (Operation::OpenDir, true, 0, PAGE_SIZE + 1, 1, Status::Range),
+            (
+                Operation::NextDir,
+                false,
+                1,
+                PAGE_SIZE,
+                1,
+                Status::Malformed,
+            ),
+            (
+                Operation::NextDir,
+                false,
+                0,
+                PAGE_SIZE - 1,
+                1,
+                Status::Malformed,
+            ),
+            (Operation::Lock, false, 1, 1, 0, Status::Malformed),
+            (Operation::Unlock, false, 1, 0, 0, Status::Malformed),
+            (Operation::Unlock, false, 0, 1, 0, Status::Malformed),
+        ] {
+            assert_eq!(
+                Request::decode([header(op), 1, argument, length], namespace, caps),
+                Err(error)
+            );
+        }
+        for word in [0, 3, 4, LOCK_TRY, LOCK_TRY | 3, 0x201, 1 << 63] {
+            assert_eq!(LockOptions::decode(word), Err(Status::Malformed));
+        }
+    }
+
+    #[test]
+    fn directory_payload_is_bounded_little_endian_and_strict() {
+        let entry = DirectoryEntry {
+            info: Info {
+                size: 0x0102_0304,
+                kind: FileType::Symlink,
+                readonly: true,
+            },
+            name: b"link\xff",
+        };
+        let mut bytes = [0xa5; DIR_HEADER_SIZE + DIR_NAME_MAX];
+        let length = entry.encode(&mut bytes).unwrap();
+        assert_eq!(length, 29);
+        assert_eq!(&bytes[..8], &[4, 3, 2, 1, 0, 0, 0, 0]);
+        assert_eq!(&bytes[16..24], &[5, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(DirectoryEntry::decode(&bytes[..length]), Ok(entry));
+        assert_eq!(entry.encode(&mut [0; DIR_HEADER_SIZE]), Err(Status::Range));
+        for index in [18, 23] {
+            let mut malformed = bytes;
+            malformed[index] = 1;
+            assert_eq!(
+                DirectoryEntry::decode(&malformed[..length]),
+                Err(Status::Malformed)
+            );
+        }
+        for (index, value) in [(8, 9), (12, 2), (16, 0), (17, 1)] {
+            let mut malformed = bytes;
+            malformed[index] = value;
+            assert_eq!(
+                DirectoryEntry::decode(&malformed[..length]),
+                Err(Status::Malformed)
+            );
+        }
+        assert_eq!(
+            DirectoryEntry::decode(&bytes[..length - 1]),
+            Err(Status::Malformed)
+        );
+        assert_eq!(
+            DirectoryEntry::decode(&bytes[..length + 1]),
+            Err(Status::Malformed)
+        );
+        for name in [
+            b"".as_slice(),
+            b".",
+            b"..",
+            b"x/y",
+            b"x\0y",
+            &[b'x'; DIR_NAME_MAX + 1],
+        ] {
+            assert_eq!(
+                DirectoryEntry { name, ..entry }.encode(&mut bytes),
+                Err(Status::Malformed)
+            );
+        }
+        let largest = DirectoryEntry {
+            name: &[b'x'; DIR_NAME_MAX],
+            ..entry
+        };
+        assert_eq!(largest.encode(&mut bytes), Ok(bytes.len()));
+        assert_eq!(DirectoryEntry::decode(&bytes), Ok(largest));
+    }
 
     #[test]
     fn namespace_and_file_authority_come_from_the_gate() {

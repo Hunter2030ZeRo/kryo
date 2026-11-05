@@ -2,10 +2,10 @@ use crate::ffi::{CString, OsString};
 use crate::fs::TryLockError;
 use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut, SeekFrom};
 use crate::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
-use crate::os::unix::ffi::OsStrExt;
+use crate::os::unix::ffi::{OsStrExt, OsStringExt};
 use crate::path::{Path, PathBuf};
 use crate::sys::time::SystemTime;
-use crate::sys::{unsupported, unsupported_err, FromInner, IntoInner};
+use crate::sys::{unsupported, FromInner, IntoInner};
 
 pub use super::common::exists;
 pub use super::unsupported::{
@@ -102,26 +102,22 @@ impl FilePermissions {
 }
 
 #[derive(Debug)]
-pub struct ReadDir(!);
-
-#[derive(Debug)]
-pub struct DirEntry(!);
-
-impl Drop for ReadDir {
-    fn drop(&mut self) {
-        self.0
-    }
+pub struct ReadDir {
+    file: File,
+    root: PathBuf,
+    finished: bool,
 }
 
-impl Drop for DirEntry {
-    fn drop(&mut self) {
-        self.0
-    }
+#[derive(Debug)]
+pub struct DirEntry {
+    root: PathBuf,
+    name: OsString,
+    metadata: FileAttr,
 }
 
 impl ReadDir {
     pub fn dir(&self) -> io::Result<Dir> {
-        self.0
+        unsupported()
     }
 }
 
@@ -129,30 +125,99 @@ impl Iterator for ReadDir {
     type Item = io::Result<DirEntry>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0
+        if self.finished {
+            return None;
+        }
+        let result = self.next_entry();
+        if !matches!(result, Ok(Some(_))) {
+            self.finished = true;
+        }
+        result.transpose()
+    }
+}
+
+impl ReadDir {
+    fn next_entry(&self) -> io::Result<Option<DirEntry>> {
+        let mut entry = libc::cryolite_dir_entry {
+            info: libc::cryolite_file_info {
+                size: 0,
+                kind: 0,
+                flags: 0,
+            },
+            name_length: 0,
+            name: [0; 255],
+        };
+        let mut present = 0;
+        status(unsafe {
+            libc::__cryolite_dir_next(self.file.as_raw_fd(), &mut entry, &mut present)
+        })?;
+        if present == 0 {
+            return Ok(None);
+        }
+        let length = entry.name_length as usize;
+        if present != 1 || length == 0 || length > entry.name.len() {
+            return Err(invalid_metadata());
+        }
+        let bytes = &entry.name[..length];
+        if bytes.contains(&0) || bytes.contains(&b'/') || bytes == b"." || bytes == b".." {
+            return Err(invalid_metadata());
+        }
+        let metadata = FileAttr::decode(entry.info)?;
+        let mut name = Vec::new();
+        name.try_reserve_exact(length)
+            .map_err(|_| io::Error::from(io::ErrorKind::OutOfMemory))?;
+        name.extend_from_slice(bytes);
+        Ok(Some(DirEntry {
+            root: owned_path(&self.root)?,
+            name: OsString::from_vec(name),
+            metadata,
+        }))
     }
 }
 
 impl DirEntry {
     pub fn path(&self) -> PathBuf {
-        self.0
+        self.root.join(&self.name)
     }
 
     pub fn file_name(&self) -> OsString {
-        self.0
+        self.name.clone()
     }
 
     pub fn metadata(&self) -> io::Result<FileAttr> {
-        self.0
+        Ok(self.metadata.clone())
     }
 
     pub fn file_type(&self) -> io::Result<FileType> {
-        self.0
+        Ok(self.metadata.file_type())
     }
 }
 
-pub fn readdir(_path: &Path) -> io::Result<ReadDir> {
-    unsupported()
+pub fn readdir(path: &Path) -> io::Result<ReadDir> {
+    let root = owned_path(path)?;
+    let path = native_path(path)?;
+    let mut fd = -1;
+    status(unsafe { libc::__cryolite_dir_open(path.as_ptr(), &mut fd) })?;
+    if fd < 0 {
+        return Err(io::const_error!(
+            io::ErrorKind::InvalidData,
+            "invalid native directory descriptor",
+        ));
+    }
+    Ok(ReadDir {
+        file: unsafe { File::from_raw_fd(fd) },
+        root,
+        finished: false,
+    })
+}
+
+fn owned_path(path: &Path) -> io::Result<PathBuf> {
+    let mut owned = PathBuf::new();
+    owned
+        .try_reserve_exact(path.as_os_str().len())
+        .map_err(|_| io::Error::from(io::ErrorKind::OutOfMemory))?;
+    owned.push(path);
+    Ok(owned)
 }
 
 pub fn stat(path: &Path) -> io::Result<FileAttr> {
@@ -387,23 +452,31 @@ impl File {
     }
 
     pub fn lock(&self) -> io::Result<()> {
-        unsupported()
+        status(unsafe { libc::__cryolite_file_lock(self.as_raw_fd(), 0, 0) })
     }
 
     pub fn lock_shared(&self) -> io::Result<()> {
-        unsupported()
+        status(unsafe { libc::__cryolite_file_lock(self.as_raw_fd(), 1, 0) })
     }
 
     pub fn try_lock(&self) -> Result<(), TryLockError> {
-        Err(TryLockError::Error(unsupported_err()))
+        self.try_lock_mode(false)
     }
 
     pub fn try_lock_shared(&self) -> Result<(), TryLockError> {
-        self.try_lock()
+        self.try_lock_mode(true)
     }
 
     pub fn unlock(&self) -> io::Result<()> {
-        unsupported()
+        status(unsafe { libc::__cryolite_file_unlock(self.as_raw_fd()) })
+    }
+
+    fn try_lock_mode(&self, shared: bool) -> Result<(), TryLockError> {
+        match unsafe { libc::__cryolite_file_lock(self.as_raw_fd(), i32::from(shared), 1) } {
+            0 => Ok(()),
+            libc::EAGAIN => Err(TryLockError::WouldBlock),
+            error => Err(TryLockError::Error(io::Error::from_raw_os_error(error))),
+        }
     }
 
     pub fn truncate(&self, size: u64) -> io::Result<()> {

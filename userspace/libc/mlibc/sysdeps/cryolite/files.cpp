@@ -16,6 +16,10 @@ constexpr uint64_t file_rights = KRYO_RIGHT_SEND | KRYO_RIGHT_DUP | KRYO_RIGHT_T
 static_assert(sizeof(cryolite_file_info) == 16 && alignof(cryolite_file_info) == 8);
 static_assert(offsetof(cryolite_file_info, size) == 0
     && offsetof(cryolite_file_info, kind) == 8 && offsetof(cryolite_file_info, flags) == 12);
+static_assert(sizeof(cryolite_dir_entry) == 280 && alignof(cryolite_dir_entry) == 8);
+static_assert(offsetof(cryolite_dir_entry, info) == 0
+    && offsetof(cryolite_dir_entry, name_length) == 16
+    && offsetof(cryolite_dir_entry, name) == 20);
 
 struct Description {
     Description *next;
@@ -72,6 +76,10 @@ int service_error(uint64_t status) {
         case KRYO_FILE_TOO_MANY_OPEN: return EMFILE;
         case KRYO_FILE_BAD_FILE: return EBADF;
         case KRYO_FILE_SYMLINK_LOOP: return ELOOP;
+        case KRYO_FILE_WOULD_BLOCK: return EAGAIN;
+        case KRYO_FILE_DEADLOCK: return EDEADLK;
+        case KRYO_FILE_NOT_DIRECTORY: return ENOTDIR;
+        case KRYO_FILE_IS_DIRECTORY: return EISDIR;
         default: return EPROTO;
     }
 }
@@ -298,6 +306,15 @@ void discard_grants(const kryo_ipc_result &reply) {
 
 enum class ReplyKind { Ordinary, Open, Info };
 
+bool valid_info(uint64_t size, uint64_t attributes) {
+    auto type = static_cast<uint32_t>(attributes);
+    auto flags = attributes >> 32;
+    return size <= static_cast<uint64_t>(LONG_MAX)
+        && (type == KRYO_FILE_REGULAR || type == KRYO_FILE_DIRECTORY
+            || type == KRYO_FILE_SYMLINK)
+        && !(flags & ~uint64_t{KRYO_FILE_READONLY});
+}
+
 int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id,
         ReplyKind kind = ReplyKind::Ordinary) {
     if (reply.status) {
@@ -310,7 +327,7 @@ int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id,
     bool opening = kind == ReplyKind::Open;
     bool information = kind == ReplyKind::Info && success;
     bool grant = opening && success;
-    bool valid = status <= KRYO_FILE_SYMLINK_LOOP
+    bool valid = status <= KRYO_FILE_IS_DIRECTORY
         && reply.message.words[0] == id && (information || reply.message.words[3] == 0)
         && reply.count == static_cast<uint64_t>(grant)
         && (grant ? reply.handles[0] != 0 : reply.handles[0] == 0)
@@ -318,14 +335,8 @@ int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id,
         && (success || reply.message.words[2] == 0);
     if (opening && success)
         valid &= reply.message.words[2] == 0;
-    if (information) {
-        auto type = static_cast<uint32_t>(reply.message.words[3]);
-        auto flags = reply.message.words[3] >> 32;
-        valid &= reply.message.words[2] <= static_cast<uint64_t>(LONG_MAX)
-            && (type == KRYO_FILE_REGULAR || type == KRYO_FILE_DIRECTORY
-                || type == KRYO_FILE_SYMLINK)
-            && !(flags & ~uint64_t{KRYO_FILE_READONLY});
-    }
+    if (information)
+        valid &= valid_info(reply.message.words[2], reply.message.words[3]);
     if (!valid) {
         discard_grants(reply);
         file->poisoned = true;
@@ -440,15 +451,8 @@ int file_command(int descriptor, uint32_t opcode, uint64_t argument, bool writin
     return 0;
 }
 
-} // namespace
-
-extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, int *descriptor) {
-    auto root = __cryolite_file_namespace();
-    if (!root)
-        return ENOSYS;
-    uint64_t wire;
-    if (auto error = open_flags(flags, mode, &wire))
-        return error;
+int open_path(uint64_t root, const char *path, int flags, uint32_t opcode,
+        uint64_t wire, int *descriptor) {
     size_t length;
     if (auto error = path_length(path, &length))
         return error;
@@ -463,7 +467,7 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
         if (!error) {
             loan.copy_in(path, length);
             auto id = file->request++;
-            kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_OPEN), id, wire, length}};
+            kryo_message message{{KRYO_FILE_HEADER(opcode), id, wire, length}};
             kryo_grant grant{loan.handle, KRYO_RIGHT_READ | KRYO_RIGHT_MAP};
             auto reply = kryo_ipc_call_exchange(root, message, &grant, 1, 1);
             error = validate_reply(file, reply, id, ReplyKind::Open);
@@ -482,6 +486,87 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
     descriptors[reserved_descriptor].published = true;
     unlock(&table_lock);
     *descriptor = reserved_descriptor;
+    return 0;
+}
+
+uint64_t little_endian(const unsigned char *bytes, size_t count) {
+    uint64_t result = 0;
+    for (size_t index = 0; index < count; ++index)
+        result |= uint64_t{bytes[index]} << (index * 8);
+    return result;
+}
+
+} // namespace
+
+extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, int *descriptor) {
+    auto root = __cryolite_file_namespace();
+    if (!root)
+        return ENOSYS;
+    uint64_t wire;
+    if (auto error = open_flags(flags, mode, &wire))
+        return error;
+    return open_path(root, path, flags, KRYO_FILE_OPEN, wire, descriptor);
+}
+
+extern "C" int __cryolite_dir_open(const char *path, int *descriptor) {
+    auto root = __cryolite_file_namespace();
+    if (!root)
+        return ENOSYS;
+    return open_path(root, path, O_RDONLY | O_CLOEXEC, KRYO_FILE_OPEN_DIR, 0, descriptor);
+}
+
+extern "C" int __cryolite_dir_next(int descriptor, struct cryolite_dir_entry *output,
+        int *present) {
+    Operation operation{pin_file(descriptor)};
+    auto file = operation.file;
+    if (!file)
+        return EBADF;
+    uint64_t id;
+    if (auto error = next_request(file, &id))
+        return error;
+    Loan loan{file};
+    if (auto error = loan.create())
+        return error;
+    kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_NEXT_DIR), id, 0, KRYO_FILE_PAGE_SIZE}};
+    kryo_grant grant{loan.handle, KRYO_RIGHT_READ | KRYO_RIGHT_WRITE | KRYO_RIGHT_MAP};
+    auto reply = kryo_ipc_call_exchange(file->handle, message, &grant, 1, 0);
+    if (auto error = validate_reply(file, reply, id))
+        return error;
+    auto count = reply.message.words[2];
+    if (!count) {
+        *present = 0;
+        return 0;
+    }
+    constexpr size_t maximum = KRYO_FILE_DIR_HEADER_SIZE + KRYO_FILE_DIR_NAME_MAX;
+    if (count <= KRYO_FILE_DIR_HEADER_SIZE || count > maximum) {
+        file->poisoned = true;
+        return EPROTO;
+    }
+    unsigned char snapshot[maximum];
+    loan.copy_out(snapshot, count);
+    auto size = little_endian(snapshot, 8);
+    auto attributes = little_endian(snapshot + 8, 8);
+    auto length = little_endian(snapshot + 16, 2);
+    bool valid = length == count - KRYO_FILE_DIR_HEADER_SIZE && valid_info(size, attributes);
+    for (size_t index = 18; index < KRYO_FILE_DIR_HEADER_SIZE; ++index)
+        valid &= snapshot[index] == 0;
+    auto name = snapshot + KRYO_FILE_DIR_HEADER_SIZE;
+    for (size_t index = 0; index < count - KRYO_FILE_DIR_HEADER_SIZE; ++index)
+        valid &= name[index] != 0 && name[index] != '/';
+    valid &= !(length == 1 && name[0] == '.')
+        && !(length == 2 && name[0] == '.' && name[1] == '.');
+    if (!valid) {
+        file->poisoned = true;
+        return EPROTO;
+    }
+    cryolite_dir_entry entry{};
+    entry.info = {size, static_cast<uint32_t>(attributes),
+        static_cast<uint32_t>(attributes >> 32)};
+    entry.name_length = static_cast<uint32_t>(length);
+    for (size_t index = 0; index < length; ++index)
+        entry.name[index] = name[index];
+    *output = entry;
+    *present = 1;
     return 0;
 }
 
@@ -565,6 +650,19 @@ extern "C" int __cryolite_file_sync(int descriptor, int data_only) {
         return EINVAL;
     return file_command(descriptor, KRYO_FILE_SYNC,
         data_only ? KRYO_FILE_SYNC_DATA : KRYO_FILE_SYNC_ALL, false);
+}
+
+extern "C" int __cryolite_file_lock(int descriptor, int shared, int nonblock) {
+    if ((shared != 0 && shared != 1) || (nonblock != 0 && nonblock != 1))
+        return EINVAL;
+    uint64_t argument = shared ? KRYO_FILE_LOCK_SHARED : KRYO_FILE_LOCK_EXCLUSIVE;
+    if (nonblock)
+        argument |= KRYO_FILE_LOCK_TRY;
+    return file_command(descriptor, KRYO_FILE_LOCK, argument, false);
+}
+
+extern "C" int __cryolite_file_unlock(int descriptor) {
+    return file_command(descriptor, KRYO_FILE_UNLOCK, 0, false);
 }
 
 extern "C" int __cryolite_file_seek(int descriptor, off_t offset, int whence, off_t *actual) {

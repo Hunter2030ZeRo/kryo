@@ -1,0 +1,50 @@
+cargo build --locked -p kryo --target x86_64-unknown-none --profile dev --features "boot-tests"
+   Compiling scopeguard v1.2.0
+   Compiling const_fn v0.4.12
+   Compiling rustversion v1.0.23
+   Compiling bit_field v0.10.3
+   Compiling bitflags v2.13.2
+   Compiling volatile v0.4.6
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/kernel/image)
+   Compiling allocator-api2 v0.4.0
+   Compiling kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/interfaces)
+   Compiling limine v0.6.5
+   Compiling lock_api v0.4.14
+   Compiling spin v0.12.3
+   Compiling talc v5.1.1
+   Compiling kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/kernel/core)
+   Compiling x86_64 v0.15.5
+   Compiling kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.13s
+python3 tools/build_std.py --profile "debug" --build-dir "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/beta-debug-attempt1/rust-std" --output "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/beta-debug-attempt1/rust-std-probe.elf"
+Traceback (most recent call last):
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_libc.py", line 237, in <module>
+    main()
+    ~~~~^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_libc.py", line 163, in main
+    source = prepare(build, arguments.source_cache.resolve(), arguments.fetch_dependencies)
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_libc.py", line 115, in prepare
+    extract(archive(cache, "mlibc", pins["mlibc"], fetch), source)
+            ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_libc.py", line 65, in archive
+    raise RuntimeError(f"Missing pinned source {path}; use --fetch-dependencies once")
+RuntimeError: Missing pinned source /home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/build/libc/cache/mlibc-07cfd943977737b8147c1289922c23479feef53d.tar.gz; use --fetch-dependencies once
+Traceback (most recent call last):
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_std.py", line 98, in <module>
+    main()
+    ~~~~^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_std.py", line 48, in main
+    run(["python3", ROOT / "tools/build_libc.py", "--profile", arguments.profile,
+    ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         "--build-dir", provider, "--source-cache", arguments.source_cache.resolve(),
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         "--jobs", arguments.jobs, "--output", provider / "libc-probe.elf"])
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_std.py", line 17, in run
+    subprocess.run([str(arg) for arg in command], cwd=ROOT, check=True, **kwargs)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/entity27th/anaconda3/lib/python3.14/subprocess.py", line 578, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['python3', '/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/tools/build_libc.py', '--profile', 'debug', '--build-dir', '/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/beta-debug-attempt1/rust-std/provider', '--source-cache', '/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/kryo/build/libc/cache', '--jobs', '8', '--output', '/home/entity27th/문서/ChatGPT/프로젝트 Kryo/durable-work/beta-debug-attempt1/rust-std/provider/libc-probe.elf']' returned non-zero exit status 1.
+make: *** [Makefile:61: rust-std] Error 1

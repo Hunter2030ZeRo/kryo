@@ -62,8 +62,12 @@ pub(super) fn run(
     crate::runtime::abi::check(pool, direct, kernel, region);
     crate::runtime::libc::check(pool, direct, kernel, region);
     crate::runtime::rust_std::check(pool, direct, kernel, region);
-    crate::runtime::transport::run(pool, direct, kernel, region);
-    crate::runtime::block_service::check(pool, direct, kernel, region);
+    if crate::runtime::betafs::phase().is_some() {
+        crate::runtime::betafs::check(pool, direct, kernel, region);
+    } else {
+        crate::runtime::transport::run(pool, direct, kernel, region);
+        crate::runtime::block_service::check(pool, direct, kernel, region);
+    }
     crate::runtime::devices::probe(pool, direct, kernel, region, true);
     crate::runtime::channel_probe::run(pool, direct, kernel, region);
     crate::runtime::supervision::check(pool, direct, kernel, region);

@@ -25,9 +25,12 @@ class PciEvidenceTests(unittest.TestCase):
         concurrent = "RUSTSTDFILEOPS: concurrent aliases OK runs=1\n"
         quota = "RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n"
         path = "RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2\n"
+        dirs_locks = ("RUSTSTDDIR: snapshots cursors and closure OK runs=2\n"
+                      "RUSTSTDLOCK: ownership and retirement OK runs=2\n"
+                      "RUSTSTDLOCK: blocking wait and wake OK runs=1\n")
         random = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
         self.assertEqual(std_checks("", False), {})
-        self.assertTrue(all(std_checks(ready + retired + aborted + files + file_ops + concurrent + quota + path + random, True).values()))
+        self.assertTrue(all(std_checks(ready + retired + aborted + files + file_ops + concurrent + quota + path + dirs_locks + random, True).values()))
         for invalid in (ready, retired, ready + retired, ready + aborted, retired + aborted,
                         ready + ready + retired + aborted,
                         ready + retired + retired + aborted,
@@ -36,7 +39,7 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired + aborted,
                         ready + retired + "USERDIAG: process=0x1 bytes=0 text=" + aborted,
                         "USERLOG: process=0x1 event=227 value=1\n"):
-            self.assertFalse(all(std_checks(invalid + files + file_ops + concurrent + quota + path + random, True).values()))
+            self.assertFalse(all(std_checks(invalid + files + file_ops + concurrent + quota + path + dirs_locks + random, True).values()))
         self.assertFalse(all(std_checks(ready + retired + aborted + random, True).values()))
         for invalid in ("", files + files, files.replace("runs=2", "runs=1"),
                         "USERDIAG: process=0x1 bytes=0 text=" + files,
@@ -72,6 +75,20 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + marker,
                         "USERLOG: process=0x1 event=237 value=1\n"):
             self.assertFalse(std_checks(invalid, True)["rust_std_path_metadata"])
+
+    def test_directory_and_lock_markers_are_trusted_and_unique(self):
+        markers = {
+            "rust_std_directories": "RUSTSTDDIR: snapshots cursors and closure OK runs=2\n",
+            "rust_std_locks": "RUSTSTDLOCK: ownership and retirement OK runs=2\n",
+            "rust_std_lock_wait": "RUSTSTDLOCK: blocking wait and wake OK runs=1\n",
+        }
+        for key, marker in markers.items():
+            self.assertTrue(std_checks(marker, True)[key])
+            wrong_count = marker.replace("runs=1", "runs=3").replace("runs=2", "runs=3")
+            for invalid in ("", marker + marker, wrong_count,
+                            "USERDIAG: process=0x1 bytes=0 text=" + marker,
+                            "USERLOG: process=0x1 event=240 value=1\n"):
+                self.assertFalse(std_checks(invalid, True)[key])
 
     def test_rust_std_random_evidence_matches_selected_cpu(self):
         available = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"

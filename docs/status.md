@@ -2,6 +2,21 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[Directory cursors and advisory locks](decisions/0048-directories-and-file-locks.md)
+extend the native file service and restricted std profile. Iterators own real
+cursors and metadata/name snapshots; shared/exclusive locks belong to open
+descriptions, queue blocking requests and release on final closure or process
+death. Storage failure drains pending lock requests.
+
+The [native BetAFS service](decisions/0049-native-betafs-durability.md) connects
+the actual independent engine to block IPC in Ring 3. Sync Data and Sync All
+use the engine's full storage barrier; directory handles can also synchronize.
+Raw, Zstd, LZ4 and OpenZL are built for the native target from verified inputs.
+The [validation record](validation/2026-11-05-durable-files/README.md) separates
+host fault tests, native codec execution and two-boot emulator persistence.
+General mount routing, namespace mutation, timestamps, libc++/pthread and
+physical hardware measurements remain separate work.
+
 [Namespace metadata lookup](decisions/0047-path-metadata.md) now connects
 Rust metadata, symlink_metadata and existence checks to a dedicated Ring 3
 request. It uses explicit final-symlink policy, preserves byte paths and
@@ -18,8 +33,8 @@ are forwarded explicitly; the volatile backend rejects both instead of claiming
 durability. POSIX WriteAt behavior honors its offset on append
 descriptions. [Validation](validation/2026-11-05-file-ops/README.md) covers
 concurrent aliases, zero-filled growth and real wait-credit rejection/recovery.
-Directory iteration, timestamps, permission mutation and a persistent filesystem
-backend remain separate work.
+Directory iteration and a BetAFS backend now use the extensions above.
+Timestamps and permission mutation remain separate work.
 
 The [optional CPU random source](decisions/0045-cpu-random-bootstrap.md) supplies
 two register words per native call through bounded BSP RDRAND sampling. The
@@ -35,13 +50,14 @@ OpenOptions, Read/Write/Seek, descriptor ownership and shared-cursor clones to
 the existing Ring 3 file-service contract. Multi-page reads/writes and final
 capability closure are covered in the [file validation record](validation/2026-11-05-std-files/README.md).
 Descriptor metadata, positioned I/O and length mutation now use the extension
-above. Durable storage and mounted BetAFS remain separate work.
+above. The native BetAFS adapter supplies durable file-service requests;
+general system mount routing remains separate work.
 
 The [restricted Rust std profile](../userspace/rust-std/README.md) builds the
 pinned library sources with native allocation, threads, futex synchronization,
 TLS destructors and monotonic time. It uses a separate experimental Unix-family
 target and one shared C/Rust Talc heap. The [implementation decision](decisions/0043-restricted-native-rust-std.md)
-records the source and lifecycle boundaries. Full Unix extensions, directory iteration, durable file synchronization,
+records the source and lifecycle boundaries. Full Unix extensions,
 independent entropy suppliers, wall clock, hosted ABI and upstream target support remain pending.
 The bootstrap target and existing freestanding services are unchanged. See the
 [native validation record](validation/2026-11-05-rust-std/README.md).
@@ -556,7 +572,7 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 
 Extend the restricted std profile with independent random suppliers, fuller native filesystem APIs,
 standard-stream startup and broader Unix contracts. Basic std file operations now use service-backed C descriptors. Descriptor metadata and positioned I/O now have native service contracts;
-directory operations and actual durable synchronization still need their backends.
+directory iteration, advisory locks and synchronization now reach their service backends.
 Provider C11 thread/TCB lifecycle,
 static TLS and the fallible Talc heap are implemented; pthreads, dynamic TLS
 and complete standard libraries remain separate work. Connect the initial

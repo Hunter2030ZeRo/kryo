@@ -145,12 +145,25 @@ pub struct cryolite_file_info {
     pub flags: u32,
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct cryolite_dir_entry {
+    pub info: cryolite_file_info,
+    pub name_length: u32,
+    pub name: [u8; 255],
+}
+
 const _: () = {
     assert!(core::mem::size_of::<cryolite_file_info>() == 16);
     assert!(core::mem::align_of::<cryolite_file_info>() == 8);
     assert!(core::mem::offset_of!(cryolite_file_info, size) == 0);
     assert!(core::mem::offset_of!(cryolite_file_info, kind) == 8);
     assert!(core::mem::offset_of!(cryolite_file_info, flags) == 12);
+    assert!(core::mem::size_of::<cryolite_dir_entry>() == 280);
+    assert!(core::mem::align_of::<cryolite_dir_entry>() == 8);
+    assert!(core::mem::offset_of!(cryolite_dir_entry, info) == 0);
+    assert!(core::mem::offset_of!(cryolite_dir_entry, name_length) == 16);
+    assert!(core::mem::offset_of!(cryolite_dir_entry, name) == 20);
 };
 extern "C" {
     pub fn malloc(size: size_t) -> *mut c_void;
@@ -207,6 +220,14 @@ extern "C" {
     ) -> c_int;
     pub fn __cryolite_file_resize(fd: c_int, size: off_t) -> c_int;
     pub fn __cryolite_file_sync(fd: c_int, data_only: c_int) -> c_int;
+    pub fn __cryolite_dir_open(path: *const c_char, output: *mut c_int) -> c_int;
+    pub fn __cryolite_dir_next(
+        fd: c_int,
+        output: *mut cryolite_dir_entry,
+        present: *mut c_int,
+    ) -> c_int;
+    pub fn __cryolite_file_lock(fd: c_int, shared: c_int, nonblock: c_int) -> c_int;
+    pub fn __cryolite_file_unlock(fd: c_int) -> c_int;
     pub fn __cryolite_file_close(fd: c_int) -> c_int;
     pub fn __cryolite_file_seek(
         fd: c_int,

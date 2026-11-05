@@ -77,6 +77,31 @@ CASES = [
     "Open during a path query retains independent slot and window ownership",
     "closing the final descriptor retains table through path context retirement",
     "path object attributes come from the response without an Open",
+    "directory Open uses namespace authority and a real directory opcode",
+    "directory Open validates paths and rolls back allocation failures",
+    "directory Open preserves output on service and malformed capability failures",
+    "directory entries decode little endian metadata and owned byte names",
+    "directory entries accept maximum names and signed size boundaries",
+    "directory EOF leaves the entry unchanged",
+    "directory completion bounds are checked before copying",
+    "directory metadata rejects invalid kinds flags and signed sizes",
+    "directory payload rejects length and reserved field mismatches",
+    "directory names reject NUL slash and dot entries",
+    "directory service errors preserve all outputs and healthy aliases",
+    "directory malformed replies reject capabilities and poison aliases",
+    "accepted directory failure prevents automatic cursor replay",
+    "undelivered directory failure allows an explicit retry",
+    "directory loan failures preserve outputs and permit recovery",
+    "directory cursor operations retain ownership through close and reuse",
+    "nested directory operations retain independent loan windows",
+    "lock modes and unlock encode one grant-free RPC each",
+    "invalid lock inputs and descriptors issue no RPC",
+    "lock contention and deadlock remain errors without poisoning",
+    "accepted lock failure poisons aliases without retry",
+    "accepted unlock failure poisons aliases without retry",
+    "lock and unlock require zero acknowledgements",
+    "lock operations serialize on the shared description",
+    "unknown statuses beyond the new protocol range poison descriptions",
 ]
 
 PREFIX = r"""
@@ -130,6 +155,8 @@ static uint64_t returned_size = 9000;
 static uint32_t returned_kind = KRYO_FILE_REGULAR;
 static uint32_t returned_attributes;
 static uint64_t returned_command;
+static unsigned char directory_payload[279];
+static size_t directory_bytes = 29;
 static void (*during_call)();
 static void (*during_unlock)();
 static void (*during_park)();
@@ -247,8 +274,15 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
     last_rpc_operation = operation;
     last_rpc_argument = message.words[2];
     last_rpc_length = message.words[3];
-    if (operation == KRYO_FILE_OPEN)
+    if (operation == KRYO_FILE_OPEN || operation == KRYO_FILE_OPEN_DIR) {
         ++open_calls;
+        assert(endpoint == namespace_handle && count == 1 && capacity == 1
+            && grants[0].rights == (KRYO_RIGHT_READ | KRYO_RIGHT_MAP)
+            && message.words[3] && message.words[3] <= 4096);
+        if (operation == KRYO_FILE_OPEN_DIR) assert(message.words[2] == 0);
+        memcpy(last_path, reinterpret_cast<void *>(rpc_address), message.words[3]);
+        last_path[message.words[3]] = 0;
+    }
     if (operation == KRYO_FILE_PATH_INFO) {
         ++path_calls;
         assert(endpoint == namespace_handle && count == 1 && capacity == 0
@@ -275,7 +309,7 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
     reply.message.words[0] = message.words[1];
     reply.message.words[1] = returned_status;
     if (!returned_status) {
-        if (operation == KRYO_FILE_OPEN) {
+        if (operation == KRYO_FILE_OPEN || operation == KRYO_FILE_OPEN_DIR) {
             assert(count == 1 && capacity == 1
                 && grants[0].rights == (KRYO_RIGHT_READ | KRYO_RIGHT_MAP));
             reply.count = 1;
@@ -288,9 +322,16 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
                 assert(count == 0 && capacity == 0 && message.words[2] == 0 && message.words[3] == 0);
             reply.message.words[2] = returned_size;
             reply.message.words[3] = returned_kind | (uint64_t{returned_attributes} << 32);
-        } else if (operation == KRYO_FILE_SET_LEN || operation == KRYO_FILE_SYNC) {
+        } else if (operation == KRYO_FILE_SET_LEN || operation == KRYO_FILE_SYNC
+                || operation == KRYO_FILE_LOCK || operation == KRYO_FILE_UNLOCK) {
             assert(count == 0 && capacity == 0 && message.words[3] == 0);
             reply.message.words[2] = returned_command;
+        } else if (operation == KRYO_FILE_NEXT_DIR) {
+            assert(count == 1 && capacity == 0 && message.words[2] == 0
+                && message.words[3] == 4096
+                && grants[0].rights == (KRYO_RIGHT_READ | KRYO_RIGHT_WRITE | KRYO_RIGHT_MAP));
+            reply.message.words[2] = returned_count == UINT64_MAX ? directory_bytes : returned_count;
+            memcpy(reinterpret_cast<void *>(rpc_address), directory_payload, sizeof(directory_payload));
         } else {
             bool reading = operation == KRYO_FILE_READ || operation == KRYO_FILE_READ_AT;
             bool positioned = operation == KRYO_FILE_READ_AT || operation == KRYO_FILE_WRITE_AT;
@@ -347,6 +388,10 @@ static void clean() {
     returned_kind = KRYO_FILE_REGULAR;
     returned_attributes = 0;
     returned_command = 0;
+    memset(directory_payload, 0, sizeof(directory_payload));
+    directory_payload[0] = 19; directory_payload[8] = KRYO_FILE_REGULAR;
+    directory_payload[16] = 5; memcpy(directory_payload + 24, "probe", 5);
+    directory_bytes = 29;
     namespace_handle = 100;
     during_call = nullptr;
     during_unlock = during_park = during_failed_cas = nullptr;
@@ -461,6 +506,32 @@ static void close_during_path_query() {
     assert(files && files->next && descriptors && descriptor_capacity);
     assert(__cryolite_file_close(path_closing) == 0);
     assert(files && !files->next && !files->handle && descriptors && descriptor_capacity);
+}
+static int directory_opened() {
+    int descriptor = -1;
+    assert(__cryolite_dir_open("/", &descriptor) == 0 && descriptor >= 3);
+    return descriptor;
+}
+static void assert_entry_sentinel(const cryolite_dir_entry &entry, int present) {
+    assert(entry.info.size == 17 && entry.info.kind == 19 && entry.info.flags == 23);
+    assert(entry.name_length == 71 && entry.name[0] == 0xcc && entry.name[254] == 0xcc);
+    assert(present == 37);
+}
+static void set_entry_sentinel(cryolite_dir_entry *entry, int *present) {
+    memset(entry, 0xcc, sizeof(*entry));
+    entry->info = {17, 19, 23}; entry->name_length = 71; *present = 37;
+}
+static void nested_directory_query() {
+    assert(maps == 1);
+    auto outer_window = mapped_address;
+    auto descriptor = directory_opened();
+    auto nested = pin_file(descriptor);
+    assert(nested->window != outer_window);
+    release_file(nested);
+    cryolite_dir_entry entry{}; int present = -1;
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+    assert(maps == 1 && memories == 1);
+    assert(__cryolite_file_close(descriptor) == 0);
 }
 int main() {
     int descriptor = -1;
@@ -1071,7 +1142,11 @@ int main() {
         returned_command = 1;
         assert((synchronize ? __cryolite_file_sync(descriptor, 0)
                             : __cryolite_file_resize(descriptor, 0)) == EPROTO);
-        returned_command = 0; before = calls;
+        returned_command = 0;
+    memset(directory_payload, 0, sizeof(directory_payload));
+    directory_payload[0] = 19; directory_payload[8] = KRYO_FILE_REGULAR;
+    directory_payload[16] = 5; memcpy(directory_payload + 24, "probe", 5);
+    directory_bytes = 29; before = calls;
         assert(__cryolite_file_info(alias, &info) == EIO && calls == before);
         assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
     }
@@ -1201,7 +1276,7 @@ int main() {
         assert(__cryolite_file_info(descriptor, &info) == 0);
         assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
     }
-    returned_status = KRYO_FILE_SYMLINK_LOOP + 1;
+    returned_status = KRYO_FILE_IS_DIRECTORY + 1;
     assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == EPROTO);
     returned_status = KRYO_FILE_SYMLINK_LOOP; response_fault = 9;
     assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == EPROTO);
@@ -1255,7 +1330,253 @@ int main() {
     assert(info.kind == KRYO_FILE_DIRECTORY && info.flags == 0 && open_calls == before_open);
     clean();
 
-    assert(case_number == 81);
+    descriptor = -7;
+    before = calls;
+    assert(__cryolite_dir_open("/unaltered/../path", &descriptor) == 0 && descriptor == 3);
+    assert(last_rpc_operation == KRYO_FILE_OPEN_DIR && last_rpc_handle == namespace_handle);
+    assert(last_rpc_argument == 0 && last_rpc_length == 18 && calls == before + 1);
+    assert(!strcmp(last_path, "/unaltered/../path"));
+    int local_flags = -1;
+    assert(__cryolite_file_control(descriptor, F_GETFL, 0, &local_flags) == 0 && local_flags == O_RDONLY);
+    assert(__cryolite_file_control(descriptor, F_GETFD, 0, &local_flags) == 0 && local_flags == FD_CLOEXEC);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    before = calls; descriptor = -7;
+    assert(__cryolite_dir_open("", &descriptor) == ENOENT);
+    memset(path, 'p', sizeof(path)); path[sizeof(path) - 1] = 0;
+    assert(__cryolite_dir_open(path, &descriptor) == ENAMETOOLONG);
+    namespace_handle = 0;
+    assert(__cryolite_dir_open("/", &descriptor) == ENOSYS);
+    namespace_handle = 100;
+    for (int fault = 0; fault < 4; ++fault) {
+        allocation_failure = fault == 0; table_allocation_failure = fault == 1;
+        create_failure = fault == 2; map_failure = fault == 3;
+        assert(__cryolite_dir_open("/", &descriptor) == ENOMEM && descriptor == -7);
+        assert(!files && !records && !tables && !maps && !memories);
+    }
+    assert(calls == before);
+    clean();
+
+    descriptor = -7; returned_status = KRYO_FILE_NOT_DIRECTORY;
+    assert(__cryolite_dir_open("/probe", &descriptor) == ENOTDIR && descriptor == -7);
+    returned_status = 0; response_fault = 4; before = gate_closes;
+    assert(__cryolite_dir_open("/", &descriptor) == EPROTO && descriptor == -7);
+    assert(gate_closes == before + 1 && !files && !descriptors);
+    response_fault = 0; descriptor = directory_opened();
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    cryolite_dir_entry entry{}; int present = 0;
+    descriptor = directory_opened();
+    for (auto kind : {KRYO_FILE_REGULAR, KRYO_FILE_DIRECTORY, KRYO_FILE_SYMLINK}) {
+        directory_payload[0] = 0x78; directory_payload[1] = 0x56;
+        directory_payload[8] = kind; directory_payload[12] = KRYO_FILE_READONLY;
+        directory_payload[24] = 0xff;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+        assert(entry.info.size == 0x5678 && entry.info.kind == static_cast<uint32_t>(kind));
+        assert(entry.info.flags == KRYO_FILE_READONLY && entry.name_length == 5);
+        assert(entry.name[0] == 0xff && entry.name[1] == 'r' && entry.name[5] == 0);
+        assert(last_rpc_operation == KRYO_FILE_NEXT_DIR && last_rpc_argument == 0 && last_rpc_length == 4096);
+    }
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = directory_opened(); directory_bytes = 279;
+    memset(directory_payload, 0, 24); memset(directory_payload, 0xff, 8); directory_payload[7] = 0x7f;
+    directory_payload[8] = KRYO_FILE_REGULAR; directory_payload[16] = 255;
+    memset(directory_payload + 24, 'x', 255);
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+    assert(entry.info.size == static_cast<uint64_t>(LONG_MAX) && entry.name_length == 255);
+    assert(entry.name[0] == 'x' && entry.name[254] == 'x');
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = directory_opened(); returned_count = 0; set_entry_sentinel(&entry, &present);
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 0);
+    assert_entry_sentinel(entry, 37);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    for (uint64_t count : {uint64_t{1}, uint64_t{24}, uint64_t{280}, uint64_t{4096}, UINT64_MAX - 1}) {
+        descriptor = directory_opened(); assert(__cryolite_file_dup(descriptor, 0, 0, &alias) == 0);
+        returned_count = count; set_entry_sentinel(&entry, &present);
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == EPROTO);
+        assert_entry_sentinel(entry, present); returned_count = UINT64_MAX; before = calls;
+        assert(__cryolite_dir_next(alias, &entry, &present) == EIO && calls == before);
+        assert(__cryolite_file_close(alias) == 0 && __cryolite_file_close(descriptor) == 0);
+    }
+    clean();
+
+    for (int fault = 0; fault < 3; ++fault) {
+        descriptor = directory_opened(); set_entry_sentinel(&entry, &present);
+        if (fault == 0) directory_payload[7] = 0x80;
+        if (fault == 1) directory_payload[8] = 99;
+        if (fault == 2) directory_payload[12] = 2;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == EPROTO);
+        assert_entry_sentinel(entry, present);
+        directory_payload[7] = 0; directory_payload[8] = KRYO_FILE_REGULAR; directory_payload[12] = 0;
+        assert(__cryolite_file_close(descriptor) == 0);
+    }
+    clean();
+
+    for (int fault = 0; fault < 4; ++fault) {
+        descriptor = directory_opened(); set_entry_sentinel(&entry, &present);
+        directory_payload[16] = fault == 0 ? 0 : fault == 1 ? 4 : 5;
+        directory_payload[17] = fault == 2 ? 1 : 0;
+        directory_payload[23] = fault == 3 ? 1 : 0;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == EPROTO);
+        assert_entry_sentinel(entry, present);
+        assert(__cryolite_file_close(descriptor) == 0);
+    }
+    clean();
+
+    for (int fault = 0; fault < 4; ++fault) {
+        descriptor = directory_opened(); set_entry_sentinel(&entry, &present);
+        directory_bytes = fault < 2 ? 29 : fault == 2 ? 25 : 26;
+        directory_payload[16] = directory_bytes - 24;
+        memcpy(directory_payload + 24, "probe", 5);
+        if (fault < 2) directory_payload[26] = fault == 0 ? 0 : '/';
+        else memset(directory_payload + 24, '.', 2);
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == EPROTO);
+        assert_entry_sentinel(entry, present);
+        assert(__cryolite_file_close(descriptor) == 0);
+    }
+    clean();
+
+    descriptor = directory_opened();
+    for (auto status : {KRYO_FILE_WOULD_BLOCK, KRYO_FILE_DEADLOCK, KRYO_FILE_NOT_DIRECTORY, KRYO_FILE_IS_DIRECTORY}) {
+        returned_status = status; set_entry_sentinel(&entry, &present);
+        int expected = status == KRYO_FILE_WOULD_BLOCK ? EAGAIN : status == KRYO_FILE_DEADLOCK ? EDEADLK
+            : status == KRYO_FILE_NOT_DIRECTORY ? ENOTDIR : EISDIR;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == expected);
+        assert_entry_sentinel(entry, present); returned_status = 0;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+    }
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = directory_opened(); response_fault = 3; before = gate_closes;
+    set_entry_sentinel(&entry, &present);
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == EPROTO);
+    assert_entry_sentinel(entry, present); assert(gate_closes == before + 1);
+    response_fault = 0; before = calls;
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == EIO && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = directory_opened(); assert(__cryolite_file_dup(descriptor, 0, 0, &alias) == 0);
+    transport_failure = 1; set_entry_sentinel(&entry, &present); before = calls;
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == EPIPE && calls == before + 1);
+    assert_entry_sentinel(entry, present); transport_failure = 0;
+    assert(__cryolite_dir_next(alias, &entry, &present) == EIO && calls == before + 1);
+    assert(__cryolite_file_close(alias) == 0 && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = directory_opened(); transport_failure = 1; transport_accepted = false;
+    set_entry_sentinel(&entry, &present);
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == EPIPE);
+    assert_entry_sentinel(entry, present); transport_failure = 0;
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = directory_opened();
+    for (int fault = 0; fault < 2; ++fault) {
+        create_failure = fault == 0; map_failure = fault == 1;
+        set_entry_sentinel(&entry, &present); before = calls;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == ENOMEM && calls == before);
+        assert_entry_sentinel(entry, present); create_failure = map_failure = 0;
+        assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+    }
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    reentered_old = directory_opened(); before = gate_closes; during_call = reenter;
+    assert(__cryolite_dir_next(reentered_old, &entry, &present) == 0 && present == 1);
+    assert(gate_closes == before + 1);
+    assert(__cryolite_file_close(reentered_new) == 0);
+    clean();
+
+    descriptor = directory_opened(); during_call = nested_directory_query;
+    assert(__cryolite_dir_next(descriptor, &entry, &present) == 0 && present == 1);
+    assert(!maps && !memories && files && !files->next);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(O_RDONLY);
+    for (int shared = 0; shared < 2; ++shared) for (int nonblock = 0; nonblock < 2; ++nonblock) {
+        before = calls; auto parks_before = park_calls;
+        assert(__cryolite_file_lock(descriptor, shared, nonblock) == 0 && calls == before + 1);
+        assert(last_rpc_operation == KRYO_FILE_LOCK && last_rpc_length == 0);
+        assert(last_rpc_argument == static_cast<uint64_t>((shared ? KRYO_FILE_LOCK_SHARED : KRYO_FILE_LOCK_EXCLUSIVE)
+            | (nonblock ? KRYO_FILE_LOCK_TRY : 0)) && park_calls == parks_before);
+    }
+    before = calls;
+    assert(__cryolite_file_unlock(descriptor) == 0 && calls == before + 1);
+    assert(last_rpc_operation == KRYO_FILE_UNLOCK && last_rpc_argument == 0 && last_rpc_length == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); before = calls;
+    assert(__cryolite_file_lock(descriptor, -1, 0) == EINVAL);
+    assert(__cryolite_file_lock(descriptor, 2, 0) == EINVAL);
+    assert(__cryolite_file_lock(descriptor, 0, -1) == EINVAL);
+    assert(__cryolite_file_lock(descriptor, 0, 2) == EINVAL);
+    assert(__cryolite_file_lock(-1, 0, 0) == EBADF && __cryolite_file_unlock(-1) == EBADF);
+    assert(calls == before && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); returned_status = KRYO_FILE_WOULD_BLOCK; before = calls;
+    assert(__cryolite_file_lock(descriptor, 0, 1) == EAGAIN && calls == before + 1);
+    returned_status = KRYO_FILE_DEADLOCK;
+    assert(__cryolite_file_lock(descriptor, 0, 0) == EDEADLK && calls == before + 2);
+    returned_status = 0;
+    assert(__cryolite_file_lock(descriptor, 1, 0) == 0 && __cryolite_file_unlock(descriptor) == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 0, 0, &alias) == 0);
+    transport_failure = 1; before = calls;
+    assert(__cryolite_file_lock(descriptor, 0, 0) == EPIPE && calls == before + 1);
+    transport_failure = 0;
+    assert(__cryolite_file_unlock(alias) == EIO && calls == before + 1);
+    assert(__cryolite_file_close(alias) == 0 && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 0, 0, &alias) == 0);
+    transport_failure = 1; before = calls;
+    assert(__cryolite_file_unlock(descriptor) == EPIPE && calls == before + 1);
+    transport_failure = 0;
+    assert(__cryolite_file_lock(alias, 0, 1) == EIO && calls == before + 1);
+    assert(__cryolite_file_close(alias) == 0 && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    for (int unlocking = 0; unlocking < 2; ++unlocking) {
+        descriptor = opened(); returned_command = 1;
+        assert((unlocking ? __cryolite_file_unlock(descriptor) : __cryolite_file_lock(descriptor, 0, 0)) == EPROTO);
+        returned_command = 0; before = calls;
+        assert(__cryolite_file_unlock(descriptor) == EIO && calls == before);
+        assert(__cryolite_file_close(descriptor) == 0);
+    }
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 0, 0, &alias) == 0);
+    old = pin_file(descriptor); shared_lock = &old->operation_lock; lock(shared_lock);
+    during_park = release_shared_operation; before = calls;
+    assert(__cryolite_file_lock(alias, 1, 0) == 0 && calls == before + 1);
+    release_file(old);
+    assert(__cryolite_file_close(alias) == 0 && __cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); returned_status = KRYO_FILE_IS_DIRECTORY + 1;
+    assert(__cryolite_file_unlock(descriptor) == EPROTO);
+    returned_status = 0; before = calls;
+    assert(__cryolite_file_lock(descriptor, 0, 1) == EIO && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    assert(case_number == 106);
     printf("file runtime: %u cases passed\n", case_number);
 }
 """
@@ -1282,6 +1603,8 @@ def main():
     runtime = runtime_path.read_text()
     info_start = runtime.index("struct cryolite_file_info {")
     info_type = runtime[info_start:runtime.index("};", info_start) + 2] + "\n"
+    dir_start = runtime.index("struct cryolite_dir_entry {")
+    info_type += runtime[dir_start:runtime.index("};", dir_start) + 2] + "\n"
     header_at = PREFIX.index("static bool allocation_failure;")
     test = PREFIX[:header_at] + types + accepted_helper + protocol + flags + "\n" + info_type + PREFIX[header_at:] + body + SUFFIX
     test = test.replace("#include <assert.h>", "#include <assert.h>\n#include <initializer_list>")

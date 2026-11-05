@@ -85,6 +85,13 @@ fn native_image() -> Result<&'static [u8], ModuleError> {
 }
 
 pub(crate) fn module_image(tag: &str) -> Result<&'static [u8], ModuleError> {
+    module_image_limited(tag, 1024 * 1024)
+}
+
+pub(crate) fn module_image_limited(
+    tag: &str,
+    maximum_bytes: usize,
+) -> Result<&'static [u8], ModuleError> {
     let modules = MODULES.response().ok_or(ModuleError::Missing)?.modules();
     let mut selected = None;
     for module in modules {
@@ -95,7 +102,7 @@ pub(crate) fn module_image(tag: &str) -> Result<&'static [u8], ModuleError> {
             return Err(ModuleError::Duplicate);
         }
         let bytes = module.data();
-        if bytes.is_empty() || bytes.len() > 1024 * 1024 {
+        if bytes.is_empty() || bytes.len() > maximum_bytes {
             return Err(ModuleError::InvalidSize);
         }
         selected = Some(bytes);

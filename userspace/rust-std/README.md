@@ -12,7 +12,8 @@ and monotonic time. Basic File/OpenOptions, read/write/seek, shared-cursor cloni
 and descriptor conversion use the existing native file service. Descriptor
 metadata, positioned I/O and resize extend that same service contract. Path
 metadata and existence checks use explicit namespace lookups with final-symlink
-policy. A narrow C bridge reuses the pinned mlibc C11 lifecycle;
+policy. Directory iteration and advisory file locks use owned description gates.
+A narrow C bridge reuses the pinned mlibc C11 lifecycle;
 it does not implement pthreads or use Linux system calls.
 
 The std-linked allocator is an rlib in the same Rust compilation. Its `std`
@@ -56,13 +57,16 @@ sets CLOEXEC; descriptors 0, 1 and 2 are not automatically bound.
   positioned I/O and resize preserve shared cursors; positioned writes honor the
   supplied offset on append descriptions. `stream_len` uses one metadata query
   (and retains its upstream feature gate).
-- Path metadata distinguishes follow/no-follow and propagates lookup errors;
-  it does not open files. Directory iteration, timestamps and permission
-  mutation remain unsupported. Sync All/Data reaches the service, whose current volatile backend
-  returns Unsupported. `File::flush` does not imply durable storage.
+- Path metadata distinguishes follow/no-follow and propagates lookup errors.
+  Directory entries own raw names and metadata snapshots; blocking advisory
+  locks wait in IPC and survive descriptor aliases. Timestamps, permission
+  mutation and the newer Dir traversal API remain unsupported.
+- Sync All/Data reaches the backend. The volatile peer returns Unsupported;
+  the BetAFS service waits for actual engine and block barriers. Directory
+  handles support synchronization. `File::flush` does not imply durable storage.
 - Network, environment mutation, process spawning, pipes and broad Unix
-  extensions remain unsupported. BetAFS and its host FileDevice are not
-  executable from this limited file surface alone.
+  extensions remain unsupported. BetAFS uses its native BlockDevice adapter;
+  this profile does not enable all host programs or their runtime contracts.
 - RandomState/HashMap uses the optional BSP CPU random source. The initial
   profile trusts CPU RDRAND output alone; unsupported hardware or temporary
   exhaustion fails explicitly. The infallible std API panics on such failure.
@@ -90,5 +94,7 @@ The CPU source and its trust boundary follow [ADR 0045](../../docs/decisions/004
 
 See [descriptor metadata and positioned I/O](../../docs/decisions/0046-descriptor-metadata-and-positioned-io.md) for the extension and its durability boundary.
 
-See [namespace metadata lookup](../../docs/decisions/0047-path-metadata.md) for
-the path-query contract and the bounded fixture's limits.
+See [namespace metadata lookup](../../docs/decisions/0047-path-metadata.md),
+[directories and locks](../../docs/decisions/0048-directories-and-file-locks.md)
+and [native BetAFS durability](../../docs/decisions/0049-native-betafs-durability.md)
+for the service contracts and validation limits.

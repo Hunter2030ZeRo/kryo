@@ -1,0 +1,12 @@
+{
+  "checked_at_utc": "2026-11-05T16:30:28.564911+00:00",
+  "base_commit": "9625456e3290748f6588b0c7af3687bb79d3ebaf",
+  "reviewed_files_applied": 102,
+  "applied_source_hashes_match": true,
+  "cargo_fmt_all_check": "passed",
+  "git_diff_check": "passed",
+  "native_validation": "Completed in source-matched isolated debug and release SMP4 QEMU builds before application.",
+  "native_rebuilt_after_application": false,
+  "native_executed_after_application": false,
+  "proof_boundary": "VirtIO FLUSH and same-volume reopen in QEMU; physical power loss and hardware durability unverified."
+}

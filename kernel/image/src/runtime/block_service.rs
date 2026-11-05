@@ -53,6 +53,101 @@ pub(crate) fn start<'kernel, 'objects>(
     if !enabled() {
         return None;
     }
+    let accounts = core::array::from_fn(|_| budget());
+    let Driver {
+        task: driver,
+        owner,
+        gates,
+        debug,
+        channels,
+    } = prepare_driver(
+        pool,
+        direct,
+        memory,
+        region,
+        objects,
+        tasks,
+        ipc,
+        &accounts[0],
+        test,
+    );
+    let clients = core::array::from_fn(|index| {
+        let mode = [3, 0, 1][index];
+        let client = prepare(
+            pool,
+            direct,
+            memory,
+            region,
+            tasks,
+            "kryo-block-client",
+            &accounts[index + 1],
+        );
+        let mut grants = alloc::vec![
+            (role::READ_GATE, &gates[0], Rights::SEND),
+            (role::DEBUG, &debug, Rights::WRITE)
+        ];
+        if mode == 1 {
+            grants.push((role::WRITE_GATE, &gates[1], Rights::SEND));
+        }
+        install(
+            client,
+            Metadata {
+                service: 41 + index as u64,
+                instance: 1,
+                argument: mode,
+            },
+            &grants,
+            tasks,
+            objects,
+        );
+        client
+    });
+    let processes = clients.map(|id| tasks.process_for(id).unwrap());
+    // Every capability and immutable receipt is installed before Runnable.
+    tasks.wake(driver).unwrap();
+    let _ = kryo_hal::print(format_args!(
+        "BLOCK IPC: service dispatched id={:#x}\n",
+        driver.as_raw()
+    ));
+    Some(Graph {
+        driver,
+        driver_process: owner,
+        clients,
+        processes,
+        complete: [false; 3],
+        phase: 0,
+        gates,
+        debug,
+        accounts,
+        _channels: channels,
+        stopper: None,
+        test,
+    })
+}
+
+pub(crate) struct Driver<'objects> {
+    pub(crate) task: TaskId,
+    pub(crate) owner: ProcessId,
+    pub(crate) gates: [Object<'objects>; 3],
+    pub(crate) debug: Object<'objects>,
+    pub(crate) channels: ChannelBudget,
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Trusted boot connects the assigned storage graph"
+)]
+pub(crate) fn prepare_driver<'kernel, 'objects>(
+    pool: &'static BootFramePool,
+    direct: DirectMap,
+    memory: &'kernel RefCell<KernelMemory>,
+    region: &mut KernelRegion,
+    objects: &'objects Objects,
+    tasks: &mut Tasks<'kernel, 'objects>,
+    ipc: &mut IpcRuntime<'objects>,
+    account: &Budget,
+    test: bool,
+) -> Driver<'objects> {
     let function = crate::boot::storage::block_device().expect("Missing service block device");
     let mut hardware = unsafe { VirtioPci::new(function) }.expect("Cannot claim service device");
     let deadline = now() + 2_000_000_000;
@@ -62,7 +157,6 @@ pub(crate) fn start<'kernel, 'objects>(
     hardware
         .prepare()
         .expect("Cannot acknowledge service device");
-    let accounts = core::array::from_fn(|_| budget());
     let driver = prepare(
         pool,
         direct,
@@ -70,7 +164,7 @@ pub(crate) fn start<'kernel, 'objects>(
         region,
         tasks,
         "kryo-block-service",
-        &accounts[0],
+        account,
     );
     assert_eq!(tasks.state(driver), Ok(TaskState::Blocked));
     let owner = tasks.process_for(driver).unwrap();
@@ -127,58 +221,13 @@ pub(crate) fn start<'kernel, 'objects>(
         tasks,
         objects,
     );
-    let clients = core::array::from_fn(|index| {
-        let mode = [3, 0, 1][index];
-        let client = prepare(
-            pool,
-            direct,
-            memory,
-            region,
-            tasks,
-            "kryo-block-client",
-            &accounts[index + 1],
-        );
-        let mut grants = alloc::vec![
-            (role::READ_GATE, &gates[0], Rights::SEND),
-            (role::DEBUG, &debug, Rights::WRITE)
-        ];
-        if mode == 1 {
-            grants.push((role::WRITE_GATE, &gates[1], Rights::SEND));
-        }
-        install(
-            client,
-            Metadata {
-                service: 41 + index as u64,
-                instance: 1,
-                argument: mode,
-            },
-            &grants,
-            tasks,
-            objects,
-        );
-        client
-    });
-    let processes = clients.map(|id| tasks.process_for(id).unwrap());
-    // Every capability and immutable receipt is installed before Runnable.
-    tasks.wake(driver).unwrap();
-    let _ = kryo_hal::print(format_args!(
-        "BLOCK IPC: service dispatched id={:#x}\n",
-        driver.as_raw()
-    ));
-    Some(Graph {
-        driver,
-        driver_process: owner,
-        clients,
-        processes,
-        complete: [false; 3],
-        phase: 0,
+    Driver {
+        task: driver,
+        owner,
         gates,
         debug,
-        accounts,
-        _channels: channels,
-        stopper: None,
-        test,
-    })
+        channels,
+    }
 }
 
 impl<'objects> Graph<'objects> {
@@ -371,7 +420,7 @@ fn receiving(tasks: &Tasks<'_, '_>, task: TaskId) -> bool {
         })
 }
 
-fn budget() -> Budget {
+pub(crate) fn budget() -> Budget {
     Budget::new(Limits {
         shared_pages: 8,
         private_pages: 0,
@@ -384,7 +433,7 @@ fn budget() -> Budget {
     })
 }
 
-fn prepare<'kernel, 'objects>(
+pub(crate) fn prepare<'kernel, 'objects>(
     pool: &'static BootFramePool,
     direct: DirectMap,
     memory: &'kernel RefCell<KernelMemory>,
@@ -412,7 +461,7 @@ fn prepare<'kernel, 'objects>(
         .unwrap_or_else(|_| panic!("Cannot prepare block process"))
 }
 
-fn install<'objects>(
+pub(crate) fn install<'objects>(
     task: TaskId,
     metadata: Metadata,
     grants: &[(u64, &Object<'objects>, Rights)],
