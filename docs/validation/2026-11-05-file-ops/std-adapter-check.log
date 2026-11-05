@@ -1,0 +1,9 @@
+   Compiling std v0.0.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-ops-work/std-check/rust/library/std)
+   Compiling proc_macro v0.0.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-ops-work/std-check/rust/library/proc_macro)
+    Checking scopeguard v1.2.0
+    Checking allocator-api2 v0.4.0
+    Checking lock_api v0.4.14
+    Checking talc v5.1.1
+    Checking cryolite-allocator v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-ops-work/kryo/userspace/libc/allocator)
+    Checking rust-std-probe v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-ops-work/kryo/userspace/rust-std/probe)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 5.80s

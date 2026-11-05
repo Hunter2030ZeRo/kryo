@@ -13,7 +13,7 @@ pub mod prelude {
     #[stable(feature = "rust1", since = "1.0.0")]
     pub use super::ffi::{OsStrExt, OsStringExt};
     #[stable(feature = "rust1", since = "1.0.0")]
-    pub use super::fs::OpenOptionsExt;
+    pub use super::fs::{FileExt, OpenOptionsExt};
     #[stable(feature = "rust1", since = "1.0.0")]
     pub use super::io::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 }

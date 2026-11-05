@@ -1,10 +1,15 @@
 //! A bounded, volatile file backend for the optional libc validation fixture.
 //! It implements neither BetAFS nor a persistent namespace.
 
+#[cfg(not(test))]
 use core::sync::atomic::{AtomicBool, Ordering};
-use kryo_interfaces::file::{self, OpenOptions, Operation, Request, Status};
+use kryo_interfaces::file::{self, FileType, Info, OpenOptions, Status, SyncScope};
+#[cfg(not(test))]
+use kryo_interfaces::file::{Operation, Request};
+#[cfg(not(test))]
 use kryo_libsys::{self as sys, Grant, Handle, ObjectKind, ReceiveEvent};
 
+#[cfg(not(test))]
 const LOAN: u64 = 0x0300_0000;
 const PAGE: usize = file::PAGE_SIZE as usize;
 const CAPACITY: usize = 16 * 1024;
@@ -96,24 +101,96 @@ impl State {
             File::ReadOnly => READ_ONLY_BYTES,
         }
     }
+
+    fn info(&self, file: File) -> Info {
+        Info {
+            size: self.size(file) as u64,
+            kind: FileType::Regular,
+            readonly: file == File::ReadOnly,
+        }
+    }
+
+    fn read_at(&self, file: File, position: u64, bytes: usize) -> &[u8] {
+        let data = self.data(file);
+        let position = usize::try_from(position).unwrap_or(usize::MAX);
+        if position >= data.len() {
+            &[]
+        } else {
+            &data[position..position + bytes.min(data.len() - position)]
+        }
+    }
+
+    fn write_at(&mut self, file: File, position: u64, input: &[u8]) -> Result<usize, Status> {
+        if file == File::ReadOnly {
+            return Err(Status::Denied);
+        }
+        if input.is_empty() {
+            return Ok(0);
+        }
+        let position = usize::try_from(position).map_err(|_| Status::NoSpace)?;
+        if position >= CAPACITY {
+            return Err(Status::NoSpace);
+        }
+        let bytes = input.len().min(CAPACITY - position);
+        if position > self.length {
+            self.bytes[self.length..position].fill(0);
+        }
+        self.bytes[position..position + bytes].copy_from_slice(&input[..bytes]);
+        self.length = self.length.max(position + bytes);
+        Ok(bytes)
+    }
+
+    fn set_len(&mut self, file: File, length: u64) -> Result<(), Status> {
+        if file == File::ReadOnly {
+            return Err(Status::Denied);
+        }
+        let length = usize::try_from(length).map_err(|_| Status::NoSpace)?;
+        if length > CAPACITY {
+            return Err(Status::NoSpace);
+        }
+        if length > self.length {
+            self.bytes[self.length..length].fill(0);
+        }
+        self.length = length;
+        Ok(())
+    }
+
+    fn sync(&self, _file: File, _scope: SyncScope) -> Result<(), Status> {
+        // This RAM backend has no storage barrier to complete.
+        Err(Status::Unsupported)
+    }
 }
 
+#[cfg(not(test))]
 struct Completion {
     value: u64,
+    attributes: u64,
     gate: Option<Handle>,
     opened: Option<usize>,
 }
 
+#[cfg(not(test))]
 impl Completion {
     const fn value(value: u64) -> Self {
         Self {
             value,
+            attributes: 0,
+            gate: None,
+            opened: None,
+        }
+    }
+
+    fn info(info: Info) -> Self {
+        Self {
+            value: info.size,
+            attributes: info.attributes(),
             gate: None,
             opened: None,
         }
     }
 }
 
+#[cfg(not(test))]
 pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
     static CLAIMED: AtomicBool = AtomicBool::new(false);
     static mut STATE: State = State::new();
@@ -159,7 +236,8 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
             Ok(completion) => (Status::Ok, completion),
             Err(status) => (status, Completion::value(0)),
         };
-        let response = file::response(incoming.message[1], status, completion.value);
+        let mut response = file::response(incoming.message[1], status, completion.value);
+        response[3] = completion.attributes;
         let delivered = match completion.gate {
             Some(gate) => sys::reply_caps(
                 endpoint,
@@ -197,6 +275,7 @@ pub(super) fn serve(endpoint: Handle) -> Result<(), u64> {
     }
 }
 
+#[cfg(not(test))]
 fn execute(
     endpoint: Handle,
     state: &mut State,
@@ -221,66 +300,81 @@ fn execute(
             state.seeks += 1;
             Completion::value(position)
         }
-        Operation::Read => {
+        Operation::Read | Operation::ReadAt => {
             if !description.options.readable() {
                 return Err(Status::Denied);
             }
             let memory = memory.ok_or(Status::Malformed)?;
             map(memory, true)?;
-            let position = usize::try_from(description.position).unwrap_or(usize::MAX);
-            let data = state.data(description.file);
-            let bytes = if position >= data.len() {
-                0
+            let (position, loan_offset) = if request.operation == Operation::ReadAt {
+                (request.argument, 0)
             } else {
-                (request.length as usize).min(data.len() - position)
+                (description.position, request.argument)
             };
-            for index in 0..bytes {
+            let data = state.read_at(description.file, position, request.length as usize);
+            let bytes = data.len();
+            for (index, byte) in data.iter().enumerate() {
                 // The private mapping and received grant retain the loan. The client
                 // may access it concurrently, so do not create a shared-memory slice.
                 unsafe {
-                    ((LOAN + request.argument) as *mut u8)
+                    ((LOAN + loan_offset) as *mut u8)
                         .add(index)
-                        .write_volatile(data[position + index]);
+                        .write_volatile(*byte);
                 }
             }
             unmap()?;
-            description.position += bytes as u64;
+            if request.operation == Operation::Read {
+                description.position += bytes as u64;
+            }
             state.reads += 1;
             Completion::value(bytes as u64)
         }
-        Operation::Write => {
+        Operation::Write | Operation::WriteAt => {
             if !description.options.writable() || description.file == File::ReadOnly {
                 return Err(Status::Denied);
             }
             let mut snapshot = [0; PAGE];
             copy_from(
                 memory.ok_or(Status::Malformed)?,
-                request.argument,
+                if request.operation == Operation::WriteAt {
+                    0
+                } else {
+                    request.argument
+                },
                 &mut snapshot[..request.length as usize],
             )?;
             if request.length == 0 {
                 return Ok(Completion::value(0));
             }
-            let position = if description.options.flags & file::APPEND != 0 {
+            let position = if request.operation == Operation::WriteAt {
+                request.argument
+            } else if description.options.flags & file::APPEND != 0 {
                 state.length as u64
             } else {
                 description.position
             };
-            let position = usize::try_from(position).map_err(|_| Status::NoSpace)?;
-            if request.length != 0 && position >= CAPACITY {
-                return Err(Status::NoSpace);
+            let bytes = state.write_at(
+                description.file,
+                position,
+                &snapshot[..request.length as usize],
+            )?;
+            if request.operation == Operation::Write {
+                description.position = position + bytes as u64;
             }
-            let bytes = (request.length as usize).min(CAPACITY.saturating_sub(position));
-            if bytes != 0 {
-                if position > state.length {
-                    state.bytes[state.length..position].fill(0);
-                }
-                state.bytes[position..position + bytes].copy_from_slice(&snapshot[..bytes]);
-                state.length = state.length.max(position + bytes);
-            }
-            description.position = position as u64 + bytes as u64;
             state.writes += 1;
             Completion::value(bytes as u64)
+        }
+        Operation::Info => Completion::info(state.info(description.file)),
+        Operation::SetLen => {
+            if !description.options.writable() {
+                return Err(Status::Denied);
+            }
+            state.set_len(description.file, request.argument)?;
+            Completion::value(0)
+        }
+        Operation::Sync => {
+            state.sync(description.file, SyncScope::try_from(request.argument)?)?;
+            Completion::value(0)
         }
         Operation::Open => unreachable!(),
     };
@@ -288,6 +382,7 @@ fn execute(
     Ok(result)
 }
 
+#[cfg(not(test))]
 fn open(
     endpoint: Handle,
     state: &mut State,
@@ -341,11 +436,13 @@ fn open(
     });
     Ok(Completion {
         value: 0,
+        attributes: 0,
         gate: Some(gate),
         opened: Some(slot),
     })
 }
 
+#[cfg(not(test))]
 fn map(memory: Handle, writable: bool) -> Result<(), Status> {
     let info = sys::handle_info(memory).map_err(|_| Status::Malformed)?;
     let rights = sys::READ | sys::MAP | if writable { sys::WRITE } else { 0 };
@@ -359,6 +456,7 @@ fn map(memory: Handle, writable: bool) -> Result<(), Status> {
     unsafe { sys::memory_map(memory, LOAN, 0, writable) }.map_err(|_| Status::Malformed)
 }
 
+#[cfg(not(test))]
 fn unmap() -> Result<(), Status> {
     // No references or further raw accesses survive this operation.
     if unsafe { sys::memory_unmap(LOAN) }.is_err() {
@@ -368,6 +466,7 @@ fn unmap() -> Result<(), Status> {
     Ok(())
 }
 
+#[cfg(not(test))]
 fn copy_from(memory: Handle, offset: u64, output: &mut [u8]) -> Result<(), Status> {
     map(memory, false)?;
     for (index, byte) in output.iter_mut().enumerate() {
@@ -377,10 +476,132 @@ fn copy_from(memory: Handle, offset: u64, output: &mut [u8]) -> Result<(), Statu
     unmap()
 }
 
+#[cfg(not(test))]
 fn close_all(handles: [Option<Handle>; 2]) -> Result<(), u64> {
     let mut failed = false;
     for handle in handles.into_iter().flatten() {
         failed |= sys::close(handle).is_err();
     }
     if failed { Err(246) } else { Ok(()) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn state() -> State {
+        let mut state = State::new();
+        state.exists = true;
+        state
+    }
+
+    #[test]
+    fn metadata_reports_backend_size_and_readonly_property() {
+        let mut state = state();
+        state.write_at(File::Probe, 0, b"mutable").unwrap();
+        assert_eq!(
+            state.info(File::Probe),
+            Info {
+                size: 7,
+                kind: FileType::Regular,
+                readonly: false
+            }
+        );
+        assert_eq!(
+            state.info(File::ReadOnly),
+            Info {
+                size: READ_ONLY_BYTES.len() as u64,
+                kind: FileType::Regular,
+                readonly: true,
+            }
+        );
+    }
+
+    #[test]
+    fn positioned_storage_writes_honor_offsets_and_zero_gaps() {
+        let mut state = state();
+        assert_eq!(state.write_at(File::Probe, 5, b"AB"), Ok(2));
+        assert_eq!(state.data(File::Probe), b"\0\0\0\0\0AB");
+        assert_eq!(state.write_at(File::Probe, 0, b"Z"), Ok(1));
+        assert_eq!(state.data(File::Probe), b"Z\0\0\0\0AB");
+        assert_eq!(state.read_at(File::Probe, 5, 1), b"A");
+    }
+
+    #[test]
+    fn positioned_reads_clip_eof_without_offset_overflow() {
+        let mut state = state();
+        state.write_at(File::Probe, 0, b"abc").unwrap();
+        assert_eq!(state.read_at(File::Probe, 1, usize::MAX), b"bc");
+        assert_eq!(state.read_at(File::Probe, 3, PAGE), b"");
+        assert_eq!(state.read_at(File::Probe, i64::MAX as u64, PAGE), b"");
+        assert_eq!(state.read_at(File::ReadOnly, u64::MAX, PAGE), b"");
+    }
+
+    #[test]
+    fn partial_capacity_writes_report_progress_and_failed_writes_preserve_state() {
+        let mut state = state();
+        assert_eq!(
+            state.write_at(File::Probe, (CAPACITY - 2) as u64, b"ABC"),
+            Ok(2)
+        );
+        assert_eq!(&state.data(File::Probe)[CAPACITY - 2..], b"AB");
+        assert!(
+            state.data(File::Probe)[..CAPACITY - 2]
+                .iter()
+                .all(|byte| *byte == 0)
+        );
+        let before = state.bytes;
+        assert_eq!(
+            state.write_at(File::Probe, CAPACITY as u64, b"X"),
+            Err(Status::NoSpace)
+        );
+        assert_eq!(
+            state.write_at(File::Probe, u64::MAX, b"X"),
+            Err(Status::NoSpace)
+        );
+        assert_eq!(state.write_at(File::Probe, u64::MAX, b""), Ok(0));
+        assert_eq!(state.bytes, before);
+        assert_eq!(state.length, CAPACITY);
+    }
+
+    #[test]
+    fn resize_zeroes_sparse_growth_and_discarded_bytes_on_regrowth() {
+        let mut state = state();
+        state.write_at(File::Probe, 0, b"sensitive").unwrap();
+        state.set_len(File::Probe, 3).unwrap();
+        state.set_len(File::Probe, 12).unwrap();
+        assert_eq!(state.data(File::Probe), b"sen\0\0\0\0\0\0\0\0\0");
+        state.set_len(File::Probe, 0).unwrap();
+        state.set_len(File::Probe, 3).unwrap();
+        assert_eq!(state.data(File::Probe), b"\0\0\0");
+    }
+
+    #[test]
+    fn invalid_resize_and_readonly_mutation_have_no_effect() {
+        let mut state = state();
+        state.write_at(File::Probe, 0, b"keep").unwrap();
+        let before = state.bytes;
+        assert_eq!(
+            state.set_len(File::Probe, CAPACITY as u64 + 1),
+            Err(Status::NoSpace)
+        );
+        assert_eq!(state.set_len(File::Probe, u64::MAX), Err(Status::NoSpace));
+        assert_eq!(state.set_len(File::ReadOnly, 0), Err(Status::Denied));
+        assert_eq!(state.write_at(File::ReadOnly, 0, b"X"), Err(Status::Denied));
+        assert_eq!(state.write_at(File::ReadOnly, 0, b""), Err(Status::Denied));
+        assert_eq!(state.bytes, before);
+        assert_eq!(state.length, 4);
+        assert_eq!(state.data(File::ReadOnly), READ_ONLY_BYTES);
+    }
+
+    #[test]
+    fn volatile_backend_never_reports_a_completed_storage_barrier() {
+        let mut state = state();
+        state.write_at(File::Probe, 0, b"live").unwrap();
+        for scope in [SyncScope::All, SyncScope::Data] {
+            assert_eq!(state.sync(File::Probe, scope), Err(Status::Unsupported));
+            assert_eq!(state.sync(File::ReadOnly, scope), Err(Status::Unsupported));
+        }
+        assert_eq!(state.data(File::Probe), b"live");
+    }
 }

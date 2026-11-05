@@ -48,12 +48,9 @@ pub(super) fn check_files() {
     check(expect(file.stream_position(), 418) == 13, 419);
     check(file.seek(SeekFrom::Start(u64::MAX)).is_err(), 420);
     check(expect(alias.stream_position(), 421) == 13, 422);
+    check(expect(file.metadata(), 423).len() == 9000, 423);
     check(
-        file.metadata().unwrap_err().kind() == ErrorKind::Unsupported,
-        423,
-    );
-    check(
-        file.set_len(0).unwrap_err().kind() == ErrorKind::Unsupported,
+        file.set_len(u64::MAX).unwrap_err().kind() == ErrorKind::InvalidInput,
         424,
     );
     check(

@@ -22,6 +22,80 @@ pub enum Operation {
     Read = 2,
     Write = 3,
     Seek = 4,
+    ReadAt = 5,
+    WriteAt = 6,
+    Info = 7,
+    SetLen = 8,
+    Sync = 9,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum FileType {
+    Regular = 1,
+    Directory = 2,
+    Symlink = 3,
+}
+
+pub const READONLY: u32 = 1;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Info {
+    pub size: u64,
+    pub kind: FileType,
+    pub readonly: bool,
+}
+
+impl Info {
+    pub fn decode(size: u64, attributes: u64) -> Result<Self, Status> {
+        let kind = match attributes as u32 {
+            1 => FileType::Regular,
+            2 => FileType::Directory,
+            3 => FileType::Symlink,
+            _ => return Err(Status::Malformed),
+        };
+        let flags = (attributes >> 32) as u32;
+        if size > i64::MAX as u64 || flags & !READONLY != 0 {
+            return Err(Status::Malformed);
+        }
+        Ok(Self {
+            size,
+            kind,
+            readonly: flags & READONLY != 0,
+        })
+    }
+
+    pub const fn attributes(self) -> u64 {
+        self.kind as u64
+            | if self.readonly {
+                (READONLY as u64) << 32
+            } else {
+                0
+            }
+    }
+
+    pub const fn response(self, id: u64) -> [u64; 4] {
+        [id, Status::Ok as u64, self.size, self.attributes()]
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u64)]
+pub enum SyncScope {
+    All = 0,
+    Data = 1,
+}
+
+impl TryFrom<u64> for SyncScope {
+    type Error = Status;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::All),
+            1 => Ok(Self::Data),
+            _ => Err(Status::Malformed),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -94,12 +168,24 @@ impl Request {
             2 => Operation::Read,
             3 => Operation::Write,
             4 => Operation::Seek,
+            5 => Operation::ReadAt,
+            6 => Operation::WriteAt,
+            7 => Operation::Info,
+            8 => Operation::SetLen,
+            9 => Operation::Sync,
             _ => return Err(Status::Malformed),
         };
         if namespace != (operation == Operation::Open) {
             return Err(Status::Denied);
         }
-        let expected = usize::from(operation != Operation::Seek);
+        let expected = match operation {
+            Operation::Open
+            | Operation::Read
+            | Operation::Write
+            | Operation::ReadAt
+            | Operation::WriteAt => 1,
+            Operation::Seek | Operation::Info | Operation::SetLen | Operation::Sync => 0,
+        };
         if capabilities != expected {
             return Err(Status::Malformed);
         }
@@ -120,6 +206,40 @@ impl Request {
             }
             Operation::Seek => {
                 if message[3] > 2 {
+                    return Err(Status::Malformed);
+                }
+            }
+            Operation::ReadAt | Operation::WriteAt => {
+                if message[3] > PAGE_SIZE {
+                    return Err(Status::Range);
+                }
+                if message[2] > i64::MAX as u64 {
+                    return Err(Status::Overflow);
+                }
+                if operation == Operation::WriteAt
+                    && message[2]
+                        .checked_add(message[3])
+                        .is_none_or(|end| end > i64::MAX as u64)
+                {
+                    return Err(Status::Overflow);
+                }
+            }
+            Operation::Info => {
+                if message[2] != 0 || message[3] != 0 {
+                    return Err(Status::Malformed);
+                }
+            }
+            Operation::SetLen => {
+                if message[3] != 0 {
+                    return Err(Status::Malformed);
+                }
+                if message[2] > i64::MAX as u64 {
+                    return Err(Status::Overflow);
+                }
+            }
+            Operation::Sync => {
+                SyncScope::try_from(message[2])?;
+                if message[3] != 0 {
                     return Err(Status::Malformed);
                 }
             }
@@ -165,13 +285,18 @@ mod tests {
             Request::decode([header(Operation::Open), 1, 0, 1], false, 1),
             Err(Status::Denied)
         );
-        for op in [Operation::Read, Operation::Write, Operation::Seek] {
+        for (op, caps) in [
+            (Operation::Read, 1),
+            (Operation::Write, 1),
+            (Operation::Seek, 0),
+            (Operation::ReadAt, 1),
+            (Operation::WriteAt, 1),
+            (Operation::Info, 0),
+            (Operation::SetLen, 0),
+            (Operation::Sync, 0),
+        ] {
             assert_eq!(
-                Request::decode(
-                    [header(op), 1, 0, 0],
-                    true,
-                    usize::from(op != Operation::Seek)
-                ),
+                Request::decode([header(op), 1, 0, 0], true, caps),
                 Err(Status::Denied)
             );
         }
@@ -253,5 +378,92 @@ mod tests {
         );
         assert_eq!(seek_position(u64::MAX, 0, i64::MIN, 1), Ok(i64::MAX as u64));
         assert_eq!(seek_position(0, 0, 0, 3), Err(Status::Malformed));
+    }
+
+    #[test]
+    fn positioned_io_admits_eof_reads_but_rejects_unrepresentable_writes() {
+        assert!(
+            Request::decode(
+                [header(Operation::ReadAt), 1, i64::MAX as u64, PAGE_SIZE],
+                false,
+                1
+            )
+            .is_ok()
+        );
+        assert!(
+            Request::decode(
+                [header(Operation::WriteAt), 1, i64::MAX as u64, 0],
+                false,
+                1
+            )
+            .is_ok()
+        );
+        for (operation, offset, bytes, error) in [
+            (Operation::ReadAt, 0, PAGE_SIZE + 1, Status::Range),
+            (Operation::WriteAt, 0, PAGE_SIZE + 1, Status::Range),
+            (Operation::ReadAt, i64::MAX as u64 + 1, 0, Status::Overflow),
+            (Operation::WriteAt, i64::MAX as u64, 1, Status::Overflow),
+            (Operation::WriteAt, i64::MAX as u64 - 1, 2, Status::Overflow),
+        ] {
+            assert_eq!(
+                Request::decode([header(operation), 1, offset, bytes], false, 1),
+                Err(error)
+            );
+        }
+    }
+
+    #[test]
+    fn new_operations_require_exact_capability_counts_and_reserved_words() {
+        for (operation, argument, length, count) in [
+            (Operation::ReadAt, 0, 1, 1),
+            (Operation::WriteAt, 0, 1, 1),
+            (Operation::Info, 0, 0, 0),
+            (Operation::SetLen, 1, 0, 0),
+            (Operation::Sync, 0, 0, 0),
+            (Operation::Sync, 1, 0, 0),
+        ] {
+            for caps in 0..=2 {
+                let request =
+                    Request::decode([header(operation), 1, argument, length], false, caps);
+                assert_eq!(request.is_ok(), caps == count);
+            }
+        }
+        for (operation, argument, length, status) in [
+            (Operation::Info, 1, 0, Status::Malformed),
+            (Operation::Info, 0, 1, Status::Malformed),
+            (Operation::SetLen, 0, 1, Status::Malformed),
+            (Operation::SetLen, i64::MAX as u64 + 1, 0, Status::Overflow),
+            (Operation::Sync, 2, 0, Status::Malformed),
+            (Operation::Sync, 0, 1, Status::Malformed),
+        ] {
+            assert_eq!(
+                Request::decode([header(operation), 1, argument, length], false, 0),
+                Err(status)
+            );
+        }
+    }
+
+    #[test]
+    fn metadata_has_no_unknown_kinds_flags_or_unrepresentable_lengths() {
+        for kind in [FileType::Regular, FileType::Directory, FileType::Symlink] {
+            for readonly in [false, true] {
+                let info = Info {
+                    size: i64::MAX as u64,
+                    kind,
+                    readonly,
+                };
+                assert_eq!(Info::decode(info.size, info.attributes()), Ok(info));
+                assert_eq!(info.response(7), [7, 0, info.size, info.attributes()]);
+            }
+        }
+        for (size, attributes) in [
+            (0, 0),
+            (0, 4),
+            (0, (2 << 32) | 1),
+            (0, (1 << 63) | 1),
+            (i64::MAX as u64 + 1, 1),
+        ] {
+            assert_eq!(Info::decode(size, attributes), Err(Status::Malformed));
+        }
     }
 }

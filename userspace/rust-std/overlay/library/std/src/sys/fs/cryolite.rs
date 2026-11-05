@@ -1,17 +1,175 @@
-use crate::ffi::CString;
+use crate::ffi::{CString, OsString};
 use crate::fs::TryLockError;
 use crate::io::{self, BorrowedCursor, IoSlice, IoSliceMut, SeekFrom};
 use crate::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 use crate::os::unix::ffi::OsStrExt;
-use crate::path::Path;
+use crate::path::{Path, PathBuf};
+use crate::sys::time::SystemTime;
 use crate::sys::{FromInner, IntoInner, unsupported, unsupported_err};
 
 pub use super::unsupported::{
-    Dir, DirBuilder, DirEntry, ExtraHomeDirs, ExtraMediaDirs, FileAttr, FilePermissions, FileTimes,
-    FileType, ReadDir, canonicalize, copy, exists, link, lstat, readdir, readlink, remove_dir_all,
-    rename, rename_noreplace, rmdir, set_perm, set_perm_nofollow, set_times, set_times_nofollow,
-    stat, symlink, unlink,
+    Dir, DirBuilder, ExtraHomeDirs, ExtraMediaDirs, FileTimes, canonicalize, copy, exists, link,
+    readlink, remove_dir_all, rename, rename_noreplace, rmdir, set_times, set_times_nofollow,
+    symlink, unlink,
 };
+
+#[derive(Clone, Debug)]
+pub struct FileAttr {
+    size: u64,
+    file_type: FileType,
+    permissions: FilePermissions,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum FileType {
+    Regular,
+    Directory,
+    Symlink,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FilePermissions(bool);
+
+impl FileAttr {
+    fn decode(info: libc::cryolite_file_info) -> io::Result<Self> {
+        let file_type = match info.kind {
+            libc::KRYO_FILE_REGULAR => FileType::Regular,
+            libc::KRYO_FILE_DIRECTORY => FileType::Directory,
+            libc::KRYO_FILE_SYMLINK => FileType::Symlink,
+            _ => return Err(invalid_metadata()),
+        };
+        if info.size > i64::MAX as u64 || info.flags & !libc::KRYO_FILE_READONLY != 0 {
+            return Err(invalid_metadata());
+        }
+        Ok(Self {
+            size: info.size,
+            file_type,
+            permissions: FilePermissions(info.flags & libc::KRYO_FILE_READONLY != 0),
+        })
+    }
+
+    pub fn size(&self) -> u64 {
+        self.size
+    }
+
+    pub fn perm(&self) -> FilePermissions {
+        self.permissions.clone()
+    }
+
+    pub fn file_type(&self) -> FileType {
+        self.file_type
+    }
+
+    pub fn modified(&self) -> io::Result<SystemTime> {
+        unsupported()
+    }
+
+    pub fn accessed(&self) -> io::Result<SystemTime> {
+        unsupported()
+    }
+
+    pub fn created(&self) -> io::Result<SystemTime> {
+        unsupported()
+    }
+}
+
+fn invalid_metadata() -> io::Error {
+    io::const_error!(io::ErrorKind::InvalidData, "invalid native file metadata")
+}
+
+impl FileType {
+    pub fn is_dir(&self) -> bool {
+        *self == Self::Directory
+    }
+
+    pub fn is_file(&self) -> bool {
+        *self == Self::Regular
+    }
+
+    pub fn is_symlink(&self) -> bool {
+        *self == Self::Symlink
+    }
+}
+
+impl FilePermissions {
+    pub fn readonly(&self) -> bool {
+        self.0
+    }
+
+    pub fn set_readonly(&mut self, readonly: bool) {
+        self.0 = readonly;
+    }
+}
+
+#[derive(Debug)]
+pub struct ReadDir(!);
+
+#[derive(Debug)]
+pub struct DirEntry(!);
+
+impl Drop for ReadDir {
+    fn drop(&mut self) {
+        self.0
+    }
+}
+
+impl Drop for DirEntry {
+    fn drop(&mut self) {
+        self.0
+    }
+}
+
+impl ReadDir {
+    pub fn dir(&self) -> io::Result<Dir> {
+        self.0
+    }
+}
+
+impl Iterator for ReadDir {
+    type Item = io::Result<DirEntry>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0
+    }
+}
+
+impl DirEntry {
+    pub fn path(&self) -> PathBuf {
+        self.0
+    }
+
+    pub fn file_name(&self) -> OsString {
+        self.0
+    }
+
+    pub fn metadata(&self) -> io::Result<FileAttr> {
+        self.0
+    }
+
+    pub fn file_type(&self) -> io::Result<FileType> {
+        self.0
+    }
+}
+
+pub fn readdir(_path: &Path) -> io::Result<ReadDir> {
+    unsupported()
+}
+
+pub fn stat(_path: &Path) -> io::Result<FileAttr> {
+    unsupported()
+}
+
+pub fn lstat(_path: &Path) -> io::Result<FileAttr> {
+    unsupported()
+}
+
+pub fn set_perm(_path: &Path, _permissions: FilePermissions) -> io::Result<()> {
+    unsupported()
+}
+
+pub fn set_perm_nofollow(_path: &Path, _permissions: FilePermissions) -> io::Result<()> {
+    unsupported()
+}
 
 #[derive(Debug)]
 pub struct File(OwnedFd);
@@ -144,6 +302,42 @@ fn completed(error: i32, count: libc::ssize_t, requested: usize) -> io::Result<u
         ))
 }
 
+fn file_offset(offset: u64) -> io::Result<libc::off_t> {
+    i64::try_from(offset).map_err(|_| {
+        io::const_error!(
+            io::ErrorKind::InvalidInput,
+            "file offset exceeds signed 64-bit range"
+        )
+    })
+}
+
+fn completed_at(
+    error: i32,
+    count: libc::ssize_t,
+    requested: usize,
+    offset: u64,
+) -> io::Result<usize> {
+    let count = completed(error, count, requested)?;
+    if offset
+        .checked_add(count as u64)
+        .is_none_or(|end| end > i64::MAX as u64)
+    {
+        return Err(io::const_error!(
+            io::ErrorKind::InvalidData,
+            "invalid native positioned file completion",
+        ));
+    }
+    Ok(count)
+}
+
+fn status(error: i32) -> io::Result<()> {
+    if error == 0 {
+        Ok(())
+    } else {
+        Err(io::Error::from_raw_os_error(error))
+    }
+}
+
 impl File {
     pub fn open(path: &Path, options: &OpenOptions) -> io::Result<Self> {
         let flags = options.flags()?;
@@ -164,15 +358,21 @@ impl File {
     }
 
     pub fn file_attr(&self) -> io::Result<FileAttr> {
-        unsupported()
+        let mut info = libc::cryolite_file_info {
+            size: 0,
+            kind: 0,
+            flags: 0,
+        };
+        status(unsafe { libc::__cryolite_file_info(self.as_raw_fd(), &mut info) })?;
+        FileAttr::decode(info)
     }
 
     pub fn fsync(&self) -> io::Result<()> {
-        unsupported()
+        status(unsafe { libc::__cryolite_file_sync(self.as_raw_fd(), libc::KRYO_FILE_SYNC_ALL) })
     }
 
     pub fn datasync(&self) -> io::Result<()> {
-        unsupported()
+        status(unsafe { libc::__cryolite_file_sync(self.as_raw_fd(), libc::KRYO_FILE_SYNC_DATA) })
     }
 
     pub fn lock(&self) -> io::Result<()> {
@@ -195,8 +395,9 @@ impl File {
         unsupported()
     }
 
-    pub fn truncate(&self, _size: u64) -> io::Result<()> {
-        unsupported()
+    pub fn truncate(&self, size: u64) -> io::Result<()> {
+        let size = file_offset(size)?;
+        status(unsafe { libc::__cryolite_file_resize(self.as_raw_fd(), size) })
     }
 
     pub fn read(&self, bytes: &mut [u8]) -> io::Result<usize> {
@@ -218,6 +419,21 @@ impl File {
 
     pub fn is_read_vectored(&self) -> bool {
         false
+    }
+
+    pub fn read_at(&self, bytes: &mut [u8], offset: u64) -> io::Result<usize> {
+        let position = file_offset(offset)?;
+        let mut count = 0;
+        let error = unsafe {
+            libc::__cryolite_file_pread(
+                self.as_raw_fd(),
+                bytes.as_mut_ptr().cast(),
+                bytes.len(),
+                position,
+                &mut count,
+            )
+        };
+        completed_at(error, count, bytes.len(), offset)
     }
 
     pub fn read_buf(&self, cursor: BorrowedCursor<'_, u8>) -> io::Result<()> {
@@ -245,6 +461,21 @@ impl File {
         false
     }
 
+    pub fn write_at(&self, bytes: &[u8], offset: u64) -> io::Result<usize> {
+        let position = file_offset(offset)?;
+        let mut count = 0;
+        let error = unsafe {
+            libc::__cryolite_file_pwrite(
+                self.as_raw_fd(),
+                bytes.as_ptr().cast(),
+                bytes.len(),
+                position,
+                &mut count,
+            )
+        };
+        completed_at(error, count, bytes.len(), offset)
+    }
+
     pub fn flush(&self) -> io::Result<()> {
         // File has no runtime buffer; storage durability requires a separate service operation.
         Ok(())
@@ -252,15 +483,7 @@ impl File {
 
     pub fn seek(&self, position: SeekFrom) -> io::Result<u64> {
         let (offset, whence) = match position {
-            SeekFrom::Start(offset) => (
-                i64::try_from(offset).map_err(|_| {
-                    io::const_error!(
-                        io::ErrorKind::InvalidInput,
-                        "file offset exceeds signed 64-bit range"
-                    )
-                })?,
-                libc::SEEK_SET,
-            ),
+            SeekFrom::Start(offset) => (file_offset(offset)?, libc::SEEK_SET),
             SeekFrom::Current(offset) => (offset, libc::SEEK_CUR),
             SeekFrom::End(offset) => (offset, libc::SEEK_END),
         };
@@ -276,8 +499,7 @@ impl File {
     }
 
     pub fn size(&self) -> Option<io::Result<u64>> {
-        // Seek-to-end/restore would race aliases of the shared open-description cursor.
-        Some(unsupported())
+        Some(self.file_attr().map(|attributes| attributes.size()))
     }
 
     pub fn tell(&self) -> io::Result<u64> {

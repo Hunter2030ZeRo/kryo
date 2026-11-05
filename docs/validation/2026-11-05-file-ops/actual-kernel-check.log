@@ -1,0 +1,5 @@
+   Compiling kryo v0.1.0 (/home/entity27th/kryo/kernel/image)
+    Checking kryo-hal v0.1.0 (/home/entity27th/kryo/hal)
+    Checking kryo-core v0.1.0 (/home/entity27th/kryo/kernel/core)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/kryo/interfaces)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.27s

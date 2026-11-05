@@ -1,7 +1,9 @@
 #![feature(restricted_std)]
+#![feature(seek_stream_len)]
 
 extern crate cryolite_allocator as _;
 
+mod file_ops;
 mod files;
 mod random;
 
@@ -65,7 +67,8 @@ fn check(condition: bool, stage: u64) {
 
 fn allocation() {
     let args: Vec<_> = std::env::args_os().collect();
-    check(args.len() == 2 && args[1].as_bytes() == b"cryolite-v3", 1);
+    check(args.len() == 3 && args[1].as_bytes() == b"cryolite-v3", 1);
+    check(matches!(args[2].as_bytes(), b"concurrent" | b"quota"), 1);
     let mut values = Vec::new();
     for value in 0..4096u64 {
         values.push(value);
@@ -195,6 +198,10 @@ fn main() {
     allocation();
     random::check_random();
     files::check_files();
+    let concurrent = std::env::args_os()
+        .nth(2)
+        .is_some_and(|argument| argument.as_bytes() == b"concurrent");
+    file_ops::check_file_ops(concurrent);
     synchronization();
     thread_lifecycle();
     monotonic_time();

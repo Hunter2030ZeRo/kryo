@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-05",
+  "base_head": "b8c3ae6d78540ed04bab9b7ea1b26199e5738d79",
+  "runs": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc-std",
+      "status": "passed",
+      "cpu": "Haswell-noTSX",
+      "cpus": 1,
+      "mode": "boot-tests",
+      "all_checks": true,
+      "guest_exit_verified": false,
+      "image_sha256": "64ecff9b76f9c423c28a5527bdd773c919c98daa159b86c0c7f49b5d9ca2f7f9"
+    },
+    {
+      "label": "release-normal-smp4-abi-libc-std-block-rw",
+      "status": "passed",
+      "cpu": "max",
+      "cpus": 4,
+      "mode": "normal",
+      "all_checks": true,
+      "guest_exit_verified": false,
+      "image_sha256": "00ccba09b3e01d267965495a0977a693cc59f07f5ee1a40ddcdcf9911705e461"
+    }
+  ],
+  "host": {
+    "provider_groups": 66,
+    "optimization": [
+      "O0",
+      "O2"
+    ],
+    "sanitizers": [
+      "address",
+      "undefined"
+    ],
+    "interfaces_tests": 15,
+    "backend_harness_tests": 15,
+    "backend_test_breakdown": "8 protocol + 7 storage helpers",
+    "python_tests": 48,
+    "workspace_fmt": "passed",
+    "workspace_clippy_all_features": "passed"
+  },
+  "native": {
+    "normal_processes_per_boot": 2,
+    "expected_abort_processes_per_boot": 1,
+    "metadata_and_file_ops_events": "232 and 233 twice per boot",
+    "concurrent_aliases": "234 once per boot, two worker threads with disjoint ranges",
+    "quota_rejection": "235 once per boot: sole wait credit held; kernel verifies CallExchange/OutOfResources and zero loan charge",
+    "quota_recovery": "236 once per boot: unchanged data, credit returned, explicit successful retry and preserved shared cursor",
+    "retirement": "All three instances and their peer/child backing retired under trusted supervisor checks"
+  },
+  "initial_failure": {
+    "logs": "initial-join-*",
+    "error": "ENOMEM (49), wait-credit exhaustion",
+    "correction": "Concurrent success is checked with sufficient credits; the original one-credit pressure case remains and gains deterministic IPC rejection/recovery coverage",
+    "production_retry_or_quota_increase": false,
+    "binaries": "Original failed packaged images remain outside Git in the work directory; archived build records retain hashes"
+  },
+  "limits": [
+    "No hardware or performance claim",
+    "No full POSIX or hosted std claim",
+    "No path metadata or timestamp implementation",
+    "Volatile Sync All/Data both return Unsupported",
+    "No independent BetAFS or ICE repository changes",
+    "Host-stopped QEMU is not guest shutdown proof"
+  ]
+}

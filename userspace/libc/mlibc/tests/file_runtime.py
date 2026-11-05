@@ -42,6 +42,26 @@ CASES = [
     "aliases share gate identity and request sequence",
     "alias operations serialize access to their scratch mapping",
     "duplicate publication never dereferences a concurrently closed description",
+    "metadata uses inline object attributes without a loan",
+    "unsupported metadata preserves output and healthy I/O",
+    "invalid metadata kinds flags and signed sizes poison all aliases",
+    "metadata error responses cannot carry values or attributes",
+    "metadata rejects and closes unexpected capabilities",
+    "positioned transfers encode exact offsets without seek RPCs",
+    "positioned empty and invalid inputs allocate nothing",
+    "positioned reads at maximum offset preserve EOF semantics",
+    "positioned writes reject signed end overflow before RPC",
+    "positioned completions are checked before copying output",
+    "zero-progress positioned write poisons its description",
+    "resize and synchronization use inline commands",
+    "command inputs and resize access are checked before RPC",
+    "nonzero command acknowledgements poison aliases",
+    "unsupported storage barriers remain errors without poisoning",
+    "accepted positioned failure blocks alias mutation replay",
+    "undelivered positioned failure permits retry",
+    "positioned transfer retains ownership through close and reuse",
+    "metadata retains ownership through close and reuse",
+    "nonmetadata responses cannot smuggle attributes",
 ]
 
 PREFIX = r"""
@@ -50,6 +70,7 @@ PREFIX = r"""
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -66,6 +87,9 @@ static unsigned open_calls;
 static unsigned calls;
 static uint64_t last_rpc_handle;
 static uint64_t last_rpc_id;
+static uint64_t last_rpc_operation;
+static uint64_t last_rpc_argument;
+static uint64_t last_rpc_length;
 static unsigned gate_closes;
 static unsigned memory_closes;
 static unsigned park_calls;
@@ -85,6 +109,10 @@ static bool transport_accepted = true;
 static int response_fault;
 static uint64_t returned_status;
 static uint64_t returned_count = UINT64_MAX;
+static uint64_t returned_size = 9000;
+static uint32_t returned_kind = KRYO_FILE_REGULAR;
+static uint32_t returned_attributes;
+static uint64_t returned_command;
 static void (*during_call)();
 static void (*during_unlock)();
 static void (*during_park)();
@@ -199,6 +227,9 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
     last_rpc_id = message.words[1];
     auto rpc_address = mapped_address;
     auto operation = message.words[0] & UINT32_MAX;
+    last_rpc_operation = operation;
+    last_rpc_argument = message.words[2];
+    last_rpc_length = message.words[3];
     if (operation == KRYO_FILE_OPEN)
         ++open_calls;
     if (during_call) {
@@ -226,15 +257,24 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
         } else if (operation == KRYO_FILE_SEEK) {
             assert(count == 0 && capacity == 0);
             reply.message.words[2] = message.words[2];
+        } else if (operation == KRYO_FILE_INFO) {
+            assert(count == 0 && capacity == 0 && message.words[2] == 0 && message.words[3] == 0);
+            reply.message.words[2] = returned_size;
+            reply.message.words[3] = returned_kind | (uint64_t{returned_attributes} << 32);
+        } else if (operation == KRYO_FILE_SET_LEN || operation == KRYO_FILE_SYNC) {
+            assert(count == 0 && capacity == 0 && message.words[3] == 0);
+            reply.message.words[2] = returned_command;
         } else {
-            assert(count == 1 && capacity == 0 && message.words[2] == 0
+            bool reading = operation == KRYO_FILE_READ || operation == KRYO_FILE_READ_AT;
+            bool positioned = operation == KRYO_FILE_READ_AT || operation == KRYO_FILE_WRITE_AT;
+            assert(count == 1 && capacity == 0 && (positioned || message.words[2] == 0)
                 && message.words[3] <= 4096);
             uint64_t expected = KRYO_RIGHT_READ | KRYO_RIGHT_MAP
-                | (operation == KRYO_FILE_READ ? KRYO_RIGHT_WRITE : 0);
+                | (reading ? KRYO_RIGHT_WRITE : 0);
             assert(grants[0].rights == expected);
             auto bytes = returned_count == UINT64_MAX ? message.words[3] : returned_count;
             reply.message.words[2] = bytes;
-            if (operation == KRYO_FILE_READ)
+            if (reading)
                 memset(reinterpret_cast<void *>(rpc_address), 0x5a, bytes <= 4096 ? bytes : 0);
         }
     }
@@ -244,6 +284,10 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
         reply.count = 2;
         reply.handles[1] = next_gate++;
     }
+    if (response_fault == 6) reply.message.words[3] = uint64_t{2} << 32 | KRYO_FILE_REGULAR;
+    if (response_fault == 7) reply.message.words[3] = 99;
+    if (response_fault == 8) reply.message.words[2] = UINT64_MAX;
+    if (response_fault == 9) reply.message.words[2] = 1;
     return reply;
 }
 
@@ -272,6 +316,10 @@ static void clean() {
     transport_accepted = true;
     returned_status = 0;
     returned_count = UINT64_MAX;
+    returned_size = 9000;
+    returned_kind = KRYO_FILE_REGULAR;
+    returned_attributes = 0;
+    returned_command = 0;
     namespace_handle = 100;
     during_call = nullptr;
     during_unlock = during_park = during_failed_cas = nullptr;
@@ -798,7 +846,225 @@ int main() {
     assert(__cryolite_file_close(descriptor) == EBADF && __cryolite_file_close(victim) == EBADF);
     clean();
 
-    assert(case_number == 46);
+    struct cryolite_file_info info{17, 19, 23};
+    descriptor = opened(O_RDONLY);
+    before = calls;
+    auto before_memory = memories;
+    returned_size = 123456789;
+    returned_kind = KRYO_FILE_SYMLINK;
+    returned_attributes = KRYO_FILE_READONLY;
+    assert(__cryolite_file_info(descriptor, &info) == 0);
+    assert(info.size == 123456789 && info.kind == KRYO_FILE_SYMLINK
+        && info.flags == KRYO_FILE_READONLY);
+    assert(calls == before + 1 && memories == before_memory && maps == 0
+        && last_rpc_operation == KRYO_FILE_INFO && last_rpc_argument == 0 && last_rpc_length == 0);
+    returned_attributes = 0;
+    assert(__cryolite_file_info(descriptor, &info) == 0 && info.flags == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_WRONLY);
+    returned_kind = KRYO_FILE_DIRECTORY;
+    assert(__cryolite_file_info(descriptor, &info) == 0 && info.kind == KRYO_FILE_DIRECTORY);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    info = {17, 19, 23};
+    returned_status = KRYO_FILE_UNSUPPORTED;
+    assert(__cryolite_file_info(descriptor, &info) == ENOTSUP);
+    assert(info.size == 17 && info.kind == 19 && info.flags == 23);
+    returned_status = 0;
+    assert(__cryolite_file_read(descriptor, data, 1, &amount) == 0 && amount == 1);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    for (int fault : {6, 7, 8}) {
+        descriptor = opened();
+        assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+        info = {17, 19, 23};
+        response_fault = fault;
+        assert(__cryolite_file_info(descriptor, &info) == EPROTO);
+        assert(info.size == 17 && info.kind == 19 && info.flags == 23);
+        response_fault = 0; before = calls;
+        assert(__cryolite_file_info(alias, &info) == EIO && calls == before);
+        assert(__cryolite_file_read(alias, data, 1, &amount) == EIO && calls == before);
+        assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    }
+    clean();
+
+    for (int fault : {2, 9}) {
+        descriptor = opened();
+        returned_status = KRYO_FILE_UNSUPPORTED;
+        response_fault = fault;
+        info = {17, 19, 23};
+        assert(__cryolite_file_info(descriptor, &info) == EPROTO);
+        assert(info.size == 17 && info.kind == 19 && info.flags == 23);
+        returned_status = response_fault = 0; before = calls;
+        assert(__cryolite_file_read(descriptor, data, 1, &amount) == EIO && calls == before);
+        assert(__cryolite_file_close(descriptor) == 0);
+    }
+    clean();
+
+    descriptor = opened();
+    response_fault = 3; before = gate_closes;
+    assert(__cryolite_file_info(descriptor, &info) == EPROTO);
+    assert(gate_closes == before + 1);
+    response_fault = 0;
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    before = calls;
+    assert(__cryolite_file_pread(descriptor, data, sizeof(data), 345, &amount) == 0 && amount == 4096);
+    assert(calls == before + 1 && last_rpc_operation == KRYO_FILE_READ_AT
+        && last_rpc_argument == 345 && last_rpc_length == 4096);
+    before = calls;
+    assert(__cryolite_file_pwrite(descriptor, data, 19, 678, &amount) == 0 && amount == 19);
+    assert(calls == before + 1 && last_rpc_operation == KRYO_FILE_WRITE_AT
+        && last_rpc_argument == 678 && last_rpc_length == 19);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_RDWR | O_APPEND);
+    assert(__cryolite_file_pwrite(descriptor, data, 1, 7, &amount) == 0);
+    assert(last_rpc_operation == KRYO_FILE_WRITE_AT && last_rpc_argument == 7);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    before = calls; before_memory = memories; amount = -7;
+    assert(__cryolite_file_pread(descriptor, nullptr, 0, LONG_MAX, &amount) == 0 && amount == 0);
+    assert(__cryolite_file_pwrite(descriptor, nullptr, 0, LONG_MAX, &amount) == 0 && amount == 0);
+    amount = -7;
+    assert(__cryolite_file_pread(descriptor, data, 1, -1, &amount) == EINVAL && amount == -7);
+    assert(__cryolite_file_pwrite(descriptor, data, 1, -1, &amount) == EINVAL && amount == -7);
+    assert(__cryolite_file_pread(descriptor, data, SIZE_MAX, 0, &amount) == EINVAL && amount == -7);
+    assert(__cryolite_file_pwrite(-1, data, 1, 0, &amount) == EBADF && amount == -7);
+    assert(calls == before && memories == before_memory && maps == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_RDONLY); before = calls;
+    assert(__cryolite_file_pwrite(descriptor, data, 1, 0, &amount) == EBADF && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_WRONLY); before = calls;
+    assert(__cryolite_file_pread(descriptor, data, 1, 0, &amount) == EBADF && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    returned_count = 0;
+    assert(__cryolite_file_pread(descriptor, data, 1, LONG_MAX, &amount) == 0 && amount == 0);
+    returned_count = 1; amount = -7; data[0] = 0xcc;
+    assert(__cryolite_file_pread(descriptor, data, 1, LONG_MAX, &amount) == EPROTO);
+    assert(amount == -7 && data[0] == 0xcc);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); before = calls; amount = -7;
+    assert(__cryolite_file_pwrite(descriptor, data, 1, LONG_MAX, &amount) == EOVERFLOW);
+    assert(__cryolite_file_pwrite(descriptor, data, 10, LONG_MAX - 9, &amount) == EOVERFLOW);
+    assert(amount == -7 && calls == before && maps == 0);
+    assert(__cryolite_file_pwrite(descriptor, data, 9, LONG_MAX - 9, &amount) == 0 && amount == 9);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened();
+    returned_count = 3;
+    assert(__cryolite_file_pread(descriptor, data, 17, 23, &amount) == 0 && amount == 3);
+    assert(__cryolite_file_pwrite(descriptor, data, 17, 23, &amount) == 0 && amount == 3);
+    returned_count = 18; amount = -7; memset(data, 0xcc, sizeof(data));
+    assert(__cryolite_file_pread(descriptor, data, 17, 23, &amount) == EPROTO);
+    assert(amount == -7 && data[0] == 0xcc && data[17] == 0xcc);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); returned_count = 0; amount = -7;
+    assert(__cryolite_file_pwrite(descriptor, data, 1, 0, &amount) == EPROTO && amount == -7);
+    before = calls;
+    assert(__cryolite_file_resize(descriptor, 0) == EIO && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); before = calls; before_memory = memories;
+    assert(__cryolite_file_resize(descriptor, 12345) == 0);
+    assert(last_rpc_operation == KRYO_FILE_SET_LEN && last_rpc_argument == 12345 && !last_rpc_length);
+    assert(__cryolite_file_sync(descriptor, 0) == 0);
+    assert(last_rpc_operation == KRYO_FILE_SYNC && last_rpc_argument == KRYO_FILE_SYNC_ALL);
+    assert(__cryolite_file_sync(descriptor, 1) == 0);
+    assert(last_rpc_operation == KRYO_FILE_SYNC && last_rpc_argument == KRYO_FILE_SYNC_DATA);
+    assert(calls == before + 3 && memories == before_memory && maps == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_RDWR | O_APPEND);
+    assert(__cryolite_file_resize(descriptor, 11) == 0);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); before = calls;
+    assert(__cryolite_file_resize(descriptor, -1) == EINVAL);
+    assert(__cryolite_file_sync(descriptor, -1) == EINVAL);
+    assert(__cryolite_file_sync(descriptor, 2) == EINVAL);
+    assert(__cryolite_file_info(-1, &info) == EBADF);
+    assert(__cryolite_file_resize(-1, 1) == EBADF);
+    assert(__cryolite_file_sync(-1, 0) == EBADF);
+    assert(calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    descriptor = opened(O_RDONLY); before = calls;
+    assert(__cryolite_file_resize(descriptor, 0) == EBADF && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    for (bool synchronize : {false, true}) {
+        descriptor = opened(); assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+        returned_command = 1;
+        assert((synchronize ? __cryolite_file_sync(descriptor, 0)
+                            : __cryolite_file_resize(descriptor, 0)) == EPROTO);
+        returned_command = 0; before = calls;
+        assert(__cryolite_file_info(alias, &info) == EIO && calls == before);
+        assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    }
+    clean();
+
+    descriptor = opened(); returned_status = KRYO_FILE_UNSUPPORTED;
+    assert(__cryolite_file_sync(descriptor, 0) == ENOTSUP);
+    assert(__cryolite_file_sync(descriptor, 1) == ENOTSUP);
+    returned_status = 0;
+    assert(__cryolite_file_read(descriptor, data, 1, &amount) == 0 && amount == 1);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    descriptor = opened(); assert(__cryolite_file_dup(descriptor, 3, 0, &alias) == 0);
+    transport_failure = 1; transport_status = KRYO_STATUS_CANCELLED;
+    assert(__cryolite_file_pwrite(descriptor, data, 1, 0, &amount) == ECANCELED);
+    transport_failure = 0; before = calls;
+    assert(__cryolite_file_pwrite(alias, data, 1, 0, &amount) == EIO);
+    assert(__cryolite_file_resize(alias, 0) == EIO && calls == before);
+    assert(__cryolite_file_close(descriptor) == 0 && __cryolite_file_close(alias) == 0);
+    clean();
+
+    descriptor = opened(); transport_failure = 1;
+    transport_accepted = false;
+    assert(__cryolite_file_pwrite(descriptor, data, 1, 17, &amount) == EPIPE);
+    transport_failure = 0;
+    assert(__cryolite_file_pwrite(descriptor, data, 1, 17, &amount) == 0 && amount == 1);
+    assert(last_rpc_argument == 17);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    reentered_old = opened(); before = gate_closes; during_call = reenter;
+    assert(__cryolite_file_pread(reentered_old, data, 1, 17, &amount) == 0 && amount == 1);
+    assert(gate_closes == before + 1);
+    assert(__cryolite_file_close(reentered_new) == 0);
+    clean();
+
+    reentered_old = opened(); before = gate_closes; during_call = reenter;
+    assert(__cryolite_file_info(reentered_old, &info) == 0 && info.size == returned_size);
+    assert(gate_closes == before + 1);
+    assert(__cryolite_file_close(reentered_new) == 0);
+    clean();
+
+    descriptor = opened(); response_fault = 2; amount = -7; data[0] = 0xcc;
+    assert(__cryolite_file_pread(descriptor, data, 1, 0, &amount) == EPROTO);
+    assert(amount == -7 && data[0] == 0xcc);
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    assert(case_number == 66);
     printf("file runtime: %u cases passed\n", case_number);
 }
 """
@@ -821,8 +1087,12 @@ def main():
     public = (ROOT / "userspace/libc/abi/include/cryolite/file.h").read_text()
     flags = "\n".join(line for line in public.splitlines()
                       if line.startswith(("#define O_", "#define SEEK_", "#define F_", "#define FD_")))
+    runtime_path = ROOT / "userspace/libc/mlibc/sysdeps/cryolite/include/cryolite/file-runtime.h"
+    runtime = runtime_path.read_text()
+    info_start = runtime.index("struct cryolite_file_info {")
+    info_type = runtime[info_start:runtime.index("};", info_start) + 2] + "\n"
     header_at = PREFIX.index("static bool allocation_failure;")
-    test = PREFIX[:header_at] + types + accepted_helper + protocol + flags + "\n" + PREFIX[header_at:] + body + SUFFIX
+    test = PREFIX[:header_at] + types + accepted_helper + protocol + flags + "\n" + info_type + PREFIX[header_at:] + body + SUFFIX
     test = test.replace("#include <assert.h>", "#include <assert.h>\n#include <initializer_list>")
     fixture = output / "file-runtime.cpp"
     fixture.write_text(test)
@@ -833,6 +1103,7 @@ def main():
         "body_sha256": hashlib.sha256(body.encode()).hexdigest(),
         "accepted_helper_sha256": hashlib.sha256(accepted_helper.encode()).hexdigest(),
         "protocol_sha256": hashlib.sha256(protocol_path.read_bytes()).hexdigest(),
+        "runtime_header_sha256": hashlib.sha256(runtime_path.read_bytes()).hexdigest(),
         "interleavings": "native wait/IPC and atomic-unlock doubles inject named cutpoints; atomic wrappers execute the real compiler atomics before callbacks",
         "cases": CASES,
         "runs": [],

@@ -36,6 +36,12 @@ pub const O_CLOEXEC: c_int = 0x00800;
 pub const SEEK_SET: c_int = 0;
 pub const SEEK_CUR: c_int = 1;
 pub const SEEK_END: c_int = 2;
+pub const KRYO_FILE_REGULAR: u32 = 1;
+pub const KRYO_FILE_DIRECTORY: u32 = 2;
+pub const KRYO_FILE_SYMLINK: u32 = 3;
+pub const KRYO_FILE_READONLY: u32 = 1;
+pub const KRYO_FILE_SYNC_ALL: c_int = 0;
+pub const KRYO_FILE_SYNC_DATA: c_int = 1;
 pub const E2BIG: c_int = 1;
 pub const EACCES: c_int = 2;
 pub const EADDRINUSE: c_int = 3;
@@ -130,6 +136,22 @@ pub struct timeval {
     pub tv_sec: time_t,
     pub tv_usec: suseconds_t,
 }
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct cryolite_file_info {
+    pub size: u64,
+    pub kind: u32,
+    pub flags: u32,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<cryolite_file_info>() == 16);
+    assert!(core::mem::align_of::<cryolite_file_info>() == 8);
+    assert!(core::mem::offset_of!(cryolite_file_info, size) == 0);
+    assert!(core::mem::offset_of!(cryolite_file_info, kind) == 8);
+    assert!(core::mem::offset_of!(cryolite_file_info, flags) == 12);
+};
 extern "C" {
     pub fn malloc(size: size_t) -> *mut c_void;
     pub fn calloc(count: size_t, size: size_t) -> *mut c_void;
@@ -163,6 +185,23 @@ extern "C" {
         size: size_t,
         count: *mut ssize_t,
     ) -> c_int;
+    pub fn __cryolite_file_pread(
+        fd: c_int,
+        buffer: *mut c_void,
+        size: size_t,
+        offset: off_t,
+        count: *mut ssize_t,
+    ) -> c_int;
+    pub fn __cryolite_file_pwrite(
+        fd: c_int,
+        buffer: *const c_void,
+        size: size_t,
+        offset: off_t,
+        count: *mut ssize_t,
+    ) -> c_int;
+    pub fn __cryolite_file_info(fd: c_int, output: *mut cryolite_file_info) -> c_int;
+    pub fn __cryolite_file_resize(fd: c_int, size: off_t) -> c_int;
+    pub fn __cryolite_file_sync(fd: c_int, data_only: c_int) -> c_int;
     pub fn __cryolite_file_close(fd: c_int) -> c_int;
     pub fn __cryolite_file_seek(
         fd: c_int,

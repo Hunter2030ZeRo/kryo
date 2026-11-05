@@ -38,6 +38,11 @@ pub(crate) fn check(
     );
     kryo_hal::emergency_write_str("RUSTSTD: process and backing retirement OK\n");
     kryo_hal::emergency_write_str("RUSTSTDFILE: read write seek clones and closure OK runs=2\n");
+    kryo_hal::emergency_write_str("RUSTSTDFILEOPS: concurrent aliases OK runs=1\n");
+    kryo_hal::emergency_write_str("RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n");
+    kryo_hal::emergency_write_str(
+        "RUSTSTDFILEOPS: metadata positioned I/O resize and sync rejection OK runs=2\n",
+    );
     kryo_hal::emergency_write_str(if random_available {
         "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
     } else {
@@ -83,10 +88,13 @@ fn run(
             slot,
             super::launch::NativeImage {
                 bytes: image,
-                argv: &[
-                    b"rust-std-probe",
-                    if abort { b"abort" } else { b"cryolite-v3" },
-                ],
+                argv: if abort {
+                    &[b"rust-std-probe", b"abort"]
+                } else if instance == 1 {
+                    &[b"rust-std-probe", b"cryolite-v3", b"concurrent"]
+                } else {
+                    &[b"rust-std-probe", b"cryolite-v3", b"quota"]
+                },
                 envp: &[],
             },
             Some(account.clone()),
@@ -159,6 +167,11 @@ fn run(
         let mut calls = CallStats::default();
         let mut events = [false; 5];
         let mut files_seen = false;
+        let mut metadata_seen = false;
+        let mut file_ops_seen = false;
+        let mut concurrent_files_seen = false;
+        let mut file_quota_rejected = false;
+        let mut file_quota_recovered = false;
         let mut random_seen = false;
         let mut abort_seen = false;
         let mut contention_started = false;
@@ -197,6 +210,13 @@ fn run(
                     value as u32 as i32
                 );
                 assert_eq!(source, task, "Unexpected child Rust std diagnostic");
+                #[cfg(feature = "boot-tests")]
+                if event == 229 {
+                    panic!(
+                        "Rust std failed at stage {}: last native failure {:?}",
+                        value, calls.last_failure
+                    );
+                }
                 assert_ne!(event, 229, "Rust std probe failed at stage {}", value);
                 if event != 231 {
                     assert_eq!(value, 1, "Invalid Rust std completion event {}", event);
@@ -234,6 +254,40 @@ fn run(
                         assert!(!random_seen, "Duplicate Rust std random event");
                         assert_eq!(value, if random_available { 1 } else { 2 });
                         random_seen = true;
+                    }
+                    232 if !abort => {
+                        assert!(!metadata_seen, "Duplicate Rust metadata event");
+                        metadata_seen = true;
+                    }
+                    233 if !abort => {
+                        assert!(metadata_seen, "Positioned I/O preceded metadata checks");
+                        assert!(!file_ops_seen, "Duplicate Rust file operations event");
+                        file_ops_seen = true;
+                    }
+                    234 if instance == 1 => {
+                        assert!(!concurrent_files_seen, "Duplicate concurrent file event");
+                        concurrent_files_seen = true;
+                    }
+                    235 if instance == 2 => {
+                        assert!(!file_quota_rejected, "Duplicate file quota rejection");
+                        assert_eq!(account.count(Resource::Waits), 1);
+                        assert_eq!(account.count(Resource::SharedPages), 0);
+                        #[cfg(feature = "boot-tests")]
+                        assert_eq!(
+                            calls.last_failure,
+                            Some((
+                                task,
+                                kryo_interfaces::syscall::Call::CallExchange,
+                                kryo_interfaces::syscall::Error::OutOfResources
+                            ))
+                        );
+                        file_quota_rejected = true;
+                    }
+                    236 if instance == 2 => {
+                        assert!(file_quota_rejected && !file_quota_recovered);
+                        assert_eq!(account.count(Resource::Waits), 0);
+                        assert_eq!(account.count(Resource::SharedPages), 0);
+                        file_quota_recovered = true;
                     }
                     _ => panic!("Unexpected Rust std event {}", event),
                 }
@@ -281,17 +335,35 @@ fn run(
                 "Rust std contention proof did not finish"
             );
             assert!(files_seen, "Missing Rust std file completion event");
+            assert!(
+                metadata_seen && file_ops_seen,
+                "Missing Rust file operations event"
+            );
+            assert_eq!(concurrent_files_seen, instance == 1);
+            assert_eq!(file_quota_rejected && file_quota_recovered, instance == 2);
             assert!(random_seen, "Missing Rust std random completion event");
         }
         assert_eq!(
             calls.threads_created,
-            if abort { 0 } else { 5 },
+            if abort {
+                0
+            } else if instance == 1 {
+                7
+            } else {
+                6
+            },
             "Rust std fixture thread count changed"
         );
         ipc.settle(&mut tasks);
         assert_eq!(
             retired,
-            if abort { 1 } else { 7 },
+            if abort {
+                1
+            } else if instance == 1 {
+                9
+            } else {
+                8
+            },
             "Rust std threads did not retire"
         );
         if let Some(service) = &service {

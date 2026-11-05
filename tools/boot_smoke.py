@@ -129,6 +129,12 @@ def std_checks(log, enabled, cpu=None):
             r"(?m)^RUSTSTD: native abort termination OK$", log)) == 1,
         "rust_std_files": len(re.findall(
             r"(?m)^RUSTSTDFILE: read write seek clones and closure OK runs=2$", log)) == 1,
+        "rust_std_file_ops": len(re.findall(
+            r"(?m)^RUSTSTDFILEOPS: metadata positioned I/O resize and sync rejection OK runs=2$", log)) == 1,
+        "rust_std_file_concurrency": len(re.findall(
+            r"(?m)^RUSTSTDFILEOPS: concurrent aliases OK runs=1$", log)) == 1,
+        "rust_std_file_quota": len(re.findall(
+            r"(?m)^RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1$", log)) == 1,
         "rust_std_random": random_check,
     }
 

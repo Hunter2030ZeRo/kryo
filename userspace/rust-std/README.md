@@ -9,7 +9,8 @@ The port provides allocation through the existing fallible Talc heap,
 Vec/String/Arc, native threads with requested stack sizes, join and detach,
 compiler TLS with destructors, upstream futex synchronization, startup arguments
 and monotonic time. Basic File/OpenOptions, read/write/seek, shared-cursor cloning
-and descriptor conversion use the existing native file service. A narrow C bridge reuses the pinned mlibc C11 lifecycle;
+and descriptor conversion use the existing native file service. Descriptor
+metadata, positioned I/O and resize extend that same service contract. A narrow C bridge reuses the pinned mlibc C11 lifecycle;
 it does not implement pthreads or use Linux system calls.
 
 The std-linked allocator is an rlib in the same Rust compilation. Its `std`
@@ -42,16 +43,20 @@ Cargo revision and must be reviewed when updating it.
 
 The experimental target declares the Unix family but remains `std=false` and
 requires `#![feature(restricted_std)]`. Its initial `std::os::unix` surface is
-limited to byte strings, descriptor ownership and open options. Missing Unix extensions are
+limited to byte strings, descriptor ownership, open options and FileExt I/O. Missing Unix extensions are
 not imported from another operating system. Descriptor cloning starts at 3 and
 sets CLOEXEC; descriptors 0, 1 and 2 are not automatically bound.
 
 ## Limits
 
-- Basic file I/O uses byte paths within an explicitly granted namespace. Metadata,
-  directories, positioned I/O, file-length mutation and storage synchronization
-  remain unsupported. `stream_len` fails without moving a shared cursor.
-  `File::flush` has no buffer to drain and does not imply durable storage.
+- File I/O uses byte paths within an explicitly granted namespace. Descriptor
+  metadata returns actual length, type and service readonly properties. FileExt
+  positioned I/O and resize preserve shared cursors; positioned writes honor the
+  supplied offset on append descriptions. `stream_len` uses one metadata query
+  (and retains its upstream feature gate).
+- Path metadata, directories, timestamps and permission mutation remain
+  unsupported. Sync All/Data reaches the service, whose current volatile backend
+  returns Unsupported. `File::flush` does not imply durable storage.
 - Network, environment mutation, process spawning, pipes and broad Unix
   extensions remain unsupported. BetAFS and its host FileDevice are not
   executable from this limited file surface alone.
@@ -79,3 +84,5 @@ The file probe uses the volatile validation service, not a mounted filesystem.
 See [the file contract](../../docs/decisions/0044-native-std-files.md).
 
 The CPU source and its trust boundary follow [ADR 0045](../../docs/decisions/0045-cpu-random-bootstrap.md).
+
+See [descriptor metadata and positioned I/O](../../docs/decisions/0046-descriptor-metadata-and-positioned-io.md) for the extension and its durability boundary.

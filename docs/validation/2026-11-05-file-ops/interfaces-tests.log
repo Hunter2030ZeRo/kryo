@@ -1,0 +1,28 @@
+   Compiling kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-ops-work/kryo/interfaces)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.39s
+     Running unittests src/lib.rs (../interface-target/x86_64-unknown-linux-gnu/debug/build/kryo-interfaces/bc104644feab6f38/out/kryo_interfaces-bc104644feab6f38)
+
+running 15 tests
+test block::tests::each_gate_carries_its_own_authority ... ok
+test file::tests::new_operations_require_exact_capability_counts_and_reserved_words ... ok
+test file::tests::positioned_io_admits_eof_reads_but_rejects_unrepresentable_writes ... ok
+test file::tests::rejects_invalid_flags_and_modes_without_silent_downgrades ... ok
+test file::tests::checks_full_loan_ranges_before_shared_access ... ok
+test file::tests::namespace_and_file_authority_come_from_the_gate ... ok
+test file::tests::rejects_versions_ids_operations_and_capability_counts ... ok
+test block::tests::rejects_bad_versions_unknown_operations_zero_ids_and_stale_instances ... ok
+test startup::tests::wire_kinds_and_record_limits_are_explicit ... ok
+test syscall::tests::unknown_calls_are_errors_and_status_does_not_overlap_handle_results ... ok
+test file::tests::metadata_has_no_unknown_kinds_flags_or_unrepresentable_lengths ... ok
+test block::tests::readonly_device_rejects_mutation_after_gate_validation ... ok
+test block::tests::validates_full_fixed_block_and_capability_count ... ok
+test file::tests::signed_seek_rejects_negative_and_overflow_before_state_changes ... ok
+test virtio::tests::records_have_fixed_width_and_alignment ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_interfaces
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

@@ -1,0 +1,14 @@
+{
+  "repository": "/home/entity27th/kryo",
+  "base_head": "b8c3ae6d78540ed04bab9b7ea1b26199e5738d79",
+  "source_apply": "54 reviewed files matched expected hashes",
+  "source_manifest": "421 inputs matched the source used for isolated debug/release builds",
+  "kernel_check": "passed: workspace, all features, locked/offline",
+  "workspace_fmt": "passed",
+  "git_diff_check": "passed",
+  "std_build": "passed: complete pinned native provider and restricted std/probe, locked/offline",
+  "std_image_bytes": 517720,
+  "std_image_sha256": "e416c07f8386242098519e429a8b15d4e87718e78f6cd467ea27caeac13ddd41",
+  "qemu_scope": "Source-matched isolated debug and release builds; actual repository separately rebuilt. The actual rebuilt image was not separately executed in QEMU.",
+  "output_scope": "Builds used the writable work directory; installed toolchains and source caches were not changed"
+}

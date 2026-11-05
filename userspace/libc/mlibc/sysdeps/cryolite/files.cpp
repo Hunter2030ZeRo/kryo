@@ -13,6 +13,9 @@ namespace {
 constexpr uintptr_t loan_start = 0x200000000000;
 constexpr uintptr_t loan_end = 0x210000000000;
 constexpr uint64_t file_rights = KRYO_RIGHT_SEND | KRYO_RIGHT_DUP | KRYO_RIGHT_TRANSFER;
+static_assert(sizeof(cryolite_file_info) == 16 && alignof(cryolite_file_info) == 8);
+static_assert(offsetof(cryolite_file_info, size) == 0
+    && offsetof(cryolite_file_info, kind) == 8 && offsetof(cryolite_file_info, flags) == 12);
 
 struct Description {
     Description *next;
@@ -282,7 +285,10 @@ void discard_grants(const kryo_ipc_result &reply) {
         close_handle(reply.handles[index]);
 }
 
-int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id, bool opening) {
+enum class ReplyKind { Ordinary, Open, Info };
+
+int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id,
+        ReplyKind kind = ReplyKind::Ordinary) {
     if (reply.status) {
         if (kryo_ipc_accepted(reply))
             file->poisoned = true;
@@ -290,15 +296,25 @@ int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id,
     }
     auto status = reply.message.words[1];
     bool success = status == KRYO_FILE_OK;
+    bool opening = kind == ReplyKind::Open;
+    bool information = kind == ReplyKind::Info && success;
     bool grant = opening && success;
     bool valid = status <= KRYO_FILE_BAD_FILE
-        && reply.message.words[0] == id && reply.message.words[3] == 0
+        && reply.message.words[0] == id && (information || reply.message.words[3] == 0)
         && reply.count == static_cast<uint64_t>(grant)
         && (grant ? reply.handles[0] != 0 : reply.handles[0] == 0)
         && reply.handles[1] == 0
         && (success || reply.message.words[2] == 0);
     if (opening && success)
         valid &= reply.message.words[2] == 0;
+    if (information) {
+        auto type = static_cast<uint32_t>(reply.message.words[3]);
+        auto flags = reply.message.words[3] >> 32;
+        valid &= reply.message.words[2] <= static_cast<uint64_t>(LONG_MAX)
+            && (type == KRYO_FILE_REGULAR || type == KRYO_FILE_DIRECTORY
+                || type == KRYO_FILE_SYMLINK)
+            && !(flags & ~uint64_t{KRYO_FILE_READONLY});
+    }
     if (!valid) {
         discard_grants(reply);
         file->poisoned = true;
@@ -337,19 +353,24 @@ int open_flags(int flags, mode_t mode, uint64_t *wire) {
     return 0;
 }
 
-int transfer(int descriptor, void *buffer, size_t bytes, ssize_t *actual, bool writing) {
+int transfer(int descriptor, void *buffer, size_t bytes, ssize_t *actual,
+        uint32_t opcode, off_t offset = 0) {
+    bool writing = opcode == KRYO_FILE_WRITE || opcode == KRYO_FILE_WRITE_AT;
+    bool positioned = opcode == KRYO_FILE_READ_AT || opcode == KRYO_FILE_WRITE_AT;
     Operation operation{pin_file(descriptor)};
     auto file = operation.file;
     if (!file || (writing ? (file->flags & O_ACCMODE) == O_RDONLY
                          : (file->flags & O_ACCMODE) == O_WRONLY))
         return EBADF;
-    if (bytes > static_cast<size_t>(LONG_MAX))
+    if (bytes > static_cast<size_t>(LONG_MAX) || (positioned && offset < 0))
         return EINVAL;
     if (!bytes) {
         *actual = 0;
         return 0;
     }
     auto count = bytes < KRYO_FILE_PAGE_SIZE ? bytes : KRYO_FILE_PAGE_SIZE;
+    if (positioned && writing && count > static_cast<uint64_t>(LONG_MAX - offset))
+        return EOVERFLOW;
     uint64_t id;
     if (auto error = next_request(file, &id))
         return error;
@@ -358,20 +379,41 @@ int transfer(int descriptor, void *buffer, size_t bytes, ssize_t *actual, bool w
         return error;
     if (writing)
         loan.copy_in(buffer, count);
-    kryo_message message{{KRYO_FILE_HEADER(writing ? KRYO_FILE_WRITE : KRYO_FILE_READ), id, 0, count}};
+    kryo_message message{{KRYO_FILE_HEADER(opcode), id,
+        positioned ? static_cast<uint64_t>(offset) : uint64_t{0}, count}};
     kryo_grant grant{loan.handle, static_cast<uint64_t>(KRYO_RIGHT_READ | KRYO_RIGHT_MAP)
         | (writing ? uint64_t{0} : uint64_t{KRYO_RIGHT_WRITE})};
     auto reply = kryo_ipc_call_exchange(file->handle, message, &grant, 1, 0);
-    if (auto error = validate_reply(file, reply, id, false))
+    if (auto error = validate_reply(file, reply, id))
         return error;
     auto completed = reply.message.words[2];
-    if (completed > count || (writing && !completed)) {
+    if (completed > count || (writing && !completed)
+        || (positioned && completed > static_cast<uint64_t>(LONG_MAX - offset))) {
         file->poisoned = true;
         return EPROTO;
     }
     if (!writing)
         loan.copy_out(buffer, completed);
     *actual = static_cast<ssize_t>(completed);
+    return 0;
+}
+
+int file_command(int descriptor, uint32_t opcode, uint64_t argument, bool writing) {
+    Operation operation{pin_file(descriptor)};
+    auto file = operation.file;
+    if (!file || (writing && (file->flags & O_ACCMODE) == O_RDONLY))
+        return EBADF;
+    uint64_t id;
+    if (auto error = next_request(file, &id))
+        return error;
+    kryo_message message{{KRYO_FILE_HEADER(opcode), id, argument, 0}};
+    auto reply = kryo_ipc_call_exchange(file->handle, message, nullptr, 0, 0);
+    if (auto error = validate_reply(file, reply, id))
+        return error;
+    if (reply.message.words[2]) {
+        file->poisoned = true;
+        return EPROTO;
+    }
     return 0;
 }
 
@@ -405,7 +447,7 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
             kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_OPEN), id, wire, length}};
             kryo_grant grant{loan.handle, KRYO_RIGHT_READ | KRYO_RIGHT_MAP};
             auto reply = kryo_ipc_call_exchange(root, message, &grant, 1, 1);
-            error = validate_reply(file, reply, id, true);
+            error = validate_reply(file, reply, id, ReplyKind::Open);
             if (!error)
                 file->handle = reply.handles[0];
         }
@@ -425,11 +467,52 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
 }
 
 extern "C" int __cryolite_file_read(int descriptor, void *buffer, size_t bytes, ssize_t *actual) {
-    return transfer(descriptor, buffer, bytes, actual, false);
+    return transfer(descriptor, buffer, bytes, actual, KRYO_FILE_READ);
 }
 
 extern "C" int __cryolite_file_write(int descriptor, const void *buffer, size_t bytes, ssize_t *actual) {
-    return transfer(descriptor, const_cast<void *>(buffer), bytes, actual, true);
+    return transfer(descriptor, const_cast<void *>(buffer), bytes, actual, KRYO_FILE_WRITE);
+}
+
+extern "C" int __cryolite_file_pread(int descriptor, void *buffer, size_t bytes,
+        off_t offset, ssize_t *actual) {
+    return transfer(descriptor, buffer, bytes, actual, KRYO_FILE_READ_AT, offset);
+}
+
+extern "C" int __cryolite_file_pwrite(int descriptor, const void *buffer, size_t bytes,
+        off_t offset, ssize_t *actual) {
+    return transfer(descriptor, const_cast<void *>(buffer), bytes, actual,
+        KRYO_FILE_WRITE_AT, offset);
+}
+
+extern "C" int __cryolite_file_info(int descriptor, struct cryolite_file_info *output) {
+    Operation operation{pin_file(descriptor)};
+    auto file = operation.file;
+    if (!file)
+        return EBADF;
+    uint64_t id;
+    if (auto error = next_request(file, &id))
+        return error;
+    kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_INFO), id, 0, 0}};
+    auto reply = kryo_ipc_call_exchange(file->handle, message, nullptr, 0, 0);
+    if (auto error = validate_reply(file, reply, id, ReplyKind::Info))
+        return error;
+    *output = {reply.message.words[2], static_cast<uint32_t>(reply.message.words[3]),
+        static_cast<uint32_t>(reply.message.words[3] >> 32)};
+    return 0;
+}
+
+extern "C" int __cryolite_file_resize(int descriptor, off_t size) {
+    if (size < 0)
+        return EINVAL;
+    return file_command(descriptor, KRYO_FILE_SET_LEN, static_cast<uint64_t>(size), true);
+}
+
+extern "C" int __cryolite_file_sync(int descriptor, int data_only) {
+    if (data_only != 0 && data_only != 1)
+        return EINVAL;
+    return file_command(descriptor, KRYO_FILE_SYNC,
+        data_only ? KRYO_FILE_SYNC_DATA : KRYO_FILE_SYNC_ALL, false);
 }
 
 extern "C" int __cryolite_file_seek(int descriptor, off_t offset, int whence, off_t *actual) {
@@ -445,7 +528,7 @@ extern "C" int __cryolite_file_seek(int descriptor, off_t offset, int whence, of
     kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_SEEK), id,
         static_cast<uint64_t>(offset), static_cast<uint64_t>(whence)}};
     auto reply = kryo_ipc_call_exchange(file->handle, message, nullptr, 0, 0);
-    if (auto error = validate_reply(file, reply, id, false))
+    if (auto error = validate_reply(file, reply, id))
         return error;
     if (reply.message.words[2] > static_cast<uint64_t>(LONG_MAX)) {
         file->poisoned = true;

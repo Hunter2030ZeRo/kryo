@@ -21,9 +21,12 @@ class PciEvidenceTests(unittest.TestCase):
         retired = "RUSTSTD: process and backing retirement OK\n"
         aborted = "RUSTSTD: native abort termination OK\n"
         files = "RUSTSTDFILE: read write seek clones and closure OK runs=2\n"
+        file_ops = "RUSTSTDFILEOPS: metadata positioned I/O resize and sync rejection OK runs=2\n"
+        concurrent = "RUSTSTDFILEOPS: concurrent aliases OK runs=1\n"
+        quota = "RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n"
         random = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
         self.assertEqual(std_checks("", False), {})
-        self.assertTrue(all(std_checks(ready + retired + aborted + files + random, True).values()))
+        self.assertTrue(all(std_checks(ready + retired + aborted + files + file_ops + concurrent + quota + random, True).values()))
         for invalid in (ready, retired, ready + retired, ready + aborted, retired + aborted,
                         ready + ready + retired + aborted,
                         ready + retired + retired + aborted,
@@ -32,12 +35,34 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired + aborted,
                         ready + retired + "USERDIAG: process=0x1 bytes=0 text=" + aborted,
                         "USERLOG: process=0x1 event=227 value=1\n"):
-            self.assertFalse(all(std_checks(invalid + files + random, True).values()))
+            self.assertFalse(all(std_checks(invalid + files + file_ops + concurrent + quota + random, True).values()))
         self.assertFalse(all(std_checks(ready + retired + aborted + random, True).values()))
         for invalid in ("", files + files, files.replace("runs=2", "runs=1"),
                         "USERDIAG: process=0x1 bytes=0 text=" + files,
                         "USERLOG: process=0x1 event=230 value=1\n"):
             self.assertFalse(std_checks(invalid, True)["rust_std_files"])
+
+    def test_file_operations_require_one_trusted_completion(self):
+        marker = "RUSTSTDFILEOPS: metadata positioned I/O resize and sync rejection OK runs=2\n"
+        self.assertTrue(std_checks(marker, True)["rust_std_file_ops"])
+        for invalid in ("", marker + marker, marker.replace("runs=2", "runs=1"),
+                        "USERDIAG: process=0x1 bytes=0 text=" + marker,
+                        "USERLOG: process=0x1 event=233 value=1\n"):
+            self.assertFalse(std_checks(invalid, True)["rust_std_file_ops"])
+
+        concurrent = "RUSTSTDFILEOPS: concurrent aliases OK runs=1\n"
+        self.assertTrue(std_checks(concurrent, True)["rust_std_file_concurrency"])
+        for invalid in ("", concurrent + concurrent, concurrent.replace("runs=1", "runs=2"),
+                        "USERDIAG: process=0x1 bytes=0 text=" + concurrent,
+                        "USERLOG: process=0x1 event=234 value=1\n"):
+            self.assertFalse(std_checks(invalid, True)["rust_std_file_concurrency"])
+
+        quota = "RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n"
+        self.assertTrue(std_checks(quota, True)["rust_std_file_quota"])
+        for invalid in ("", quota + quota, quota.replace("runs=1", "runs=2"),
+                        "USERDIAG: process=0x1 bytes=0 text=" + quota,
+                        "USERLOG: process=0x1 event=236 value=1\n"):
+            self.assertFalse(std_checks(invalid, True)["rust_std_file_quota"])
 
     def test_rust_std_random_evidence_matches_selected_cpu(self):
         available = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"

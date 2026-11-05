@@ -2,6 +2,16 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[Descriptor metadata and positioned I/O](decisions/0046-descriptor-metadata-and-positioned-io.md)
+now add genuine length/type/readonly snapshots, cursor-preserving At operations
+and checked resize through the Ring 3 file service. File Sync All/Data requests
+are forwarded explicitly; the volatile backend rejects both instead of claiming
+durability. POSIX WriteAt behavior honors its offset on append
+descriptions. [Validation](validation/2026-11-05-file-ops/README.md) covers
+concurrent aliases, zero-filled growth and real wait-credit rejection/recovery.
+Path metadata, timestamps, permission mutation and a persistent filesystem
+backend remain separate work.
+
 The [optional CPU random source](decisions/0045-cpu-random-bootstrap.md) supplies
 two register words per native call through bounded BSP RDRAND sampling. The
 initial policy trusts that CPU source alone; it does not raise v3 requirements.
@@ -15,14 +25,14 @@ The [native std file profile](decisions/0044-native-std-files.md) connects File,
 OpenOptions, Read/Write/Seek, descriptor ownership and shared-cursor clones to
 the existing Ring 3 file-service contract. Multi-page reads/writes and final
 capability closure are covered in the [file validation record](validation/2026-11-05-std-files/README.md).
-Metadata, positioned I/O, length mutation, durability and mounted BetAFS remain
-separate work.
+Descriptor metadata, positioned I/O and length mutation now use the extension
+above. Durable storage and mounted BetAFS remain separate work.
 
 The [restricted Rust std profile](../userspace/rust-std/README.md) builds the
 pinned library sources with native allocation, threads, futex synchronization,
 TLS destructors and monotonic time. It uses a separate experimental Unix-family
 target and one shared C/Rust Talc heap. The [implementation decision](decisions/0043-restricted-native-rust-std.md)
-records the source and lifecycle boundaries. Full Unix extensions, metadata, positioned I/O, durable file synchronization,
+records the source and lifecycle boundaries. Full Unix extensions, path metadata, durable file synchronization,
 independent entropy suppliers, wall clock, hosted ABI and upstream target support remain pending.
 The bootstrap target and existing freestanding services are unchanged. See the
 [native validation record](validation/2026-11-05-rust-std/README.md).
@@ -536,8 +546,8 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 ## Next work
 
 Extend the restricted std profile with independent random suppliers, fuller native filesystem APIs,
-standard-stream startup and broader Unix contracts. Basic std file operations now use service-backed C descriptors. Metadata,
-positioned I/O and durability still require native service contracts.
+standard-stream startup and broader Unix contracts. Basic std file operations now use service-backed C descriptors. Descriptor metadata and positioned I/O now have native service contracts;
+path metadata and actual durable synchronization still need their backends.
 Provider C11 thread/TCB lifecycle,
 static TLS and the fallible Talc heap are implemented; pthreads, dynamic TLS
 and complete standard libraries remain separate work. Connect the initial
