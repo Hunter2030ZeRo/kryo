@@ -1,4 +1,4 @@
-use std::fs::{File, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::FileExt;
 use std::sync::Arc;
@@ -193,7 +193,7 @@ fn check_lane(file: &File, lane: u64) -> io::Result<()> {
         thread::yield_now();
         let mut observed = [0; 8];
         file.read_exact_at(&mut observed, offset)?;
-        if observed != expected {
+        if observed != expected || fs::metadata("/probe")?.len() != 8192 {
             return Err(io::Error::from(ErrorKind::InvalidData));
         }
     }
@@ -239,6 +239,10 @@ fn quota_recovery() {
     }
     let error = file.write_at(b"Q", 8180).unwrap_err();
     check(error.raw_os_error() == Some(49), 606);
+    check(
+        fs::exists("/probe").unwrap_err().kind() == ErrorKind::OutOfMemory,
+        617,
+    );
     event(235, 1);
     word.store(1, Ordering::Release);
     let (status, woke) = native(60, word.as_ptr() as u64, 1);
@@ -253,6 +257,7 @@ fn quota_recovery() {
     expect(file.read_exact_at(&mut byte, 8180), 613);
     check(byte == *b"R", 614);
     check(expect(file.stream_position(), 615) == 45, 616);
+    check(expect(fs::exists("/probe"), 618), 619);
     event(236, 1);
 }
 

@@ -24,9 +24,10 @@ class PciEvidenceTests(unittest.TestCase):
         file_ops = "RUSTSTDFILEOPS: metadata positioned I/O resize and sync rejection OK runs=2\n"
         concurrent = "RUSTSTDFILEOPS: concurrent aliases OK runs=1\n"
         quota = "RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n"
+        path = "RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2\n"
         random = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
         self.assertEqual(std_checks("", False), {})
-        self.assertTrue(all(std_checks(ready + retired + aborted + files + file_ops + concurrent + quota + random, True).values()))
+        self.assertTrue(all(std_checks(ready + retired + aborted + files + file_ops + concurrent + quota + path + random, True).values()))
         for invalid in (ready, retired, ready + retired, ready + aborted, retired + aborted,
                         ready + ready + retired + aborted,
                         ready + retired + retired + aborted,
@@ -35,7 +36,7 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired + aborted,
                         ready + retired + "USERDIAG: process=0x1 bytes=0 text=" + aborted,
                         "USERLOG: process=0x1 event=227 value=1\n"):
-            self.assertFalse(all(std_checks(invalid + files + file_ops + concurrent + quota + random, True).values()))
+            self.assertFalse(all(std_checks(invalid + files + file_ops + concurrent + quota + path + random, True).values()))
         self.assertFalse(all(std_checks(ready + retired + aborted + random, True).values()))
         for invalid in ("", files + files, files.replace("runs=2", "runs=1"),
                         "USERDIAG: process=0x1 bytes=0 text=" + files,
@@ -63,6 +64,14 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + quota,
                         "USERLOG: process=0x1 event=236 value=1\n"):
             self.assertFalse(std_checks(invalid, True)["rust_std_file_quota"])
+
+    def test_path_metadata_requires_one_trusted_completion(self):
+        marker = "RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2\n"
+        self.assertTrue(std_checks(marker, True)["rust_std_path_metadata"])
+        for invalid in ("", marker + marker, marker.replace("runs=2", "runs=1"),
+                        "USERDIAG: process=0x1 bytes=0 text=" + marker,
+                        "USERLOG: process=0x1 event=237 value=1\n"):
+            self.assertFalse(std_checks(invalid, True)["rust_std_path_metadata"])
 
     def test_rust_std_random_evidence_matches_selected_cpu(self):
         available = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"

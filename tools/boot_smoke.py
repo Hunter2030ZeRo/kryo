@@ -135,6 +135,8 @@ def std_checks(log, enabled, cpu=None):
             r"(?m)^RUSTSTDFILEOPS: concurrent aliases OK runs=1$", log)) == 1,
         "rust_std_file_quota": len(re.findall(
             r"(?m)^RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1$", log)) == 1,
+        "rust_std_path_metadata": len(re.findall(
+            r"(?m)^RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2$", log)) == 1,
         "rust_std_random": random_check,
     }
 

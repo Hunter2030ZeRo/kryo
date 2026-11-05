@@ -71,6 +71,7 @@ int service_error(uint64_t status) {
         case KRYO_FILE_OVERFLOW: return EOVERFLOW;
         case KRYO_FILE_TOO_MANY_OPEN: return EMFILE;
         case KRYO_FILE_BAD_FILE: return EBADF;
+        case KRYO_FILE_SYMLINK_LOOP: return ELOOP;
         default: return EPROTO;
     }
 }
@@ -139,7 +140,7 @@ Descriptor *find_descriptor(int descriptor) {
     return entry->owner && entry->published ? entry : nullptr;
 }
 
-Description *reserve_file(int flags, int *descriptor, int *error) {
+Description *reserve_description(int flags, int *error) {
     auto record = static_cast<Description *>(calloc(1, sizeof(Description)));
     if (!record) {
         *error = ENOMEM;
@@ -164,17 +165,11 @@ Description *reserve_file(int flags, int *descriptor, int *error) {
             return nullptr;
         }
     }
-    *error = reserve_slot(3, descriptor);
-    if (*error) {
-        unlock(&table_lock);
-        free(record);
-        return nullptr;
-    }
     record->window = window;
     record->next = files;
     files = record;
-    descriptors[*descriptor] = {record, flags & O_CLOEXEC ? FD_CLOEXEC : 0, false};
     unlock(&table_lock);
+    *error = 0;
     return record;
 }
 
@@ -211,6 +206,22 @@ void release_file(Description *record) {
     free(retired_table);
     close_handle(record->handle);
     free(record);
+}
+
+Description *reserve_file(int flags, int *descriptor, int *error) {
+    auto record = reserve_description(flags, error);
+    if (!record)
+        return nullptr;
+    lock(&table_lock);
+    *error = reserve_slot(3, descriptor);
+    if (!*error)
+        descriptors[*descriptor] = {record, flags & O_CLOEXEC ? FD_CLOEXEC : 0, false};
+    unlock(&table_lock);
+    if (*error) {
+        release_file(record);
+        return nullptr;
+    }
+    return record;
 }
 
 struct Operation {
@@ -299,7 +310,7 @@ int validate_reply(Description *file, const kryo_ipc_result &reply, uint64_t id,
     bool opening = kind == ReplyKind::Open;
     bool information = kind == ReplyKind::Info && success;
     bool grant = opening && success;
-    bool valid = status <= KRYO_FILE_BAD_FILE
+    bool valid = status <= KRYO_FILE_SYMLINK_LOOP
         && reply.message.words[0] == id && (information || reply.message.words[3] == 0)
         && reply.count == static_cast<uint64_t>(grant)
         && (grant ? reply.handles[0] != 0 : reply.handles[0] == 0)
@@ -350,6 +361,18 @@ int open_flags(int flags, mode_t mode, uint64_t *wire) {
     if (flags & O_TRUNC) result |= KRYO_FILE_TRUNCATE;
     if (flags & O_APPEND) result |= KRYO_FILE_APPEND;
     *wire = result | (static_cast<uint64_t>((flags & O_CREAT) ? mode : 0) << 32);
+    return 0;
+}
+
+int path_length(const char *path, size_t *length) {
+    size_t bytes = 0;
+    while (bytes <= KRYO_FILE_PAGE_SIZE && path[bytes])
+        ++bytes;
+    if (!bytes)
+        return ENOENT;
+    if (bytes > KRYO_FILE_PAGE_SIZE)
+        return ENAMETOOLONG;
+    *length = bytes;
     return 0;
 }
 
@@ -426,13 +449,9 @@ extern "C" int __cryolite_file_open(const char *path, int flags, mode_t mode, in
     uint64_t wire;
     if (auto error = open_flags(flags, mode, &wire))
         return error;
-    size_t length = 0;
-    while (length <= KRYO_FILE_PAGE_SIZE && path[length])
-        ++length;
-    if (!length)
-        return ENOENT;
-    if (length > KRYO_FILE_PAGE_SIZE)
-        return ENAMETOOLONG;
+    size_t length;
+    if (auto error = path_length(path, &length))
+        return error;
     int error = 0;
     int reserved_descriptor;
     auto file = reserve_file(flags, &reserved_descriptor, &error);
@@ -496,6 +515,39 @@ extern "C" int __cryolite_file_info(int descriptor, struct cryolite_file_info *o
     kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_INFO), id, 0, 0}};
     auto reply = kryo_ipc_call_exchange(file->handle, message, nullptr, 0, 0);
     if (auto error = validate_reply(file, reply, id, ReplyKind::Info))
+        return error;
+    *output = {reply.message.words[2], static_cast<uint32_t>(reply.message.words[3]),
+        static_cast<uint32_t>(reply.message.words[3] >> 32)};
+    return 0;
+}
+
+extern "C" int __cryolite_file_stat(const char *path, int nofollow,
+        struct cryolite_file_info *output) {
+    if (nofollow != KRYO_FILE_FOLLOW && nofollow != KRYO_FILE_NOFOLLOW)
+        return EINVAL;
+    auto root = __cryolite_file_namespace();
+    if (!root)
+        return ENOSYS;
+    size_t length;
+    if (auto error = path_length(path, &length))
+        return error;
+    int error;
+    auto record = reserve_description(0, &error);
+    if (!record)
+        return error;
+    Operation operation{record};
+    Loan loan{record};
+    if (auto error = loan.create())
+        return error;
+    loan.copy_in(path, length);
+    uint64_t id;
+    if (auto error = next_request(record, &id))
+        return error;
+    kryo_message message{{KRYO_FILE_HEADER(KRYO_FILE_PATH_INFO), id,
+        static_cast<uint64_t>(nofollow), length}};
+    kryo_grant grant{loan.handle, KRYO_RIGHT_READ | KRYO_RIGHT_MAP};
+    auto reply = kryo_ipc_call_exchange(root, message, &grant, 1, 0);
+    if (auto error = validate_reply(record, reply, id, ReplyKind::Info))
         return error;
     *output = {reply.message.words[2], static_cast<uint32_t>(reply.message.words[3]),
         static_cast<uint32_t>(reply.message.words[3] >> 32)};

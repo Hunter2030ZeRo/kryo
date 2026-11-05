@@ -1,0 +1,25 @@
+
+running 21 tests
+test file::tests::namespace_and_file_authority_come_from_the_gate ... ok
+test file::tests::metadata_has_no_unknown_kinds_flags_or_unrepresentable_lengths ... ok
+test file::tests::checks_full_loan_ranges_before_shared_access ... ok
+test file::tests::new_operations_require_exact_capability_counts_and_reserved_words ... ok
+test file::tests::path_metadata_requires_namespace_authority_and_one_bounded_path_loan ... ok
+test file::tests::positioned_io_admits_eof_reads_but_rejects_unrepresentable_writes ... ok
+test file::tests::rejects_invalid_flags_and_modes_without_silent_downgrades ... ok
+test file::tests::rejects_versions_ids_operations_and_capability_counts ... ok
+test file::tests::signed_seek_rejects_negative_and_overflow_before_state_changes ... ok
+test file_fixture::tests::dangling_links_and_cycles_distinguish_final_link_policy ... ok
+test file_fixture::tests::invalid_resize_and_readonly_mutation_have_no_effect ... ok
+test file_fixture::tests::open_follows_aliases_but_exclusive_creation_does_not_follow_links ... ok
+test file_fixture::tests::metadata_reports_backend_size_and_readonly_property ... ok
+test file_fixture::tests::pathname_resolution_propagates_denial_and_rejects_unrecognized_names ... ok
+test file_fixture::tests::positioned_reads_clip_eof_without_offset_overflow ... ok
+test file_fixture::tests::partial_capacity_writes_report_progress_and_failed_writes_preserve_state ... ok
+test file_fixture::tests::positioned_storage_writes_honor_offsets_and_zero_gaps ... ok
+test file_fixture::tests::resize_zeroes_sparse_growth_and_discarded_bytes_on_regrowth ... ok
+test file_fixture::tests::volatile_backend_never_reports_a_completed_storage_barrier ... ok
+test file_fixture::tests::pathname_follow_observes_backend_file_changes ... ok
+test file_fixture::tests::pathname_metadata_observes_absence_without_creating_file_or_description ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

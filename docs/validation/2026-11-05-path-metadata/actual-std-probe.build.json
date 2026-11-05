@@ -1,0 +1,145 @@
+{
+  "scope": "experimental restricted std: allocation, threads, futex synchronization, TLS, monotonic time and service-backed files, descriptor/path metadata, positioned I/O, resize and optional CPU random output; no wall clock, directory iteration, timestamps, durable synchronization, network or process spawning",
+  "profile": "debug",
+  "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+  "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+  "cargo": "cargo 1.101.0-nightly (31d3246e0 2026-10-27)\nrelease: 1.101.0-nightly\ncommit-hash: 31d3246e0e8d3a80d4a90b54aa48ff180adb408b\ncommit-date: 2026-10-27\nhost: x86_64-unknown-linux-gnu\nlibgit2: 1.9.6 (sys:0.21.0 vendored)\nlibcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:OpenSSL/3.6.3)\nssl: OpenSSL 3.6.3 9 Jun 2026\nos: CachyOS Linux Rolling Release [64-bit]\n",
+  "rust_sources": {
+    "rustc_commit": "708c94ef093ecc42fb8851e17d8383d999727abc",
+    "cargo_commit": "31d3246e0e8d3a80d4a90b54aa48ff180adb408b",
+    "libc_version": "0.2.191",
+    "libc_root_sha256": "929ad68438df6fe7fc2cf8bf1d1ccbef3e4a713717cc98947571bf166eacb521",
+    "source_files": {
+      "Cargo.lock": "e3007071f73ee4fddcf817e4a19c1ecea766b590c9a5469980341aa79473914e",
+      "Cargo.toml": "b346ae33bd9648949894510a2bcc1d1f8b78c7301c3110e4a98b68bacd3b4584",
+      "std/src/os/mod.rs": "d1ebf9f6a67525bd7ce0ffe7dfe990852682887a0c7a082cf17cf106c4966dfe",
+      "std/src/sys/alloc/mod.rs": "605fba85756be94fdc13f40823daa82ec29b493c102564fbe36a34a3414314e1",
+      "std/src/sys/args/mod.rs": "412b94c48bf9f1578e1e688a86bb3ec9d634e6ea714f1d36358ef22459f1959d",
+      "std/src/sys/env/mod.rs": "289b1cbe20f832c77397b87d996dbb17944ec96f48228f7bfd2a09a6cc9601c4",
+      "std/src/sys/fs/mod.rs": "747d9cfb1753de3741bb5251e2c6eb159d39cdca43a1048f7544841e2de55908",
+      "std/src/sys/io/error/mod.rs": "51d30b4298f3bdba90b02936a7b4bc9891266fe8248675fe300222e24ae915e6",
+      "std/src/sys/io/mod.rs": "a48fe98f5e49eeecd2c31b5a3846c025750ce93a077a00581c1602e69cbd0cec",
+      "std/src/sys/net/connection/mod.rs": "eded75aa20ecb3d72f74cdb2c8a7955bb790d126c044d7209c96e2092c2a07a3",
+      "std/src/sys/net/hostname/mod.rs": "3c4954baa0cc0157ccd0dd1803f92d139cc1e004a1b1981a027ae2dcfe5eb749",
+      "std/src/sys/pal/mod.rs": "251dee50eff49b81ae5283ffd9871635dc63c316e0156a0f6f69672657ddbec3",
+      "std/src/sys/pipe/mod.rs": "613fc85805097e868c11fb255f5bafd9284856def75f1b0831100c6c44639d0c",
+      "std/src/sys/process/mod.rs": "72900897787bb4349cd48ef30f46423f7742e083b5f2ded2543f3564a2cdaabe",
+      "std/src/sys/random/mod.rs": "9c7f5334792445eda612dc8369fc9554ab40710f7a896569554da6791a52499e",
+      "std/src/sys/stdio/mod.rs": "ffc59c348ecc12e0d4748855309112f13979392983cafb677be6b82fc6e74d59",
+      "std/src/sys/sync/condvar/mod.rs": "4738e89e6ae37d1843dbf66e3ebbf51f74b375e8199af8965288aff3255f41ca",
+      "std/src/sys/sync/futex/mod.rs": "8edeb158d1fa1e7e9a786309684f323275e2c13b22fe974345378809012fe0cc",
+      "std/src/sys/sync/mutex/mod.rs": "a58c3f5605de2ec78f6b621fa1138042cc40088cf43e21694ab08129b47b1470",
+      "std/src/sys/sync/once/mod.rs": "03fa76d79a5c65651bd627ffb2ec41f00afaccd9e0f81a48fa76201e192ce670",
+      "std/src/sys/sync/rwlock/mod.rs": "800959dcab669de71206b5492b81deb2765a183d323e2807daefee35fa00ae19",
+      "std/src/sys/sync/thread_parking/mod.rs": "b41e3911b3817ab6f666ab966077fd99258a59f823a77aa716c27516e136fbc9",
+      "std/src/sys/thread/mod.rs": "15a78d7def5c10ecc273def02a1fbecfdc2c59c95538ef1b8c992c3e77f5df05",
+      "std/src/sys/thread_local/mod.rs": "bb6780939e581070dca11c4f9714bf7e639034d5c95e91f4e9c04c07070548e0",
+      "std/src/sys/time/mod.rs": "93bc631fd16b7efb974890147ea360c279175222a0c71602a1c6c89d69fd1b5f",
+      "unwind/src/lib.rs": "241f53465adc37c509d8612a25a7617fb0f9156a8d95164e94164c3bacd6d968",
+      "panic_unwind/src/lib.rs": "b43aa2753f70103c60ef6e0470d16a81017b49ca39f6c3ce52801b870e8310c0",
+      "std/src/sys/fd/mod.rs": "6a272e616abee71040f8bf0bd6c036f7071d05d6abae169a2125709a2c4edffe",
+      "std/src/sys/paths/mod.rs": "6aa5ba82e18cb372725e820de93ee53f8e78b6ab10b4c38c22ee627c91a25c91",
+      "std/src/sys/personality/mod.rs": "d725255dee4c27be1f57c3884e2f3e9e1dc367c6d5db44c2683ce78cf897f301",
+      "backtrace/src/backtrace/mod.rs": "666383a0bec82dbd9c7413e0fa96d62240dd20f5969b6f8b80411f7fcff2d84c"
+    },
+    "libc_new_sha256": "7dfcc8270ee7c151a8ff90223fcd88d4d9f967d36cfe16f82166350ad999bdfb",
+    "library_sha256": "34c3a01a3cdafcb1a204db70c4554ab2f0b4daf0e33f095ac4e523f66f4750ab",
+    "libc_sha256": "440276b687f4ad7fa24aa9b9eae234f9a1ec7264bc4808b784a0cbe4d5bca9c2"
+  },
+  "target_sha256": "cd6716eb931ba4ef540f22dce237aea479363c872112b598b048bbc3b4180fa2",
+  "build_tool_sha256": "a036c07b33e0d84573318147b3f8fefa152f52025d29f642a905e066419303ec",
+  "codegen": {
+    "cpu": "x86-64-v3",
+    "mmx": false,
+    "panic": "abort"
+  },
+  "random_source": {
+    "kind": "CPU RDRAND",
+    "trust": "CPU-only bootstrap",
+    "native_result_bytes": 16,
+    "bridge_atomic_max": 256,
+    "entropy_quality_validated": false
+  },
+  "overlay_inputs_sha256": "c2ff85bdbcdfdfa4a31fd8dc569a2b64cd72a78a19f18173e6195b83b3c8bd65",
+  "provider": {
+    "scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
+    "profile": "debug",
+    "sources": {
+      "mlibc": {
+        "repository": "https://github.com/managarm/mlibc",
+        "revision": "07cfd943977737b8147c1289922c23479feef53d",
+        "archive_sha256": "6393f00bf7f3c6eead809f02e60a8f29fd031822566c3c050d7a80c299fb3558",
+        "archive_bytes": 966764
+      },
+      "frigg": {
+        "repository": "https://github.com/managarm/frigg",
+        "revision": "b9ce1199489f25add06d66c5cc355e2c17dbe027",
+        "archive_sha256": "d252a2a2ed56f5d256cf4c91f8fc3bc7b64dfaebf05cdb6cb227f3668d887b35",
+        "archive_bytes": 91405
+      },
+      "freestanding-c-hdrs": {
+        "repository": "https://github.com/osdev0/freestanding-c-hdrs",
+        "revision": "5e951873194cf131d00abe4978426e5aaaf6e379",
+        "archive_sha256": "1e506787dcc18eef047505f29e56e911a6841f48995fdc7865613fc5d1ca7863",
+        "archive_bytes": 12647
+      },
+      "freestanding-cxx-hdrs": {
+        "repository": "https://github.com/osdev0/freestanding-cxx-hdrs",
+        "revision": "a1787cd05a88eed4548002fa1f6c80ab2d80d9e5",
+        "archive_sha256": "a432fbc6227523f60bfee7f835a43dfccd32e59648873f8fbed218dce4db06f1",
+        "archive_bytes": 325796
+      },
+      "libsmarter": {
+        "repository": "https://github.com/managarm/libsmarter",
+        "revision": "f7d061bc37d485418344452c7ceb28d5df3ba85d",
+        "archive_sha256": "1426e24f3c3c2a08983fad71d461faa415f0ccc1ca432dd80bebe1dac9cc7bce",
+        "archive_bytes": 4039
+      }
+    },
+    "rustc": "rustc 1.101.0-nightly (708c94ef0 2026-11-03)\nbinary: rustc\ncommit-hash: 708c94ef093ecc42fb8851e17d8383d999727abc\ncommit-date: 2026-11-03\nhost: x86_64-unknown-linux-gnu\nrelease: 1.101.0-nightly\nLLVM version: 23.1.5\n",
+    "clang": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+    "clang++": "clang version 23.1.4\nTarget: x86_64-pc-linux-gnu\nThread model: posix\nInstalledDir: /usr/bin\n",
+    "source_inputs_sha256": "0c460c46502534913a9b22b2c298eba4fdf4c2a04c5f309fc4a8103dba0d525d",
+    "toolchain_sha256": "7aabfa19a238a6ff8793b4290fb7f49c01be82496519f6fa24deb18892f1d572",
+    "target_sha256": "ff83ff06ac211b3024fc9292a8208772b323382b9137e01f9aef2ccf8cac4f70",
+    "allocator_lock_sha256": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+    "codegen": {
+      "mmx": false,
+      "string_paths": "AVX2 without legacy dispatch"
+    },
+    "probe_sources": {
+      "allocator.c": "0b2db3b79a8e96628ed98a766a73aaefddca94cdf21cba22ee856a4c8e812632",
+      "allocator_entry.S": "1919c36e59d8bb958674ae093be4a4509723788e99332127935fd623cc8f2894",
+      "linker.ld": "c0d82b8dcda1e182d4c8ca9e7e62401113c10ee8825d306aecfa760080f4ff1a",
+      "main.c": "2c0e76de668465dd059f317ec1a94c1efbe37523150eb18ca2cebacdafc617ff",
+      "provider_descriptors.c": "de7ba844c0905d6efe6cc6aebcb142735a8a318a039fe8f7575d7449e5735c31",
+      "provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+      "provider_stdio.c": "6b2dc574189dddd16502a39b90cb047032ed7d1e9f040b772598ca0a776f8cb8",
+      "provider_threads.c": "3c4f61c311aa27eebc01b7b99b17087f29fad60c601fc679c50a25c86ebd0555"
+    },
+    "allocator_sources": {
+      "userspace/libc/allocator/Cargo.lock": "9a119cd1ab6c38d361bf6c315cd4a2064b6e3da3b96ed83351def56347b2e72b",
+      "userspace/libc/allocator/Cargo.toml": "0ccf342ff2ea77a25c3c87349a1ca24ad19009f9769f32e697d3af3f1c5ae528",
+      "userspace/libc/allocator/include/allocator.h": "45f34c5baa46d03b5c6344a39662d60e05ed2acffaf8d700a4577f4a4da01199",
+      "userspace/libc/allocator/src/lib.rs": "23c440e3764f298982eb069d8887b61416156ecc72b268c3720c5c6202f5e410",
+      "userspace/libc/allocator/src/mutex.rs": "59d68ee63f78125efbfffa6e4b9033d8a89ee26399187e42c6b3110a50b37ba9",
+      "userspace/libc/allocator/src/native.rs": "928c2ca4c07941a8574e821a03680ee344f808b515842f6fbd1f6e1bfac03320",
+      "userspace/libc/allocator/src/tests.rs": "9b9078b7a188cccb2b7abb6f374dcfdc0a5be63d42c6199388638b7f08377ff3"
+    },
+    "image_sha256": "449eefff2dc5b73f2f7b060f0a4d260a46e94eb14ab12b3add762027844d2cdc",
+    "image_bytes": 352704
+  },
+  "probe_sources": {
+    "Cargo.lock": "b9b02c9883501e069c4f9e377b3bcf773b262e9cdc3e56be534a8b8588d0347b",
+    "Cargo.toml": "5c7cb45437c7b2d5533f1d46e9b09fa4d8b27eed5f53c546c55a1288839cadac",
+    "build.rs": "a858f94f6e2e563d249770db907d901edffaf3d521c059c17b8464921a4b784b",
+    "src/file_ops.rs": "dd354365e3428a4bb8a167650e0f251a79af4ac9b465a2cb78add1136dd10451",
+    "src/files.rs": "04ffc4422e591386cd1e7b477621f3db18fefae44f06db3c5bacd941f65fc9a5",
+    "src/main.rs": "4730700e038735eba7043bf43352d0f6fbad5f62ee414be856857077f1d8b01a",
+    "src/namespace.rs": "1ebf17d400da16e83dc1983cd6af1917b80e29e62db84928cb14f9649f532350",
+    "src/random.rs": "73415fb272d4d67807840b721eb1efd0115bc393220591d80943da64d6a69441"
+  },
+  "image_sha256": "52e55ab17b27ecbd995884e76c559fed5cfb2a5641997edc05dea71db4381e31",
+  "image_bytes": 525608
+}

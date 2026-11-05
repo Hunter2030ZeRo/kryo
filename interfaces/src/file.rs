@@ -27,6 +27,7 @@ pub enum Operation {
     Info = 7,
     SetLen = 8,
     Sync = 9,
+    PathInfo = 10,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -100,6 +101,25 @@ impl TryFrom<u64> for SyncScope {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
+pub enum LookupPolicy {
+    Follow = 0,
+    NoFollow = 1,
+}
+
+impl TryFrom<u64> for LookupPolicy {
+    type Error = Status;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Self::Follow),
+            1 => Ok(Self::NoFollow),
+            _ => Err(Status::Malformed),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u64)]
 pub enum Status {
     Ok = 0,
     Malformed = 1,
@@ -114,6 +134,7 @@ pub enum Status {
     Overflow = 10,
     TooManyOpen = 11,
     BadFile = 12,
+    SymlinkLoop = 13,
 }
 
 pub const fn header(operation: Operation) -> u64 {
@@ -173,9 +194,10 @@ impl Request {
             7 => Operation::Info,
             8 => Operation::SetLen,
             9 => Operation::Sync,
+            10 => Operation::PathInfo,
             _ => return Err(Status::Malformed),
         };
-        if namespace != (operation == Operation::Open) {
+        if namespace != matches!(operation, Operation::Open | Operation::PathInfo) {
             return Err(Status::Denied);
         }
         let expected = match operation {
@@ -183,7 +205,8 @@ impl Request {
             | Operation::Read
             | Operation::Write
             | Operation::ReadAt
-            | Operation::WriteAt => 1,
+            | Operation::WriteAt
+            | Operation::PathInfo => 1,
             Operation::Seek | Operation::Info | Operation::SetLen | Operation::Sync => 0,
         };
         if capabilities != expected {
@@ -241,6 +264,12 @@ impl Request {
                 SyncScope::try_from(message[2])?;
                 if message[3] != 0 {
                     return Err(Status::Malformed);
+                }
+            }
+            Operation::PathInfo => {
+                LookupPolicy::try_from(message[2])?;
+                if message[3] == 0 || message[3] > PAGE_SIZE {
+                    return Err(Status::Range);
                 }
             }
         }
@@ -465,5 +494,31 @@ mod tests {
         ] {
             assert_eq!(Info::decode(size, attributes), Err(Status::Malformed));
         }
+    }
+
+    #[test]
+    fn path_metadata_requires_namespace_authority_and_one_bounded_path_loan() {
+        for policy in [LookupPolicy::Follow, LookupPolicy::NoFollow] {
+            let message = [header(Operation::PathInfo), 1, policy as u64, 1];
+            assert!(Request::decode(message, true, 1).is_ok());
+            assert_eq!(Request::decode(message, false, 1), Err(Status::Denied));
+            for caps in [0, 2] {
+                assert_eq!(Request::decode(message, true, caps), Err(Status::Malformed));
+            }
+        }
+        for length in [0, PAGE_SIZE + 1, u64::MAX] {
+            assert_eq!(
+                Request::decode([header(Operation::PathInfo), 1, 0, length], true, 1),
+                Err(Status::Range)
+            );
+        }
+        assert_eq!(
+            Request::decode([header(Operation::PathInfo), 1, 2, 1], true, 1),
+            Err(Status::Malformed)
+        );
+        assert_eq!(
+            Request::decode([header(Operation::PathInfo), 0, 0, 1], true, 1),
+            Err(Status::Malformed)
+        );
     }
 }

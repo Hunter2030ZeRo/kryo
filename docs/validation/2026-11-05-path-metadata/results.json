@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-05",
+  "base_head": "3aa083260981bd315ad09ed3137344b733907ee7",
+  "runs": [
+    {
+      "label": "debug-Haswell-noTSX-abi-libc-std",
+      "status": "passed",
+      "cpu": "Haswell-noTSX",
+      "cpus": 1,
+      "mode": "boot-tests",
+      "all_checks": true,
+      "guest_exit_verified": false,
+      "image_sha256": "f5290a3521266a380c45ce8fdba50886b0ad78ba5bccfc9c533b673999d95a53"
+    },
+    {
+      "label": "release-normal-smp4-abi-libc-std-block-rw",
+      "status": "passed",
+      "cpu": "max",
+      "cpus": 4,
+      "mode": "normal",
+      "all_checks": true,
+      "guest_exit_verified": false,
+      "image_sha256": "8e0d327d73c32fdb698692a3d24d9cbf25fa4df517b42319ff9b67ede3a33d53"
+    }
+  ],
+  "host": {
+    "provider_groups": 81,
+    "optimization": [
+      "O0",
+      "O2"
+    ],
+    "sanitizers": [
+      "address",
+      "undefined"
+    ],
+    "interface_tests": 16,
+    "backend_harness_tests": 21,
+    "backend_breakdown": "9 protocol + 12 resolver/storage helpers",
+    "python_tests": 49,
+    "workspace_fmt": "passed",
+    "workspace_clippy_all_features": "passed"
+  },
+  "native": {
+    "normal_processes_per_boot": 2,
+    "expected_abort_processes_per_boot": 1,
+    "path_event": "237 once per normal process; trusted kernel checks zero remaining wait and shared-page charges",
+    "before_create": "PathInfo reports /probe absent and reports its final link without creating the target",
+    "path_semantics": "Actual descriptor/path snapshots, root directory, readonly file, followed/final links, dangling target, bounded cycle, denial, NUL/length/non-UTF8 paths",
+    "descriptor_lifetime": "Lookup creates no FD; first subsequent open uses3; handles and shared-page/wait usage return to baseline",
+    "concurrency": "Both positioned-I/O workers also perform PathInfo; original shared-cursor/data checks retained",
+    "quota_recovery": "Both configurations: held sole wait credit makes exists return OutOfMemory, zero retained loan charge, explicit lookup succeeds after release. Debug boot-tests also verify exact CallExchange/OutOfResources provenance",
+    "retirement": "All process, peer, gate, loan and child backing checks passed"
+  },
+  "limits": [
+    "QEMU TCG functional evidence only",
+    "Bounded volatile namespace, no production traversal/cwd/mounts",
+    "No directory iteration, path mutation, readlink, file locks or full public C stat",
+    "No persistent synchronization, hardware or performance proof",
+    "No BetAFS or ICE edits or execution"
+  ]
+}

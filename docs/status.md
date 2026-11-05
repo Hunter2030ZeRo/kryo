@@ -2,6 +2,15 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+[Namespace metadata lookup](decisions/0047-path-metadata.md) now connects
+Rust metadata, symlink_metadata and existence checks to a dedicated Ring 3
+request. It uses explicit final-symlink policy, preserves byte paths and
+propagates permission, loop and resource errors. No file descriptor or open
+gate is created for a lookup. The bounded volatile fixture exercises directories,
+links, dangling targets and cycles; it does not implement a general namespace.
+[Validation](validation/2026-11-05-path-metadata/README.md) covers native
+execution, concurrent lookups, failure recovery and complete retirement.
+
 [Descriptor metadata and positioned I/O](decisions/0046-descriptor-metadata-and-positioned-io.md)
 now add genuine length/type/readonly snapshots, cursor-preserving At operations
 and checked resize through the Ring 3 file service. File Sync All/Data requests
@@ -9,7 +18,7 @@ are forwarded explicitly; the volatile backend rejects both instead of claiming
 durability. POSIX WriteAt behavior honors its offset on append
 descriptions. [Validation](validation/2026-11-05-file-ops/README.md) covers
 concurrent aliases, zero-filled growth and real wait-credit rejection/recovery.
-Path metadata, timestamps, permission mutation and a persistent filesystem
+Directory iteration, timestamps, permission mutation and a persistent filesystem
 backend remain separate work.
 
 The [optional CPU random source](decisions/0045-cpu-random-bootstrap.md) supplies
@@ -32,7 +41,7 @@ The [restricted Rust std profile](../userspace/rust-std/README.md) builds the
 pinned library sources with native allocation, threads, futex synchronization,
 TLS destructors and monotonic time. It uses a separate experimental Unix-family
 target and one shared C/Rust Talc heap. The [implementation decision](decisions/0043-restricted-native-rust-std.md)
-records the source and lifecycle boundaries. Full Unix extensions, path metadata, durable file synchronization,
+records the source and lifecycle boundaries. Full Unix extensions, directory iteration, durable file synchronization,
 independent entropy suppliers, wall clock, hosted ABI and upstream target support remain pending.
 The bootstrap target and existing freestanding services are unchanged. See the
 [native validation record](validation/2026-11-05-rust-std/README.md).
@@ -547,7 +556,7 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 
 Extend the restricted std profile with independent random suppliers, fuller native filesystem APIs,
 standard-stream startup and broader Unix contracts. Basic std file operations now use service-backed C descriptors. Descriptor metadata and positioned I/O now have native service contracts;
-path metadata and actual durable synchronization still need their backends.
+directory operations and actual durable synchronization still need their backends.
 Provider C11 thread/TCB lifecycle,
 static TLS and the fallible Talc heap are implemented; pthreads, dynamic TLS
 and complete standard libraries remain separate work. Connect the initial

@@ -1,0 +1,20 @@
+{
+  "code_quality_status": "CLEAR",
+  "recommendation": "APPROVE",
+  "blockers": [],
+  "reviewer": "independent read-only code review agent",
+  "scope": "Protocol, C owner/loan lifetime, std stat/lstat/exists, bounded resolver, native failure paths and both final QEMU runs",
+  "independent_checks": [
+    "81 provider groups at O0/O2 with ASan/UBSan",
+    "21 protocol/backend tests",
+    "Source and final native logs"
+  ],
+  "test_corrections": [
+    "Separated gate and call counter snapshots",
+    "Removed unused Description/cursor assertions from storage-helper test"
+  ],
+  "limits": [
+    "No persistent filesystem or hardware proof",
+    "No complete POSIX or hosted std claim"
+  ]
+}

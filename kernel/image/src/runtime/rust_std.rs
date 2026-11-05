@@ -38,6 +38,7 @@ pub(crate) fn check(
     );
     kryo_hal::emergency_write_str("RUSTSTD: process and backing retirement OK\n");
     kryo_hal::emergency_write_str("RUSTSTDFILE: read write seek clones and closure OK runs=2\n");
+    kryo_hal::emergency_write_str("RUSTSTDPATH: metadata symlinks and lookup recovery OK runs=2\n");
     kryo_hal::emergency_write_str("RUSTSTDFILEOPS: concurrent aliases OK runs=1\n");
     kryo_hal::emergency_write_str("RUSTSTDFILEOPS: wait quota rejection and recovery OK runs=1\n");
     kryo_hal::emergency_write_str(
@@ -173,6 +174,7 @@ fn run(
         let mut file_quota_rejected = false;
         let mut file_quota_recovered = false;
         let mut random_seen = false;
+        let mut path_seen = false;
         let mut abort_seen = false;
         let mut contention_started = false;
         let mut contention_finished = false;
@@ -289,6 +291,12 @@ fn run(
                         assert_eq!(account.count(Resource::SharedPages), 0);
                         file_quota_recovered = true;
                     }
+                    237 if !abort => {
+                        assert!(!path_seen, "Duplicate path metadata event");
+                        assert_eq!(account.count(Resource::SharedPages), 0);
+                        assert_eq!(account.count(Resource::Waits), 0);
+                        path_seen = true;
+                    }
                     _ => panic!("Unexpected Rust std event {}", event),
                 }
             }
@@ -335,6 +343,7 @@ fn run(
                 "Rust std contention proof did not finish"
             );
             assert!(files_seen, "Missing Rust std file completion event");
+            assert!(path_seen, "Missing Rust std path metadata event");
             assert!(
                 metadata_seen && file_ops_seen,
                 "Missing Rust file operations event"

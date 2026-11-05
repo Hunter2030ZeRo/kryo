@@ -62,6 +62,21 @@ CASES = [
     "positioned transfer retains ownership through close and reuse",
     "metadata retains ownership through close and reuse",
     "nonmetadata responses cannot smuggle attributes",
+    "path metadata publishes no descriptor or returned gate",
+    "path queries do not allocate descriptor table storage",
+    "path bytes and follow policy pass unchanged",
+    "invalid or unavailable path queries allocate nothing",
+    "path context allocation fails before namespace RPC",
+    "path loan creation failure releases its temporary owner",
+    "path map failure closes backing and releases its window",
+    "path service errors preserve outputs without poisoning namespace",
+    "malformed path replies do not poison live descriptions",
+    "unexpected path grants close without closing namespace authority",
+    "accepted path failures never retry or close outgoing grant aliases twice",
+    "nested path queries retain independent windows",
+    "Open during a path query retains independent slot and window ownership",
+    "closing the final descriptor retains table through path context retirement",
+    "path object attributes come from the response without an Open",
 ]
 
 PREFIX = r"""
@@ -84,6 +99,8 @@ static bool table_allocation_failure;
 static unsigned memories;
 static unsigned maps;
 static unsigned open_calls;
+static unsigned path_calls;
+static char last_path[4097];
 static unsigned calls;
 static uint64_t last_rpc_handle;
 static uint64_t last_rpc_id;
@@ -232,6 +249,15 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
     last_rpc_length = message.words[3];
     if (operation == KRYO_FILE_OPEN)
         ++open_calls;
+    if (operation == KRYO_FILE_PATH_INFO) {
+        ++path_calls;
+        assert(endpoint == namespace_handle && count == 1 && capacity == 0
+            && grants[0].rights == (KRYO_RIGHT_READ | KRYO_RIGHT_MAP)
+            && message.words[2] <= KRYO_FILE_NOFOLLOW
+            && message.words[3] && message.words[3] <= 4096);
+        memcpy(last_path, reinterpret_cast<void *>(rpc_address), message.words[3]);
+        last_path[message.words[3]] = 0;
+    }
     if (during_call) {
         auto callback = during_call;
         during_call = nullptr;
@@ -257,8 +283,9 @@ static kryo_ipc_result kryo_ipc_call_exchange(uint64_t endpoint, kryo_message me
         } else if (operation == KRYO_FILE_SEEK) {
             assert(count == 0 && capacity == 0);
             reply.message.words[2] = message.words[2];
-        } else if (operation == KRYO_FILE_INFO) {
-            assert(count == 0 && capacity == 0 && message.words[2] == 0 && message.words[3] == 0);
+        } else if (operation == KRYO_FILE_INFO || operation == KRYO_FILE_PATH_INFO) {
+            if (operation == KRYO_FILE_INFO)
+                assert(count == 0 && capacity == 0 && message.words[2] == 0 && message.words[3] == 0);
             reply.message.words[2] = returned_size;
             reply.message.words[3] = returned_kind | (uint64_t{returned_attributes} << 32);
         } else if (operation == KRYO_FILE_SET_LEN || operation == KRYO_FILE_SYNC) {
@@ -405,6 +432,36 @@ static void close_all_published() {
 }
 static uint32_t contended_word;
 static void release_other_owner() { unlock(&contended_word); }
+static uintptr_t path_window;
+static int path_opened;
+static int path_closing;
+static void inspect_nested_path_windows() {
+    assert(files && files->next && !files->next->next);
+    assert(!files->handle && !files->next->handle && files->window != files->next->window);
+    assert(maps == 2 && memories == 2 && !descriptors && !descriptor_capacity);
+}
+static void nested_path_query() {
+    auto outer = files;
+    assert(outer && !outer->handle && !descriptors && !descriptor_capacity);
+    struct cryolite_file_info nested{};
+    during_call = inspect_nested_path_windows;
+    assert(__cryolite_file_stat("/nested", KRYO_FILE_NOFOLLOW, &nested) == 0);
+    assert(files == outer && !descriptors && !descriptor_capacity);
+}
+static void open_during_path_query() {
+    assert(files && !files->handle && !descriptors && !descriptor_capacity);
+    path_window = files->window;
+    path_opened = opened();
+    assert(path_opened == 3);
+    auto current = pin_file(path_opened);
+    assert(current && current->window != path_window);
+    release_file(current);
+}
+static void close_during_path_query() {
+    assert(files && files->next && descriptors && descriptor_capacity);
+    assert(__cryolite_file_close(path_closing) == 0);
+    assert(files && !files->next && !files->handle && descriptors && descriptor_capacity);
+}
 int main() {
     int descriptor = -1;
     unsigned before;
@@ -1064,7 +1121,141 @@ int main() {
     assert(__cryolite_file_close(descriptor) == 0);
     clean();
 
-    assert(case_number == 66);
+    info = {17, 19, 23}; auto gates_before = gate_closes;
+    auto before_open = open_calls;
+    auto before_path = path_calls;
+    before = calls;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(info.size == returned_size && info.kind == KRYO_FILE_REGULAR && !info.flags);
+    assert(calls == before + 1 && path_calls == before_path + 1
+        && open_calls == before_open && !descriptors && !descriptor_capacity);
+    assert(!files && !records && !tables && !memories && !maps);
+    assert(last_rpc_handle == namespace_handle && last_rpc_operation == KRYO_FILE_PATH_INFO);
+    assert(last_rpc_argument == KRYO_FILE_FOLLOW && last_rpc_length == 6 && !strcmp(last_path, "/probe"));
+    assert(gate_closes == gates_before);
+    clean();
+
+    table_allocation_failure = true; before_open = open_calls; before = gate_closes;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(!descriptors && !descriptor_capacity && !tables && open_calls == before_open);
+    assert(gate_closes == before);
+    clean();
+
+    before_open = open_calls;
+    assert(__cryolite_file_stat("/probe/../denied", KRYO_FILE_NOFOLLOW, &info) == 0);
+    assert(!strcmp(last_path, "/probe/../denied") && last_rpc_argument == KRYO_FILE_NOFOLLOW);
+    memset(path, 'p', 4096); path[4096] = 0;
+    assert(__cryolite_file_stat(path, KRYO_FILE_FOLLOW, &info) == 0);
+    assert(last_rpc_length == 4096 && strlen(last_path) == 4096 && open_calls == before_open);
+    clean();
+
+    before = calls; before_open = open_calls; info = {17, 19, 23};
+    assert(__cryolite_file_stat("/probe", -1, &info) == EINVAL);
+    assert(__cryolite_file_stat("/probe", 2, &info) == EINVAL);
+    assert(__cryolite_file_stat("", KRYO_FILE_FOLLOW, &info) == ENOENT);
+    memset(path, 'p', sizeof(path)); path[sizeof(path) - 1] = 0;
+    assert(__cryolite_file_stat(path, KRYO_FILE_FOLLOW, &info) == ENAMETOOLONG);
+    namespace_handle = 0;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == ENOSYS);
+    assert(info.size == 17 && info.kind == 19 && info.flags == 23);
+    assert(calls == before && open_calls == before_open && !files && !descriptors && !records);
+    clean();
+
+    allocation_failure = true; before = calls;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == ENOMEM);
+    assert(calls == before && !files && !descriptors && !records && !memories);
+    clean();
+
+    create_failure = 1; before = calls; before_open = open_calls;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == ENOMEM);
+    assert(calls == before && open_calls == before_open && !files && !descriptors && !records && !memories);
+    clean();
+
+    map_failure = 1; before = calls;
+    auto closed_before = memory_closes;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == ENOMEM);
+    assert(calls == before && memory_closes == closed_before + 1);
+    assert(!files && !records && !descriptors && !maps && !memories);
+    clean();
+
+    for (auto status : {KRYO_FILE_NOT_FOUND, KRYO_FILE_DENIED, KRYO_FILE_SYMLINK_LOOP,
+                         KRYO_FILE_UNSUPPORTED, KRYO_FILE_IO}) {
+        returned_status = status; info = {17, 19, 23}; before = gate_closes;
+        int expected = status == KRYO_FILE_NOT_FOUND ? ENOENT
+            : status == KRYO_FILE_DENIED ? EACCES
+            : status == KRYO_FILE_SYMLINK_LOOP ? ELOOP
+            : status == KRYO_FILE_UNSUPPORTED ? ENOTSUP : EIO;
+        assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == expected);
+        assert(info.size == 17 && info.kind == 19 && info.flags == 23 && gate_closes == before);
+        returned_status = 0;
+        assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    }
+    clean();
+
+    descriptor = opened();
+    for (int fault : {1, 6, 7, 8}) {
+        response_fault = fault; info = {17, 19, 23};
+        assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == EPROTO);
+        assert(info.size == 17 && info.kind == 19 && info.flags == 23);
+        response_fault = 0;
+        assert(__cryolite_file_info(descriptor, &info) == 0);
+        assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    }
+    returned_status = KRYO_FILE_SYMLINK_LOOP + 1;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == EPROTO);
+    returned_status = KRYO_FILE_SYMLINK_LOOP; response_fault = 9;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == EPROTO);
+    returned_status = response_fault = 0;
+    assert(__cryolite_file_close(descriptor) == 0);
+    clean();
+
+    response_fault = 3; before = gate_closes;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == EPROTO);
+    assert(gate_closes == before + 1 && !files && !descriptors);
+    response_fault = 0;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(gate_closes == before + 1);
+    clean();
+
+    transport_failure = 1; transport_status = KRYO_STATUS_CANCELLED;
+    before = calls; closed_before = memory_closes;
+    gates_before = gate_closes;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == ECANCELED);
+    assert(calls == before + 1 && memory_closes == closed_before + 1 && gate_closes == gates_before);
+    transport_failure = 0;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(calls == before + 2 && gate_closes == gates_before);
+    clean();
+
+    before_open = open_calls; gates_before = gate_closes;
+    during_call = nested_path_query;
+    assert(__cryolite_file_stat("/outer", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(open_calls == before_open && gate_closes == gates_before && !files && !descriptors);
+    clean();
+
+    during_call = open_during_path_query;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(path_opened == 3 && descriptor_capacity && files && !files->next);
+    assert(__cryolite_file_info(path_opened, &info) == 0);
+    assert(__cryolite_file_close(path_opened) == 0);
+    clean();
+
+    path_closing = opened(); gates_before = gate_closes;
+    during_call = close_during_path_query;
+    assert(__cryolite_file_stat("/probe", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(gate_closes == gates_before + 1 && !files && !descriptors && !descriptor_capacity);
+    clean();
+
+    returned_kind = KRYO_FILE_SYMLINK; returned_attributes = KRYO_FILE_READONLY;
+    returned_size = 6; before_open = open_calls;
+    assert(__cryolite_file_stat("/probe-link", KRYO_FILE_NOFOLLOW, &info) == 0);
+    assert(info.kind == KRYO_FILE_SYMLINK && info.flags == KRYO_FILE_READONLY && info.size == 6);
+    returned_kind = KRYO_FILE_DIRECTORY; returned_size = 0; returned_attributes = 0;
+    assert(__cryolite_file_stat("/", KRYO_FILE_FOLLOW, &info) == 0);
+    assert(info.kind == KRYO_FILE_DIRECTORY && info.flags == 0 && open_calls == before_open);
+    clean();
+
+    assert(case_number == 81);
     printf("file runtime: %u cases passed\n", case_number);
 }
 """

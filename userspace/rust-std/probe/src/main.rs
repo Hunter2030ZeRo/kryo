@@ -5,6 +5,7 @@ extern crate cryolite_allocator as _;
 
 mod file_ops;
 mod files;
+mod namespace;
 mod random;
 
 use std::alloc::{Layout, alloc, dealloc};
@@ -197,7 +198,9 @@ fn main() {
     }
     allocation();
     random::check_random();
+    namespace::before_files();
     files::check_files();
+    namespace::check_metadata();
     let concurrent = std::env::args_os()
         .nth(2)
         .is_some_and(|argument| argument.as_bytes() == b"concurrent");

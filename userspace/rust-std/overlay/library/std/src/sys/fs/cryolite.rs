@@ -5,12 +5,12 @@ use crate::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, Ra
 use crate::os::unix::ffi::OsStrExt;
 use crate::path::{Path, PathBuf};
 use crate::sys::time::SystemTime;
-use crate::sys::{FromInner, IntoInner, unsupported, unsupported_err};
+use crate::sys::{unsupported, unsupported_err, FromInner, IntoInner};
 
+pub use super::common::exists;
 pub use super::unsupported::{
-    Dir, DirBuilder, ExtraHomeDirs, ExtraMediaDirs, FileTimes, canonicalize, copy, exists, link,
-    readlink, remove_dir_all, rename, rename_noreplace, rmdir, set_times, set_times_nofollow,
-    symlink, unlink,
+    canonicalize, copy, link, readlink, remove_dir_all, rename, rename_noreplace, rmdir, set_times,
+    set_times_nofollow, symlink, unlink, Dir, DirBuilder, ExtraHomeDirs, ExtraMediaDirs, FileTimes,
 };
 
 #[derive(Clone, Debug)]
@@ -155,12 +155,23 @@ pub fn readdir(_path: &Path) -> io::Result<ReadDir> {
     unsupported()
 }
 
-pub fn stat(_path: &Path) -> io::Result<FileAttr> {
-    unsupported()
+pub fn stat(path: &Path) -> io::Result<FileAttr> {
+    path_attr(path, false)
 }
 
-pub fn lstat(_path: &Path) -> io::Result<FileAttr> {
-    unsupported()
+pub fn lstat(path: &Path) -> io::Result<FileAttr> {
+    path_attr(path, true)
+}
+
+fn path_attr(path: &Path, nofollow: bool) -> io::Result<FileAttr> {
+    let path = native_path(path)?;
+    let mut info = libc::cryolite_file_info {
+        size: 0,
+        kind: 0,
+        flags: 0,
+    };
+    status(unsafe { libc::__cryolite_file_stat(path.as_ptr(), i32::from(nofollow), &mut info) })?;
+    FileAttr::decode(info)
 }
 
 pub fn set_perm(_path: &Path, _permissions: FilePermissions) -> io::Result<()> {

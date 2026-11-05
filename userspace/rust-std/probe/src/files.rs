@@ -116,10 +116,7 @@ pub(super) fn check_files() {
         File::open(nul).unwrap_err().kind() == ErrorKind::InvalidInput,
         443,
     );
-    check(
-        fs::metadata("/probe").unwrap_err().kind() == ErrorKind::Unsupported,
-        444,
-    );
+    check(expect(fs::metadata("/probe"), 444).len() == 9004, 444);
 
     expect(fs::write("/probe", []), 445);
     check(expect(fs::read("/probe"), 446).is_empty(), 447);

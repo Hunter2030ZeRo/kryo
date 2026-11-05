@@ -77,7 +77,7 @@ def main():
     output = (arguments.output or ROOT / "build/rust-std-probe.elf").resolve()
     package_image(artifact, output, mapped_headers=True)
     metadata = {
-        "scope": "experimental restricted std: allocation, threads, futex synchronization, TLS, monotonic time and service-backed files, descriptor metadata, positioned I/O, resize and optional CPU random output; no wall clock, path metadata, timestamps, durable synchronization, network or process spawning",
+        "scope": "experimental restricted std: allocation, threads, futex synchronization, TLS, monotonic time and service-backed files, descriptor/path metadata, positioned I/O, resize and optional CPU random output; no wall clock, directory iteration, timestamps, durable synchronization, network or process spawning",
         "profile": arguments.profile, **versions,
         "rust_sources": pins, "target_sha256": digest(target),
         "build_tool_sha256": digest(Path(__file__)),

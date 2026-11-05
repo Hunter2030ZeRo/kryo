@@ -23,6 +23,7 @@ int __cryolite_file_write(int, const void *, size_t, ssize_t *);
 int __cryolite_file_pread(int, void *, size_t, off_t, ssize_t *);
 int __cryolite_file_pwrite(int, const void *, size_t, off_t, ssize_t *);
 int __cryolite_file_info(int, struct cryolite_file_info *);
+int __cryolite_file_stat(const char *, int, struct cryolite_file_info *);
 int __cryolite_file_resize(int, off_t);
 int __cryolite_file_sync(int, int);
 int __cryolite_file_seek(int, off_t, int, off_t *);

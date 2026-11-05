@@ -3,7 +3,7 @@
 
 #[cfg(not(test))]
 use core::sync::atomic::{AtomicBool, Ordering};
-use kryo_interfaces::file::{self, FileType, Info, OpenOptions, Status, SyncScope};
+use kryo_interfaces::file::{self, FileType, Info, LookupPolicy, OpenOptions, Status, SyncScope};
 #[cfg(not(test))]
 use kryo_interfaces::file::{Operation, Request};
 #[cfg(not(test))]
@@ -15,11 +15,56 @@ const PAGE: usize = file::PAGE_SIZE as usize;
 const CAPACITY: usize = 16 * 1024;
 const OPEN_LIMIT: usize = 8;
 const READ_ONLY_BYTES: &[u8] = b"read-only fixture\n";
+const LINK_LIMIT: usize = 40;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum File {
     Probe,
     ReadOnly,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Node {
+    File(File),
+    Directory,
+    Link(&'static [u8]),
+}
+
+fn lookup(path: &[u8]) -> Result<Node, Status> {
+    match path {
+        b"/" => Ok(Node::Directory),
+        b"/probe" => Ok(Node::File(File::Probe)),
+        b"/readonly" => Ok(Node::File(File::ReadOnly)),
+        b"/probe-link" => Ok(Node::Link(b"/probe")),
+        b"/dangling" => Ok(Node::Link(b"/missing")),
+        b"/cycle" => Ok(Node::Link(b"/cycle")),
+        b"/denied" => Err(Status::Denied),
+        _ => Err(Status::NotFound),
+    }
+}
+
+fn resolve(mut path: &[u8], policy: LookupPolicy) -> Result<Node, Status> {
+    if path.is_empty() || path.len() > PAGE {
+        return Err(Status::Range);
+    }
+    if path.contains(&0) {
+        return Err(Status::Malformed);
+    }
+    let mut links = 0;
+    loop {
+        let node = lookup(path)?;
+        let Node::Link(target) = node else {
+            return Ok(node);
+        };
+        if policy == LookupPolicy::NoFollow {
+            return Ok(node);
+        }
+        if links == LINK_LIMIT {
+            return Err(Status::SymlinkLoop);
+        }
+        links += 1;
+        path = target;
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -108,6 +153,49 @@ impl State {
             kind: FileType::Regular,
             readonly: file == File::ReadOnly,
         }
+    }
+
+    fn path_info(&self, path: &[u8], policy: LookupPolicy) -> Result<Info, Status> {
+        match resolve(path, policy)? {
+            Node::File(File::Probe) if !self.exists => Err(Status::NotFound),
+            Node::File(file) => Ok(self.info(file)),
+            Node::Directory => Ok(Info {
+                size: 0,
+                kind: FileType::Directory,
+                readonly: false,
+            }),
+            Node::Link(target) => Ok(Info {
+                size: target.len() as u64,
+                kind: FileType::Symlink,
+                readonly: true,
+            }),
+        }
+    }
+
+    fn open_file(&self, path: &[u8], options: OpenOptions) -> Result<File, Status> {
+        if options.flags & (file::CREATE | file::EXCLUSIVE) == (file::CREATE | file::EXCLUSIVE)
+            && matches!(lookup(path), Ok(Node::Link(_)))
+        {
+            return Err(Status::Exists);
+        }
+        let file = match resolve(path, LookupPolicy::Follow)? {
+            Node::File(file) => file,
+            Node::Directory => return Err(Status::Unsupported),
+            Node::Link(_) => unreachable!(),
+        };
+        let exists = file == File::ReadOnly || self.exists;
+        if !exists && options.flags & file::CREATE == 0 {
+            return Err(Status::NotFound);
+        }
+        if exists
+            && options.flags & (file::CREATE | file::EXCLUSIVE) == (file::CREATE | file::EXCLUSIVE)
+        {
+            return Err(Status::Exists);
+        }
+        if file == File::ReadOnly && options.writable() {
+            return Err(Status::Denied);
+        }
+        Ok(file)
     }
 
     fn read_at(&self, file: File, position: u64, bytes: usize) -> &[u8] {
@@ -286,6 +374,9 @@ fn execute(
     if request.operation == Operation::Open {
         return open(endpoint, state, request, memory.ok_or(Status::Malformed)?);
     }
+    if request.operation == Operation::PathInfo {
+        return path_info(state, request, memory.ok_or(Status::Malformed)?);
+    }
     let slot = state.description(label).ok_or(Status::BadFile)?;
     let mut description = state.descriptions[slot].ok_or(Status::BadFile)?;
     let result = match request.operation {
@@ -376,7 +467,7 @@ fn execute(
             state.sync(description.file, SyncScope::try_from(request.argument)?)?;
             Completion::value(0)
         }
-        Operation::Open => unreachable!(),
+        Operation::Open | Operation::PathInfo => unreachable!(),
     };
     state.descriptions[slot] = Some(description);
     Ok(result)
@@ -393,26 +484,7 @@ fn open(
     let mut path = [0; PAGE];
     let path = &mut path[..request.length as usize];
     copy_from(memory, 0, path)?;
-    if path.contains(&0) {
-        return Err(Status::Malformed);
-    }
-    let file = match &*path {
-        b"/probe" => File::Probe,
-        b"/readonly" => File::ReadOnly,
-        _ => return Err(Status::NotFound),
-    };
-    let exists = file == File::ReadOnly || state.exists;
-    if !exists && options.flags & file::CREATE == 0 {
-        return Err(Status::NotFound);
-    }
-    if exists
-        && options.flags & (file::CREATE | file::EXCLUSIVE) == (file::CREATE | file::EXCLUSIVE)
-    {
-        return Err(Status::Exists);
-    }
-    if file == File::ReadOnly && options.writable() {
-        return Err(Status::Denied);
-    }
+    let file = state.open_file(path, options)?;
     let slot = state
         .descriptions
         .iter()
@@ -440,6 +512,16 @@ fn open(
         gate: Some(gate),
         opened: Some(slot),
     })
+}
+
+#[cfg(not(test))]
+fn path_info(state: &State, request: Request, memory: Handle) -> Result<Completion, Status> {
+    let mut path = [0; PAGE];
+    let path = &mut path[..request.length as usize];
+    copy_from(memory, 0, path)?;
+    state
+        .path_info(path, LookupPolicy::try_from(request.argument)?)
+        .map(Completion::info)
 }
 
 #[cfg(not(test))]
@@ -603,5 +685,157 @@ mod tests {
             assert_eq!(state.sync(File::ReadOnly, scope), Err(Status::Unsupported));
         }
         assert_eq!(state.data(File::Probe), b"live");
+    }
+
+    #[test]
+    fn pathname_metadata_observes_absence_without_creating_file_or_description() {
+        let state = State::new();
+        for policy in [LookupPolicy::Follow, LookupPolicy::NoFollow] {
+            assert_eq!(state.path_info(b"/probe", policy), Err(Status::NotFound));
+        }
+        assert_eq!(
+            state.path_info(b"/probe-link", LookupPolicy::Follow),
+            Err(Status::NotFound)
+        );
+        assert_eq!(
+            state.path_info(b"/probe-link", LookupPolicy::NoFollow),
+            Ok(Info {
+                size: 6,
+                kind: FileType::Symlink,
+                readonly: true,
+            })
+        );
+        assert_eq!(
+            state.path_info(b"/", LookupPolicy::Follow),
+            Ok(Info {
+                size: 0,
+                kind: FileType::Directory,
+                readonly: false,
+            })
+        );
+        assert_eq!(
+            state.path_info(b"/readonly", LookupPolicy::Follow),
+            Ok(state.info(File::ReadOnly))
+        );
+        assert!(!state.exists);
+        assert!(state.descriptions.iter().all(Option::is_none));
+        assert_eq!(state.opens, 0);
+        assert_eq!(state.closures, 0);
+        assert_eq!(state.next_label, file::NAMESPACE_LABEL + 1);
+    }
+
+    #[test]
+    fn pathname_follow_observes_backend_file_changes() {
+        let mut state = state();
+        state.write_at(File::Probe, 0, b"mutable").unwrap();
+        for path in [b"/probe".as_slice(), b"/probe-link"] {
+            assert_eq!(
+                state.path_info(path, LookupPolicy::Follow),
+                Ok(state.info(File::Probe))
+            );
+        }
+        state.set_len(File::Probe, 3).unwrap();
+        assert_eq!(
+            state
+                .path_info(b"/probe-link", LookupPolicy::Follow)
+                .unwrap()
+                .size,
+            3
+        );
+        assert_eq!(
+            state
+                .path_info(b"/probe-link", LookupPolicy::NoFollow)
+                .unwrap()
+                .size,
+            6
+        );
+    }
+
+    #[test]
+    fn dangling_links_and_cycles_distinguish_final_link_policy() {
+        let state = state();
+        assert_eq!(
+            state.path_info(b"/dangling", LookupPolicy::Follow),
+            Err(Status::NotFound)
+        );
+        assert_eq!(
+            state.path_info(b"/dangling", LookupPolicy::NoFollow),
+            Ok(Info {
+                size: 8,
+                kind: FileType::Symlink,
+                readonly: true,
+            })
+        );
+        assert_eq!(
+            state.path_info(b"/cycle", LookupPolicy::Follow),
+            Err(Status::SymlinkLoop)
+        );
+        assert_eq!(
+            state.path_info(b"/cycle", LookupPolicy::NoFollow),
+            Ok(Info {
+                size: 6,
+                kind: FileType::Symlink,
+                readonly: true,
+            })
+        );
+    }
+
+    #[test]
+    fn pathname_resolution_propagates_denial_and_rejects_unrecognized_names() {
+        let state = state();
+        for policy in [LookupPolicy::Follow, LookupPolicy::NoFollow] {
+            assert_eq!(state.path_info(b"/denied", policy), Err(Status::Denied));
+            for path in [
+                b"/unknown".as_slice(),
+                b"../probe",
+                b"/probe/..",
+                b"/unknown\xff",
+            ] {
+                assert_eq!(state.path_info(path, policy), Err(Status::NotFound));
+            }
+            assert_eq!(
+                state.path_info(b"/probe\0suffix", policy),
+                Err(Status::Malformed)
+            );
+            assert_eq!(state.path_info(b"", policy), Err(Status::Range));
+            assert_eq!(
+                state.path_info(&[b'x'; PAGE + 1], policy),
+                Err(Status::Range)
+            );
+        }
+    }
+
+    #[test]
+    fn open_follows_aliases_but_exclusive_creation_does_not_follow_links() {
+        let mut state = State::new();
+        let read = OpenOptions {
+            flags: file::READ_ONLY,
+            mode: 0,
+        };
+        let create = OpenOptions {
+            flags: file::READ_WRITE | file::CREATE,
+            mode: 0o666,
+        };
+        let exclusive = OpenOptions {
+            flags: create.flags | file::EXCLUSIVE,
+            mode: 0o666,
+        };
+        assert_eq!(state.open_file(b"/probe-link", read), Err(Status::NotFound));
+        assert_eq!(state.open_file(b"/probe-link", create), Ok(File::Probe));
+        for path in [b"/probe-link".as_slice(), b"/dangling", b"/cycle"] {
+            assert_eq!(state.open_file(path, exclusive), Err(Status::Exists));
+        }
+        assert_eq!(state.open_file(b"/probe", exclusive), Ok(File::Probe));
+        assert!(!state.exists);
+        assert_eq!(state.open_file(b"/dangling", create), Err(Status::NotFound));
+        assert_eq!(state.open_file(b"/cycle", read), Err(Status::SymlinkLoop));
+        assert_eq!(state.open_file(b"/", read), Err(Status::Unsupported));
+        assert_eq!(state.open_file(b"/denied", read), Err(Status::Denied));
+        state.exists = true;
+        assert_eq!(state.open_file(b"/probe-link", read), Ok(File::Probe));
+        assert_eq!(state.open_file(b"/readonly", read), Ok(File::ReadOnly));
+        assert_eq!(state.open_file(b"/readonly", create), Err(Status::Denied));
+        assert!(state.descriptions.iter().all(Option::is_none));
+        assert_eq!(state.opens, 0);
     }
 }

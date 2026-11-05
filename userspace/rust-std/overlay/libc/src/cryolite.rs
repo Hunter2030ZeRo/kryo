@@ -200,6 +200,11 @@ extern "C" {
         count: *mut ssize_t,
     ) -> c_int;
     pub fn __cryolite_file_info(fd: c_int, output: *mut cryolite_file_info) -> c_int;
+    pub fn __cryolite_file_stat(
+        path: *const c_char,
+        nofollow: c_int,
+        output: *mut cryolite_file_info,
+    ) -> c_int;
     pub fn __cryolite_file_resize(fd: c_int, size: off_t) -> c_int;
     pub fn __cryolite_file_sync(fd: c_int, data_only: c_int) -> c_int;
     pub fn __cryolite_file_close(fd: c_int) -> c_int;
