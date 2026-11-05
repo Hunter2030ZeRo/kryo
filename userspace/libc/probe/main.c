@@ -14,6 +14,7 @@ extern uint64_t __cryolite_wait_fallbacks(void);
 extern void check_allocator(kryo_handle debug);
 extern void check_provider_threads(kryo_handle debug);
 extern void check_provider_stdio(kryo_handle debug);
+extern void check_provider_files(kryo_handle debug);
 
 static _Thread_local volatile uint64_t tls_value = UINT64_C(0x2197acde4568);
 static _Thread_local volatile uint64_t tls_zero;
@@ -108,7 +109,7 @@ int main(int argc, char **argv, char **envp) {
     errno = 0;
     require(clock_gettime(CLOCK_REALTIME, &after) == -1 && errno == ENOTSUP, 24);
     errno = 0;
-    require(fopen("/missing", "r") == NULL && errno == ENOSYS, 25);
+    require(fopen("/missing", "r") == NULL && errno == ENOENT, 25);
     kryo_result reserved = kryo_vm_reserve(8192, 4096);
     require(reserved.status == 0, 27);
     require(kryo_vm_commit(reserved.value, 4096).status == 0, 28);
@@ -127,6 +128,7 @@ int main(int argc, char **argv, char **envp) {
     require(kryo_vm_release(reserved.value).status == 0, 31);
     require(kryo_debug_write(__cryolite_debug_handle(), text, (size_t)length).status == 0, 26);
     check_provider_stdio(__cryolite_debug_handle());
+    check_provider_files(__cryolite_debug_handle());
     check_provider_threads(__cryolite_debug_handle());
     check_allocator(__cryolite_debug_handle());
     kryo_result instance = kryo_startup_read(__cryolite_startup_handle(), 4);

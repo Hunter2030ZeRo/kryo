@@ -2,16 +2,21 @@
 
 The Cryolite overlay targets mlibc revision
 `07cfd943977737b8147c1289922c23479feef53d`. It selects the ANSI/static profile;
-POSIX, Linux, BSD and glibc options are disabled. It does not provide a complete
-Cryolite sysroot, pthreads, file descriptors, stdio streams or dynamic linking.
+POSIX, Linux, BSD and glibc options are disabled. A native file descriptor
+backend now supports ANSI FILE operations through service IPC. A complete
+Cryolite sysroot, public POSIX file functions, inherited standard streams,
+pthreads and dynamic linking remain pending.
 
 The x86-64 entry preserves Kryo's startup capability from RDI separately from
 the SysV argument stack. Startup checks the immutable record, unique roles,
 kind-specific rights and actual capability information before choosing optional
 role 1 DebugConsole WRITE authority. Logging uses escaped native diagnostics;
-these diagnostics do not implement stdout or stderr. Open fails with ENOSYS;
-read, write, seek, close and isatty fail with EBADF because this profile installs
-no runtime descriptor table.
+these diagnostics do not implement stdout or stderr. An optional role 2 SEND EndpointGate supplies namespace authority. Without it,
+Open returns ENOSYS. The fallible descriptor registry reserves metadata before
+Open and pins records across operations and close. Descriptors 0..2 remain
+uninstalled. Valid regular files return ENOTTY from isatty; absent descriptors
+return EBADF. See the [file contract](../../../docs/decisions/0040-service-backed-files.md)
+for RPC limits, runtime scratch addresses and accepted-operation ownership.
 
 `__dlapi_enter` performs upstream static loader initialization, ELF/TLS parsing,
 TCB setup and constructors. The overlay completes the owned pthread attribute
@@ -37,14 +42,14 @@ kernel can retire its retained resources. Talc's own backing adapter is separate
 Futex waits use Kryo's private aligned word waits. The provider's relative timeout
 is converted once to an absolute monotonic deadline with checked arithmetic.
 Realtime and CPU-time clocks fail with ENOTSUP; unselected clocks fail EINVAL.
-Unsupported mappings and file operations are never reported as successful.
+Unsupported mappings and file features are never reported as successful.
 
 The local stdio storage patch checks FILE allocation before opening a descriptor,
 so allocation failure cannot strand an opened owner. Buffer allocation and size
 overflow return ENOMEM without null-pointer arithmetic; failed pushback also
 sets the stream error indicator. A read publishes consumed pushback as a short
 read before further I/O; fread retains complete elements across a later read,
-reset or write-back error. These changes do not supply a descriptor backend.
+reset or write-back error. The separate files.cpp adapter supplies the descriptor backend.
 
 The optional provider probe exhausts its private memory account, checks public
 stdio buffer/pushback failure, and recovers after releasing allocations. Most
@@ -57,7 +62,18 @@ allocator, Open and I/O doubles. Its 25 cases include consumed pushback before
 buffered/unbuffered EIO and EOF, complete/incomplete elements, reset/write-back
 errors and buffer OOM. They run under AddressSanitizer and
 UndefinedBehaviorSanitizer at O0/O2. Source-manifest and function hashes identify
-the tested code; successful mock Open is not evidence of native file-service support.
+the tested code; successful mock Open is not native filesystem evidence. The separate native
+file probe exercises real FILE calls against a volatile Rust validation peer;
+it does not mount BetAFS or establish persistent storage.
+
+The file adapter uses indexed descriptor lookup and reuses its vacant mapping
+slots. Table and record growth are fallible. A description with an accepted
+native IPC failure rejects further I/O, so buffered cleanup cannot replay an
+uncertain write. Close remains available; undelivered failures may retry.
+`tests/file_runtime.py` runs the verbatim backend and native acceptance helper
+against host allocator/native-call doubles, including allocation failures,
+close/reuse interleavings and accepted-versus-undelivered cancellation. Its 30
+cases run at O0/O2 with ASan/UBSan; this evidence is separate from guest execution.
 
 The build disables stack-protector instrumentation. No AT_RANDOM entropy is
 fabricated: this provider's deterministic fallback canary is a bring-up

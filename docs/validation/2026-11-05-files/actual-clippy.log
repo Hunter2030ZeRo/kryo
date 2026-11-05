@@ -1,0 +1,15 @@
+    Checking scopeguard v1.2.0
+    Checking bit_field v0.10.3
+    Checking bitflags v2.13.2
+    Checking volatile v0.4.6
+    Checking allocator-api2 v0.4.0
+   Compiling kryo v0.1.0 (/home/entity27th/kryo/kernel/image)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/kryo/interfaces)
+    Checking limine v0.6.5
+    Checking lock_api v0.4.14
+    Checking x86_64 v0.15.5
+    Checking spin v0.12.3
+    Checking talc v5.1.1
+    Checking kryo-core v0.1.0 (/home/entity27th/kryo/kernel/core)
+    Checking kryo-hal v0.1.0 (/home/entity27th/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.78s

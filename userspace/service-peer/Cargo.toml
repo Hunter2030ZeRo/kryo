@@ -7,3 +7,4 @@ build = "../build.rs"
 
 [dependencies]
 kryo-libsys.workspace = true
+kryo-interfaces.workspace = true

@@ -1,0 +1,27 @@
+{
+  "copied_files": 1799,
+  "changed_in_clone": [],
+  "mainstage_drift": [
+    "docs/decisions/0040-service-backed-files.md",
+    "docs/status.md",
+    "userspace/libc/mlibc/README.md"
+  ],
+  "compiled_drift": [],
+  "case": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/file-service-work/final-boundary/kryo/build/smoke/release-Haswell-noTSX-abi-libc",
+  "evidence_sha256": "2525162a4efdd31c5ee1ae45c3ce6d27314e8980db619dbbdfee214f65230c6a",
+  "source_manifest_sha256": "45fab24114af6494d4d666621a147bda3f4a5b6baa1e396dd5833efeba9f06c8",
+  "file_markers": [
+    "USERLOG: process=0x100000002 event=214 value=1",
+    "USERLOG: process=0x100000002 event=214 value=1",
+    "USERLOG: process=0x100000002 event=214 value=1",
+    "LIBCFILE: C Rust open read write seek and closure OK runs=3"
+  ],
+  "provider_fingerprint": "b592558edb685e887843043f9fae78ce811c596349f24345c01efe3c3061507c",
+  "elf_sha256": "60625a74f7447192547a33c4230a1f1553b67e2d3f5e40b6fbd5135f715502c2",
+  "packaged_elf_matches_metadata": true,
+  "mainstage_provider_comparisons": {
+    "debug-Haswell-noTSX-abi-libc": true,
+    "release-max-smp4-abi-libc-block-ro": true,
+    "debug-normal-max-smp4-abi-libc-block-rw": false
+  }
+}

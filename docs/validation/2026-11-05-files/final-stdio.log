@@ -1,0 +1,9 @@
+{
+  "cases": 25,
+  "optimized_runs": 2,
+  "sanitizers": [
+    "address",
+    "undefined"
+  ],
+  "evidence": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/file-service-work/actual-stdio-fallibility/evidence.json"
+}

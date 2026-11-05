@@ -1,0 +1,6 @@
+{
+  "exit_code": -6,
+  "expected_failure": "subsequent Write must return EIO after accepted cancellation",
+  "detected": true,
+  "fixture_sha256": "149a12ec75ac62461ce914e257e8f14a53978baf072cf849693936fe668ac1f6"
+}

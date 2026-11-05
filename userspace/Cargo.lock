@@ -87,6 +87,7 @@ dependencies = [
 name = "service-peer"
 version = "0.1.0"
 dependencies = [
+ "kryo-interfaces",
  "kryo-libsys",
 ]
 

@@ -1,0 +1,1 @@
+without-accepted-poison: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/.omo/evidence/file-runtime-accepted-review/without-accepted-poison.cpp:1190: int main(): Assertion `__cryolite_file_write(descriptor, data, 1, &amount) == EIO' failed.

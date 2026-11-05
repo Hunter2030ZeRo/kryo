@@ -169,6 +169,14 @@ This signed-disk configuration is not general device discovery or replacement.
 Native binary format is ELF64 AMD64; [ADR 0021](decisions/0021-native-elf-abi.md)
 records the currently limited bootstrap ABI and the general native user ABI gate.
 
+The static ANSI mlibc adapter now has service-backed FILE hooks. Namespace
+startup authority is optional; each Open returns a separate authenticated gate
+while the service owns its cursor and access/append state. Local descriptor pins
+retain active operations through close and numerical reuse. The optional libc
+probe connects to a volatile Ring 3 validation peer; production VFS, inherited
+streams, public POSIX descriptors, durable storage and mounted BetAFS remain
+pending. [ADR 0040](decisions/0040-service-backed-files.md) defines this boundary.
+
 ## Isolation and recovery
 
 Mappings retain their backing memory. Closing a handle or terminating a service does not reclaim memory still referenced by another mapping, request, or device.

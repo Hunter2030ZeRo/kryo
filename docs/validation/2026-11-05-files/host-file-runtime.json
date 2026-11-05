@@ -1,0 +1,53 @@
+{
+  "scope": "verbatim provider backend with host native-call/allocator doubles; not guest IPC or filesystem evidence",
+  "source": "userspace/libc/mlibc/sysdeps/cryolite/files.cpp",
+  "source_sha256": "8bdeb79a4963f14f64fa7ebafd103c10b5598a8d01320e1620433dafd006db5b",
+  "body_sha256": "52dc3404c17fb992e0ed2c09ef562758fe3db6fe6591af4d2e5cec46838cd95b",
+  "accepted_helper_sha256": "51983c03ffadb827a3342977eb71def81f947b9169d75bf52ce124f20912af9d",
+  "protocol_sha256": "ed1d217bc6ff52a4470d3570f40e12531dffe8d49bbd27089a25624550fac601",
+  "interleavings": "native wait/IPC and atomic-unlock doubles inject named cutpoints; atomic wrappers execute the real compiler atomics before callbacks",
+  "cases": [
+    "namespace absent",
+    "descriptor allocation before Open",
+    "loan creation failure",
+    "loan map failure",
+    "server Open failure",
+    "bounded path and flag validation",
+    "Open capability kind and rights",
+    "malformed response identity and reserved words",
+    "unexpected capability cleanup",
+    "chunked transfer and access mode",
+    "zero-byte operations and invalid descriptors",
+    "server-owned seek",
+    "oversized read response poisons description",
+    "zero-progress write rejected",
+    "transport failure does not close request-grant aliases",
+    "close pins and numerical reuse",
+    "RPC close and reopen preserve old operation ownership",
+    "request id exhaustion",
+    "mapping slot reuse",
+    "unknown service status rejected",
+    "close at descriptor publication does not read freed storage",
+    "uncontended locks make no native waits or wakes",
+    "release before park cannot lose wake",
+    "release before contention mark avoids park",
+    "wait quota failure yields and rechecks",
+    "initial descriptor-table allocation failure precedes Open",
+    "failed table growth preserves existing descriptors",
+    "table growth preserves indexed lookup and hole reuse",
+    "accepted write failure blocks automatic retry",
+    "undelivered write failure remains retryable"
+  ],
+  "runs": [
+    {
+      "optimization": "O0",
+      "exit_code": 0,
+      "output": "file runtime: 30 cases passed"
+    },
+    {
+      "optimization": "O2",
+      "exit_code": 0,
+      "output": "file runtime: 30 cases passed"
+    }
+  ]
+}

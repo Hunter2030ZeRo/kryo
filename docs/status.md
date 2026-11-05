@@ -1,6 +1,15 @@
 # Implementation status
 
-Snapshot: 2026-11-04. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
+
+[Service-backed FILE hooks](decisions/0040-service-backed-files.md) connect the
+static ANSI mlibc profile to a separate Ring 3 memory-backed validation peer.
+The service owns offsets and append status; local descriptor pins protect
+in-flight work across close and numerical reuse. Descriptor lookup is indexed;
+accepted IPC failures disable further I/O to prevent buffered-write replay.
+The [validation record](validation/2026-11-05-files/README.md) separates real
+C/Rust guest execution from host fault injection. Production namespace routing,
+mounted BetAFS, inherited streams and public POSIX file functions remain pending.
 
 [Endpoint gates](decisions/0038-endpoint-gates.md) route distinct immutable
 authorities through one receiver and report final-authority closure. Event
@@ -8,14 +17,14 @@ storage is reserved at mint; queued operations and grants retain gate ownership.
 Final process-handle destruction settles before idle, so closure can wake an
 unbounded receiver without polling. Closed-root stale handles retain their
 charge. C/Rust SDK routing and retirement are covered in the
-[validation record](validation/2026-11-04-gates/README.md). File protocols and
-server-side accepted-operation ownership remain separate work.
+[validation record](validation/2026-11-04-gates/README.md). The file follow-up adds a bounded synchronous protocol; asynchronous
+server-side accepted-operation ownership remains separate work.
 
 The [stdio correction](decisions/0039-fallible-provider-stdio.md) makes FILE and
 buffer allocation fallible and preserves completed fread elements on error.
 A real quota-exhaustion probe checks buffer failure and recovery; a source-body
-host harness checks Open/Read failures separately. File hooks remain unsupported
-until the Ring 3 file service is connected. See the
+host harness checks Open/Read failures separately. The file follow-up supplies a validation service backend; production
+namespace and storage integration remain pending. See the
 [validation record](validation/2026-11-04-stdio/README.md).
 
 [Capability-bearing replies](decisions/0037-capability-bearing-replies.md)

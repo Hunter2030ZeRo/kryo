@@ -1,0 +1,104 @@
+{
+  "status": "CLEAR",
+  "codeQualityStatus": "CLEAR",
+  "recommendation": "APPROVE",
+  "blockers": [],
+  "date": "2026-11-05",
+  "scope": "Independent code review of native file wire, provider descriptor lifetime/startup, Ring3 fixture and kernel retirement wiring, plus final indexed lookup and accepted-failure poison deltas. Final host harness has30cases; native QEMU matrix remains executor-owned.",
+  "source_hashes": {
+    "interfaces/src/file.rs": "ee4ae04fa21b76b616333833118f14db32a0674c2711b31f5f263d0d8e1aed61",
+    "userspace/libsys/include/cryolite/file-protocol.h": "ed1d217bc6ff52a4470d3570f40e12531dffe8d49bbd27089a25624550fac601",
+    "userspace/libc/mlibc/sysdeps/cryolite/files.cpp": "8bdeb79a4963f14f64fa7ebafd103c10b5598a8d01320e1620433dafd006db5b",
+    "userspace/libc/mlibc/sysdeps/cryolite/sysdeps.cpp": "f2aaa0bde857a9246854c6073afc87fc33ae6dcbc4bdbc96223ec24f719aa60e",
+    "userspace/libc/mlibc/sysdeps/cryolite/include/cryolite/file-runtime.h": "fce5b1ccc6d72bcc2dacbed6dd190e83b77cc4f1590a08a6edd17ec3cecb94f5",
+    "userspace/libc/mlibc/tests/file_runtime.py": "c46135c9c70c5202f3f058ccdce19440131273e04332a748e1de86ef2ea0dad9",
+    "userspace/service-peer/src/file_fixture.rs": "b2d513f565d640ae68735508d0acc2f5a60064a35cf8ef4be6331c970ddc1fd6",
+    "userspace/service-peer/src/main.rs": "079b303a5b65d6a8e76bdc4675878e46505b2889879318b2b8023096efdb6249",
+    "userspace/libc/probe/provider_files.c": "1eba603251d989ed482aef6801bad3fbc52736d2f4bf90451c43c1dfc69c5e29",
+    "kernel/image/src/runtime/libc.rs": "8e708e6157219d6757a0ef89a6a9427c2ed7d207b0687ecc57ec20f5b392671b",
+    "kernel/image/src/runtime/libc/files.rs": "5ea4a536b5c77005ecf55e771fdcf145340c5ed1a2a0469e259e55c51c692fa7",
+    "userspace/libsys/include/cryolite/native.h": "3b9620e61e67428cea445f22fc5bbf6e22c509010d0579b240058bb3f5a9f4f0",
+    "docs/decisions/0040-service-backed-files.md": "8eb7181ebf67e4524edc7820407fcbf58a66fc018f31bec15baedb5bda7fb62c",
+    "userspace/libc/mlibc/README.md": "08a725b94719306e8871999d0983a1fa81e3bbcc7380263baea9610f43aad409",
+    "docs/status.md": "2b8956e872fc6730220d729acf00fde805db0aba0670e3b790d23ff99772964b"
+  },
+  "counts": {
+    "wire_host_tests": 5,
+    "file_runtime_host_cases": 30,
+    "file_runtime_optimization_runs": 2
+  },
+  "evidence_paths": [
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-indexed-review/evidence.json",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-indexed-review/O0.log",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-indexed-review/O2.log",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-review-final/old-publication.json",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-review-final/old-publication.log",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-accepted-review/evidence.json",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-accepted-review/O0.log",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-accepted-review/O2.log",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-accepted-review/without-accepted-poison.json",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-accepted-review/without-accepted-poison.log",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/file-service-work/final-negative-control.json",
+    "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/file-service-work/final-negative-control.log"
+  ],
+  "report_path": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-service-code-review.md",
+  "resolved_defects": [
+    {
+      "severity": "HIGH",
+      "description": "Open publication could race Close and dereference freed File; descriptor captured before publication, ASan regression and negative control verified."
+    },
+    {
+      "severity": "MEDIUM",
+      "description": "Native fixture checked undefined legacy CallCaps capability result fields; switched assertions to CallExchange with reply capacity zero."
+    },
+    {
+      "severity": "HIGH",
+      "description": "Accepted cancellation could leave provider dirty bytes replayable after server effects. validate_reply now poisons accepted failures while preserving initial errno; subsequent Read/Write/Seek issue no RPC, Close remains usable, and undelivered cancellation remains retryable.",
+      "proof": "Pinned provider dirty-offset/flush source and core accepted-cancellation paths inspected; independent 30-case O0/O2 ASan+UBSan harness passed; removing only poisoning makes the subsequent-write regression abort."
+    }
+  ],
+  "indexed_table_review": {
+    "result": "CLEAR",
+    "details": [
+      "Descriptor slots reserved before remote Open; doubling growth failure preserves prior table.",
+      "Pin and Close descriptor lookup are indexed with bounds checks under table lock.",
+      "Old operation pins retain File and mapping slot after numerical descriptor reuse.",
+      "Final release checks slot pointer identity before clearing it; table remains until final record/pin retires.",
+      "No capacity arithmetic overflow under the specified LP64 int descriptor bound.",
+      "Final-reference unlink remains a cold linked-list scan; whole Close is not claimed O(1)."
+    ]
+  },
+  "skill_perspectives": {
+    "skills_available": false,
+    "fallback": "Role-provided remove-ai-slops/programming criteria applied; no production or test violations found."
+  },
+  "limits": [
+    "Host native-call doubles and deterministic atomic cutpoints are not guest concurrent-I/O evidence.",
+    "ASan and UBSan enabled; LeakSanitizer disabled, explicit owner counters checked.",
+    "No hardware latency, persistent filesystem, BetAFS or full POSIX implementation claim."
+  ],
+  "accepted_failure_evidence": {
+    "provider_revision": "07cfd943977737b8147c1289922c23479feef53d",
+    "provider_file": "actual-provider-debug/source/options/ansi/generic/file-io.cpp",
+    "provider_sha256": "b7fccab66efd51f0c5f84f4a93e3a966c7948e914ea6e401d5b48dbef35e1555",
+    "manifest_match": true,
+    "references": [
+      "file-io.cpp:279-282 flush retries dirty bytes",
+      "file-io.cpp:397-404 io_write failure preserves dirty offsets",
+      "file-io.cpp:719-724 flush_all_files retries at exit",
+      "kernel/core/src/ipc/endpoint.rs:457-466 accepted CancelWait",
+      "kernel/image/src/runtime/ipc_runtime.rs:539-542 accepted delivery exported in RDX"
+    ],
+    "resolved": true,
+    "independent_negative_control": "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/.omo/evidence/file-runtime-accepted-review/without-accepted-poison.json"
+  },
+  "documentation_review": {
+    "status": "CLEAR",
+    "files": [
+      "docs/decisions/0040-service-backed-files.md",
+      "userspace/libc/mlibc/README.md",
+      "docs/status.md"
+    ],
+    "scope": "Final ADR and summary wording match indexed descriptor lookup, cold unlink cost, accepted-failure poisoning, partial-progress/unknown-outcome service contract and experimental ABI boundary. No new native ABI changes. Final guest matrix not independently reviewed."
+  }
+}

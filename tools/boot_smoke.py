@@ -104,6 +104,8 @@ def libc_checks(log, enabled):
             r"(?m)^LIBCTHREAD: last exit callbacks and wait quota recovery OK$", log)) == 1,
         "libc_stdio_recovery": len(re.findall(
             r"(?m)^LIBCSTDIO: buffer allocation failure and recovery OK runs=3$", log)) == 1,
+        "libc_file_service": len(re.findall(
+            r"(?m)^LIBCFILE: C Rust open read write seek and closure OK runs=3$", log)) == 1,
     }
 
 

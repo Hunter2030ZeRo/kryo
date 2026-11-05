@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+mod file_fixture;
+
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use kryo_libsys::{self as sys, Error, Grant, Handle};
@@ -34,6 +36,12 @@ _start:
 
 extern "C" fn peer_main(bootstrap: u64, factory: u64, _features: u64, mode: u64) -> ! {
     let bootstrap = Handle::from_raw(bootstrap).unwrap_or_else(|| sys::exit(200));
+    if mode == 4 {
+        match file_fixture::serve(bootstrap) {
+            Ok(()) => sys::exit(0),
+            Err(code) => sys::exit(code),
+        }
+    }
     let factory = Handle::from_raw(factory).unwrap_or_else(|| sys::exit(201));
     if mode > 3 {
         sys::exit(216);

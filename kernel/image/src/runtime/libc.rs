@@ -1,3 +1,5 @@
+mod files;
+
 use super::{
     BootFramePool, CallStats, IpcRuntime, KernelMemory, KernelObject, KernelRegion, Objects,
     RefCell, Tasks,
@@ -6,7 +8,6 @@ use kryo_core::capability::Rights;
 use kryo_core::object::ObjectKind;
 use kryo_core::process::ExitReason;
 use kryo_core::resource::{Budget, Limits, Resource};
-use kryo_core::sched::TaskState;
 use kryo_hal::DirectMap;
 use kryo_interfaces::startup::{Entry, Metadata, ObjectKind as WireKind};
 
@@ -33,6 +34,7 @@ pub(crate) fn check(
     );
     kryo_hal::emergency_write_str("LIBCTHREAD: last exit callbacks and wait quota recovery OK\n");
     kryo_hal::emergency_write_str("LIBCSTDIO: buffer allocation failure and recovery OK runs=3\n");
+    kryo_hal::emergency_write_str("LIBCFILE: C Rust open read write seek and closure OK runs=3\n");
 }
 
 fn run(
@@ -51,7 +53,7 @@ fn run(
         let mut tasks = Tasks::growing();
         let mut ipc = IpcRuntime::growing(&objects);
         let account = Budget::new(Limits {
-            shared_pages: 0,
+            shared_pages: 8,
             private_pages: 8192,
             reserved_pages: 65536,
             handles: 16,
@@ -90,18 +92,34 @@ fn run(
             .insert(debug, Rights::WRITE | Rights::DUP)
             .unwrap()
             .as_raw();
+        let (service, namespace) =
+            files::prepare(pool, direct, memory, region, &mut tasks, &mut ipc, &objects);
+        let namespace = resources
+            .process
+            .handles
+            .insert(namespace, Rights::SEND)
+            .unwrap()
+            .as_raw();
         let startup = super::startup::install_record(
             Metadata {
                 service: 51,
                 instance,
                 argument: 0,
             },
-            &[Entry {
-                role: 1,
-                handle: debug,
-                kind: WireKind::DebugConsole,
-                rights: (Rights::WRITE | Rights::DUP).bits(),
-            }],
+            &[
+                Entry {
+                    role: 1,
+                    handle: debug,
+                    kind: WireKind::DebugConsole,
+                    rights: (Rights::WRITE | Rights::DUP).bits(),
+                },
+                Entry {
+                    role: kryo_interfaces::file::NAMESPACE_ROLE,
+                    handle: namespace,
+                    kind: WireKind::EndpointGate,
+                    rights: Rights::SEND.bits(),
+                },
+            ],
             &mut resources.process.handles,
             &objects,
         )
@@ -112,15 +130,18 @@ fn run(
             .spawn(resources)
             .unwrap_or_else(|_| panic!("Cannot publish libc probe"));
         let owner = tasks.process_for(task).unwrap();
+        tasks.wake(service.task).unwrap();
         let mut calls = CallStats::default();
-        let mut events = [false; 6];
+        let mut events = [false; 7];
+        let mut status = None;
+        let mut service_status = None;
         let mut snapshots = [None; 2];
         let mut balanced = [false; 2];
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time()
             .unwrap()
             .saturating_add(30_000_000_000);
-        while tasks.terminal(owner).is_none() {
+        while status.is_none() || service_status.is_none() {
             assert!(
                 kryo_hal::monotonic_time().unwrap() < deadline,
                 "Libc probe stalled"
@@ -139,6 +160,7 @@ fn run(
                 assert_eq!(source, task, "Unexpected child libc diagnostic");
                 assert_ne!(event, 209, "Libc probe failed at stage {}", value);
                 assert_ne!(event, 211, "Libc stdio probe failed at stage {}", value);
+                assert_ne!(event, 215, "Libc file probe failed at stage {}", value);
                 let index = match event {
                     200..=202 => {
                         assert_eq!(value, 1, "Invalid libc completion event {}", event);
@@ -155,6 +177,10 @@ fn run(
                     210 => {
                         assert_eq!(value, 1, "Libc stdio recovery did not finish");
                         Some(5)
+                    }
+                    214 => {
+                        assert_eq!(value, 1, "Libc file operations did not finish");
+                        Some(6)
                     }
                     212 => None,
                     206 | 207 => {
@@ -183,21 +209,31 @@ fn run(
                     events[index] = true;
                 }
             }
-            // Kernel thread resources can retire after execution handoff; the
-            // retained control object still supplies actual native join results.
-            if tasks.terminal(owner).is_none() {
-                while let Some(id) = tasks.next_dying(None) {
-                    assert_ne!(id, task, "Libc main thread exited before its children");
-                    drop(
-                        tasks
-                            .reap(id, &mut ipc, |resources| resources.close(pool, region))
-                            .unwrap(),
-                    );
-                    retired += 1;
+            if status.is_none() {
+                status = tasks.terminal(owner);
+            }
+            if service_status.is_none() {
+                service_status = tasks.terminal(service.owner);
+                if let Some(result) = service_status {
+                    assert_eq!(result.reason, ExitReason::Exited, "File peer faulted");
+                    assert_eq!(result.code, 0, "File peer failed");
                 }
             }
+            // Retiring the client publishes final gate closures before idle.
+            // The service must observe them and exit without polling or control RPCs.
+            while let Some(id) = tasks.next_dying(None) {
+                if status.is_none() {
+                    assert_ne!(id, task, "Libc main thread exited before its children");
+                }
+                drop(
+                    tasks
+                        .reap(id, &mut ipc, |resources| resources.close(pool, region))
+                        .unwrap(),
+                );
+                retired += 1;
+            }
         }
-        let status = tasks.terminal(owner).unwrap();
+        let status = status.unwrap();
         assert_eq!(status.reason, ExitReason::Exited, "Libc probe faulted");
         assert_eq!(
             status.code,
@@ -217,16 +253,12 @@ fn run(
             "Libc fixture thread count changed"
         );
         ipc.settle(&mut tasks);
-        assert_eq!(tasks.state(task), Ok(TaskState::Dying));
-        while let Some(id) = tasks.next_dying(None) {
-            drop(
-                tasks
-                    .reap(id, &mut ipc, |resources| resources.close(pool, region))
-                    .unwrap(),
-            );
-            retired += 1;
-        }
-        assert_eq!(retired, 18, "Libc threads did not retire");
+        assert_eq!(retired, 19, "Libc and file service threads did not retire");
+        assert_eq!(
+            service.channels.live_count(),
+            0,
+            "File gate charges survived"
+        );
         assert_eq!(tasks.live_count(), 0);
         assert!(ipc.words.is_empty(), "Libc private waits survived teardown");
         assert_eq!(ipc.waits.live_count(), 0);

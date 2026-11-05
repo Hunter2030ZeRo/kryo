@@ -1,0 +1,317 @@
+patching file include/__fcxx/algorithm_results.h
+patching file include/__fcxx/iterator_base.h
+Hunk #1 succeeded at 728 (offset 6 lines).
+patching file include/__fcxx/ranges_access.h
+patching file include/__fcxx/span.h
+patching file include/algorithm
+patching file include/array
+patching file include/expected
+patching file include/optional
+patching file include/span
+patching file include/variant
+patching file meson.build
+patching file options/internal/include/mlibc/allocator.hpp
+patching file options/internal/generic/allocator.cpp
+patching file options/internal/generic/cryolite-allocator.inc
+patching file options/internal/generic/sigset.cpp
+patching file options/ansi/x86_64/strlen.cpp
+patching file options/ansi/x86_64/strcmp.cpp
+patching file options/ansi/x86_64/meson.build
+patching file options/ansi/generic/string.cpp
+patching file options/internal/generic/essential.cpp
+patching file options/internal/include/bits/nl_item.h
+patching file options/ansi/include/stdio.h
+patching file options/ansi/include/time.h
+patching file options/ansi/generic/string.cpp
+patching file options/internal/generic/threads.cpp
+patching file options/rtld/generic/linker.cpp
+patching file options/rtld/generic/main.cpp
+patching file options/internal/generic/threads.cpp
+patching file options/ansi/generic/file-io.cpp
+patching file options/ansi/generic/stdio.cpp
+patching file options/ansi/include/mlibc/file-io.hpp
+The Meson build system
+Version: 1.12.1
+Source dir: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source
+Build dir: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/meson
+Build type: cross build
+Project name: mlibc
+Project version: 7.0.0
+Build machine cpu family: x86_64
+Build machine cpu: x86_64
+Host machine cpu family: x86_64
+Host machine cpu: x86-64-v3
+Target machine cpu family: x86_64
+Target machine cpu: x86-64-v3
+C compiler for the build machine: cc (gcc 16.2.1 "cc (GCC) 16.2.1 20260810")
+C linker for the build machine: cc ld.bfd 2.47
+C++ compiler for the build machine: c++ (gcc 16.2.1 "c++ (GCC) 16.2.1 20260810")
+C++ linker for the build machine: c++ ld.bfd 2.47
+C compiler for the host machine: clang (clang 23.1.4 "clang version 23.1.4")
+C linker for the host machine: clang ld.lld 23.1.4
+C++ compiler for the host machine: clang++ (clang 23.1.4 "clang version 23.1.4")
+C++ linker for the host machine: clang++ ld.lld 23.1.4
+Checking if "C++ compiler supports ifunc" compiles: NO (cached)
+Looking for a fallback subproject for the dependency freestanding-c-hdrs because:
+Use of fallback dependencies is forced.
+
+Executing subproject freestanding-c-hdrs for machine: host 
+
+freestanding-c-hdrs| Project name: freestanding-c-hdrs
+freestanding-c-hdrs| Project version: undefined
+freestanding-c-hdrs| Build targets in project: 0
+freestanding-c-hdrs| Subproject freestanding-c-hdrs finished.
+
+Dependency freestanding-c-hdrs for host machine from subproject subprojects/freestanding-c-hdrs found: YES undefined
+Looking for a fallback subproject for the dependency freestanding-cxx-hdrs because:
+Use of fallback dependencies is forced.
+
+Executing subproject freestanding-cxx-hdrs for machine: host 
+
+freestanding-cxx-hdrs| Project name: freestanding-cxx-hdrs
+freestanding-cxx-hdrs| Project version: undefined
+freestanding-cxx-hdrs| Build targets in project: 0
+freestanding-cxx-hdrs| Subproject freestanding-cxx-hdrs finished.
+
+Dependency freestanding-cxx-hdrs for host machine from subproject subprojects/freestanding-cxx-hdrs found: YES undefined
+Looking for a fallback subproject for the dependency frigg because:
+Use of fallback dependencies is forced.
+
+Executing subproject frigg for machine: host 
+
+frigg| Project name: frigg
+frigg| Project version: undefined
+frigg| Build targets in project: 0
+frigg| Subproject frigg finished.
+
+Dependency frigg for host machine from subproject subprojects/frigg found: YES undefined
+Looking for a fallback subproject for the dependency libsmarter because:
+Use of fallback dependencies is forced.
+
+Executing subproject libsmarter for machine: host 
+
+libsmarter| Project name: libsmarter
+libsmarter| Project version: undefined
+libsmarter| Build targets in project: 0
+libsmarter| Subproject libsmarter finished.
+
+Dependency libsmarter for host machine from subproject subprojects/libsmarter found: YES undefined
+Compiler for C++ supports arguments -Wno-prio-ctor-dtor: NO (cached)
+Configuring internal-config.h using configuration
+Configuring mlibc-config.h using configuration
+Program hdoc found: NO
+Configuring .hdoc.toml using configuration
+Build targets in project: 12
+
+mlibc 7.0.0
+
+  tests
+    Build tests           : NO
+    Build host-libc tests : YES
+    Build cross-libc tests: NO
+
+  mlibc options
+    headers-only          : NO
+    ABI                   : 7
+    POSIX option          : disabled
+    Linux option          : disabled
+    glibc option          : disabled
+    BSD option            : disabled
+    debug allocator       : NO
+    libgcc dependency     : NO
+
+  Subprojects (for host machine)
+    freestanding-c-hdrs   : YES
+    freestanding-cxx-hdrs : YES
+    frigg                 : YES
+    libsmarter            : YES
+
+  User defined options
+    Cross files           : /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/cryolite.cross
+    b_staticpic           : false
+    bsd_option            : disabled
+    build_tests           : false
+    default_library       : static
+    force_fallback_for    : frigg,libsmarter,freestanding-c-hdrs,freestanding-cxx-hdrs
+    glibc_option          : disabled
+    libdir                : lib
+    libgcc_dependency     : false
+    linux_option          : disabled
+    posix_option          : disabled
+    prefix                : /usr
+    use_freestnd_hdrs     : enabled
+    wrap_mode             : nodownload
+
+Found ninja-1.13.2 at /home/entity27th/.local/bin/ninja
+Generating targets:   0%|          | 0/12 eta ?Generating targets:  67%|██████▋   | 8/12 eta 00:00                                                   Writing build.ninja:   0%|          | 0/408 eta ?                                                 Cleaning... 0 files.
+ninja: Entering directory `/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/meson'
+[1/55] Compiling C++ object ld.a.p/options_internal_generic_essential.cpp.o
+[2/55] Compiling C++ object ld.a.p/options_internal_generic_frigg.cpp.o
+[3/55] Compiling C++ object ld.a.p/options_internal_gcc_stack_protector.cpp.o
+[4/55] Compiling C++ object ld.a.p/options_internal_generic_debug.cpp.o
+[5/55] Compiling C++ object ld.a.p/options_internal_gcc_guard-abi.cpp.o
+[6/55] Compiling C++ object ld.a.p/options_internal_generic_allocator.cpp.o
+[7/55] Compiling C++ object libc.a.p/sysdeps_cryolite_files.cpp.o
+[8/55] Compiling C++ object ld.a.p/options_internal_generic_ensure.cpp.o
+[9/55] Compiling C++ object libc.a.p/sysdeps_cryolite_threads.cpp.o
+[10/55] Compiling C++ object libc.a.p/options_elf_generic_phdr.cpp.o
+[11/55] Compiling C++ object libc.a.p/options_elf_generic_startup.cpp.o
+[12/55] Compiling C++ object libc.a.p/options_internal_generic_allocator.cpp.o
+[13/55] Compiling C++ object ld.a.p/options_internal_generic_ubsan.cpp.o
+[14/55] Compiling C++ object libc.a.p/options_internal_generic_c-locale-defaults.cpp.o
+[15/55] Compiling C++ object libc.a.p/options_internal_generic_essential.cpp.o
+[16/55] Compiling C++ object libc.a.p/options_internal_generic_debug.cpp.o
+[17/55] Compiling C++ object ld.a.p/options_rtld_generic_main.cpp.o
+[18/55] Compiling C++ object libc.a.p/options_internal_generic_ctype.cpp.o
+[19/55] Compiling C++ object libc.a.p/options_internal_generic_charset.cpp.o
+[20/55] Compiling C++ object libc.a.p/options_internal_generic_charcode.cpp.o
+[21/55] Compiling C++ object libc.a.p/options_internal_generic_sigset.cpp.o
+[22/55] Compiling C++ object libc.a.p/options_internal_generic_ensure.cpp.o
+[23/55] Compiling C++ object libc.a.p/options_internal_generic_frigg.cpp.o
+[24/55] Compiling C++ object libc.a.p/options_internal_generic_getopt.cpp.o
+[25/55] Compiling C++ object libc.a.p/options_internal_generic_global-config.cpp.o
+[26/55] Compiling C++ object libc.a.p/options_internal_generic_strings.cpp.o
+[27/55] Compiling C++ object libc.a.p/options_internal_generic_search.cpp.o
+[28/55] Compiling C++ object libc.a.p/options_internal_generic_stdlib.cpp.o
+[29/55] Compiling C++ object libc.a.p/options_internal_generic_wide.cpp.o
+[30/55] Compiling C++ object libc.a.p/options_internal_generic_ubsan.cpp.o
+[31/55] Compiling C++ object libc.a.p/options_internal_gcc_stack_protector.cpp.o
+[32/55] Compiling C++ object libc.a.p/options_ansi_generic_assert.cpp.o
+[33/55] Compiling C++ object libc.a.p/options_internal_gcc_guard-abi.cpp.o
+[34/55] Compiling C++ object libc.a.p/options_internal_generic_threads.cpp.o
+[35/55] Compiling C++ object libc.a.p/options_ansi_generic_ctype.cpp.o
+[36/55] Compiling C++ object libc.a.p/options_internal_generic_locale-defaults.cpp.o
+[37/55] Compiling C++ object libc.a.p/options_ansi_generic_environment.cpp.o
+[38/55] Compiling C++ object libc.a.p/options_ansi_generic_stdlib.cpp.o
+[39/55] Compiling C++ object libc.a.p/options_ansi_generic_locale.cpp.o
+[40/55] Compiling C++ object ld.a.p/options_rtld_generic_linker.cpp.o
+[41/55] Compiling C++ object libc.a.p/options_ansi_generic_inttypes.cpp.o
+[42/55] Compiling C++ object libc.a.p/options_ansi_generic_signal.cpp.o
+[43/55] Compiling C++ object libc.a.p/options_ansi_generic_file-io.cpp.o
+[44/55] Compiling C++ object libc.a.p/options_ansi_generic_threads.cpp.o
+[45/55] Compiling C++ object libc.a.p/options_ansi_x86_64_strlen.cpp.o
+[46/55] Compiling C++ object libc.a.p/options_ansi_generic_wchar.cpp.o
+[47/55] Linking static target ld.a
+[48/55] Compiling C++ object libc.a.p/options_ansi_x86_64_strcmp.cpp.o
+[49/55] Compiling C++ object libc.a.p/options_ansi_generic_wctype.cpp.o
+[50/55] Compiling C++ object libc.a.p/options_lsb_generic_dso_exit.cpp.o
+[51/55] Compiling C++ object libc.a.p/options_ansi_generic_string.cpp.o
+[52/55] Compiling C++ object libc.a.p/options_ansi_generic_time.cpp.o
+[53/55] Compiling C++ object libc.a.p/options_internal_generic_locale.cpp.o
+[54/55] Compiling C++ object libc.a.p/options_ansi_generic_stdio.cpp.o
+[55/55] Linking static target libc.a
+Installing subdir /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/auxv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/blkcnt_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/blksize_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/clockid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/dev_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/errno.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/fcntl.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/fsblkcnt_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/fsfilcnt_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/gid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/ino_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/limits.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/mode_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/nlink_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/pid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/resource.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/sched_param.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/seek-whence.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/sig-limits.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/signal.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/sigset_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/stat.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/suseconds_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/uid_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/vm-flags.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/abi-bits/wait.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/abi-bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/bits/pthread_attr_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/bits/timeval.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/bits/ansi/timespec.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/mlibc/sysdeps.hpp to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/mlibc
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/thread-runtime.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/file-runtime.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/errno.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/file.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/memory.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/signal.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/time.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/types.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/file-protocol.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/sysdeps/cryolite/include/cryolite/native.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/cryolite
+Installing sysdeps/cryolite/crt1.o to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libc.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libpthread.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing librt.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libutil.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libm.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libresolv.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libdl.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libssp.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing libssp_nonshared.a to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/lib
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/stdint.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/wchar_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/wchar.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/wint_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/wctrans_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/wctype_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/size_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/types.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/ensure.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/machine.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/mbstate.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/locale.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/locale-internals.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/nl_item.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/null.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/off_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/file.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/ssize_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/sigset_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/inline-definition.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/ether_addr.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/cpu_set.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/threads.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/winsize.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/search.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/getopt.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/reclen_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/timeval.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/pthread_types.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/pthread_attr_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/pthread_sizes.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/internal/include/bits/sysmacros.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/elf/include/elf.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/elf/include/link.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/alloca.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/assert.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/complex.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/ctype.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/errno.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/fenv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/inttypes.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/limits.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/locale.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/math.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/setjmp.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/signal.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/stdc-predef.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/stdio.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/stdlib.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/string.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/threads.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/time.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/uchar.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/wchar.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/wctype.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/bits/ansi/timespec.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/bits/ansi/time_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/bits/ansi/fenv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/bits/ansi/clock_t.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/ansi/include/bits/ansi/tm.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/bits/ansi
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/source/options/lsb/include/sys/auxv.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include/sys
+Installing /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/meson/mlibc-config.h to /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/sysroot/usr/include
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.05s
+/home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-libc-release.elf: 5990592 -> 319616 bytes, runtime load data preserved; section metadata normalized; symbols: /home/entity27th/문서/ChatGPT/프로젝트 Kryo/file-service-work/actual-provider-release/libc-probe

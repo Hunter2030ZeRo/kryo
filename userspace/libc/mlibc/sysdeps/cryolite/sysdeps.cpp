@@ -2,6 +2,7 @@
 #include <limits.h>
 #include <stdint.h>
 #include <cryolite/native.h>
+#include <cryolite/file-protocol.h>
 #include <mlibc/all-sysdeps.hpp>
 
 namespace {
@@ -10,6 +11,7 @@ constexpr size_t page_size = 4096;
 constexpr uint64_t nanos_per_second = 1000000000;
 uint64_t startup_handle;
 uint64_t debug_handle;
+uint64_t file_namespace;
 uint64_t wait_fallbacks;
 
 [[noreturn]] void fail() {
@@ -157,6 +159,10 @@ extern "C" uint64_t __cryolite_startup_handle() {
     return startup_handle;
 }
 
+extern "C" uint64_t __cryolite_file_namespace() {
+    return file_namespace;
+}
+
 extern "C" uint64_t __cryolite_wait_fallbacks() {
     return __atomic_load_n(&wait_fallbacks, __ATOMIC_RELAXED);
 }
@@ -175,9 +181,11 @@ extern "C" void __cryolite_startup(uint64_t record) {
         1 | 2 | 32 | 4 | 1024, 1 | 2 | 32 | 4 | 1024,
         2048 | 4 | 1024, 256 | 4 | 1024, 128 | 256 | 2 | 4 | 1024,
         4096 | 4 | 1024, 128 | 256, 128, 128 | 8192 | 4 | 1024,
+        8 | 4 | 1024,
     };
     uint64_t roles[KRYO_STARTUP_MAX_GRANTS];
     uint64_t debug = 0;
+    uint64_t namespace_handle = 0;
     for (size_t index = 0; index < count; ++index) {
         auto base = KRYO_STARTUP_HEADER_WORDS + index * KRYO_STARTUP_ENTRY_WORDS;
         auto role = read_word(record, base);
@@ -195,10 +203,15 @@ extern "C" void __cryolite_startup(uint64_t record) {
             if (kind != KRYO_OBJECT_DEBUG_CONSOLE || !(rights & KRYO_RIGHT_WRITE))
                 fail();
             debug = handle;
+        } else if (role == KRYO_FILE_NAMESPACE_ROLE) {
+            if (kind != KRYO_OBJECT_ENDPOINT_GATE || rights != KRYO_RIGHT_SEND)
+                fail();
+            namespace_handle = handle;
         }
     }
     startup_handle = record;
     debug_handle = debug;
+    file_namespace = namespace_handle;
 }
 
 namespace mlibc {
@@ -315,30 +328,6 @@ int Sysdeps<Sleep>::operator()(time_t *seconds, long *nanos) {
 void Sysdeps<Yield>::operator()() {
     if (kryo_yield().status)
         fail();
-}
-
-int Sysdeps<Open>::operator()(const char *, int, mode_t, int *) {
-    return ENOSYS;
-}
-
-int Sysdeps<Read>::operator()(int, void *, size_t, ssize_t *) {
-    return EBADF;
-}
-
-int Sysdeps<Write>::operator()(int, const void *, size_t, ssize_t *) {
-    return EBADF;
-}
-
-int Sysdeps<Seek>::operator()(int, off_t, int, off_t *) {
-    return EBADF;
-}
-
-int Sysdeps<Close>::operator()(int) {
-    return EBADF;
-}
-
-int Sysdeps<Isatty>::operator()(int) {
-    return EBADF;
 }
 
 } // namespace mlibc

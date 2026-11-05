@@ -92,7 +92,7 @@ def extract(path, destination):
 
 def prepare(build, cache, fetch):
     pins = json.loads(PINS.read_text())
-    inputs = [PINS, Path(__file__), ROOT / "userspace/libsys/include/cryolite/native.h",
+    inputs = [PINS, Path(__file__), *sorted((ROOT / "userspace/libsys/include/cryolite").glob("*.h")),
               *sorted((ROOT / "userspace/libc/abi/include").rglob("*.h")),
               *sorted((PORT / "sysdeps").rglob("*")),
               *sorted((PORT / "patches").rglob("*"))]
@@ -127,7 +127,8 @@ def prepare(build, cache, fetch):
     # All public scalar/layout inputs come from the owned Cryolite profile.
     includes = source / "sysdeps/cryolite/include/cryolite"
     shutil.copytree(ROOT / "userspace/libc/abi/include/cryolite", includes, dirs_exist_ok=True)
-    shutil.copy2(ROOT / "userspace/libsys/include/cryolite/native.h", includes / "native.h")
+    for header in sorted((ROOT / "userspace/libsys/include/cryolite").glob("*.h")):
+        shutil.copy2(header, includes / header.name)
     manifest.write_text(json.dumps(source_manifest(source), indent=2) + "\n")
     stamp.write_text(fingerprint + "\n")
     return source
@@ -197,13 +198,13 @@ def main():
     artifact = build / "libc-probe"
     run(["clang", *FLAGS, "-O2", "-Wall", "-Wextra", "-Werror", "-nostdinc", "-isystem", sysroot / "usr/include",
          "-c", probe / "main.c", "-o", build / "probe.o"])
-    for name in ("allocator.c", "allocator_entry.S", "provider_threads.c", "provider_stdio.c"):
+    for name in ("allocator.c", "allocator_entry.S", "provider_threads.c", "provider_stdio.c", "provider_files.c"):
         run(["clang", *FLAGS, "-O2", "-fno-builtin", "-nostdinc", "-isystem", sysroot / "usr/include",
              "-Wall", "-Wextra", "-Werror", "-c", probe / name, "-o", build / f"{name}.o"])
     run(["ld.lld", "--static", "--gc-sections", "--build-id=none", "-zmax-page-size=0x1000",
          "-T", probe / "linker.ld", configured / "sysdeps/cryolite/crt1.o", build / "probe.o",
          build / "allocator.c.o", build / "allocator_entry.S.o",
-         build / "provider_threads.c.o", build / "provider_stdio.c.o",
+         build / "provider_threads.c.o", build / "provider_stdio.c.o", build / "provider_files.c.o",
          "--start-group", sysroot / "usr/lib/libc.a", allocator, "--end-group", "-o", artifact])
     assembly = subprocess.check_output(["objdump", "-d", "-M", "intel", str(artifact)], text=True)
     symbols = subprocess.check_output(["llvm-nm", str(artifact)], text=True)
@@ -217,7 +218,7 @@ def main():
         raise RuntimeError("Native libc probe linked a legacy string fallback")
     output = arguments.output or ROOT / "build/libc-probe.elf"
     package_image(artifact, output, mapped_headers=True)
-    metadata = {"scope": "static ANSI mlibc bring-up; no descriptors/pthreads/entropy/hosted ABI release",
+    metadata = {"scope": "static ANSI mlibc with service-backed FILE hooks; no POSIX/pthreads/entropy/hosted ABI release",
                 "profile": arguments.profile, "sources": json.loads(PINS.read_text()), **versions,
                 "source_inputs_sha256": (build / "source-inputs.sha256").read_text().strip(),
                 "toolchain_sha256": digest(ROOT / "targets/cryolite-toolchain.json"),
