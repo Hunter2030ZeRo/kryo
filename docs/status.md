@@ -2,6 +2,15 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [optional CPU random source](decisions/0045-cpu-random-bootstrap.md) supplies
+two register words per native call through bounded BSP RDRAND sampling. The
+initial policy trusts that CPU source alone; it does not raise v3 requirements.
+Unavailable/busy results publish no random words, and a fallible private C
+bridge commits bounded buffers only after success. Std RandomState/HashMap now
+uses this path on supported hardware. Public getentropy/getrandom, startup
+hardening, independent suppliers and hardware entropy assessment remain pending.
+See the [validation record](validation/2026-11-05-cpu-random/README.md).
+
 The [native std file profile](decisions/0044-native-std-files.md) connects File,
 OpenOptions, Read/Write/Seek, descriptor ownership and shared-cursor clones to
 the existing Ring 3 file-service contract. Multi-page reads/writes and final
@@ -14,7 +23,7 @@ pinned library sources with native allocation, threads, futex synchronization,
 TLS destructors and monotonic time. It uses a separate experimental Unix-family
 target and one shared C/Rust Talc heap. The [implementation decision](decisions/0043-restricted-native-rust-std.md)
 records the source and lifecycle boundaries. Full Unix extensions, metadata, positioned I/O, durable file synchronization,
-entropy, wall clock, hosted ABI and upstream target support remain pending.
+independent entropy suppliers, wall clock, hosted ABI and upstream target support remain pending.
 The bootstrap target and existing freestanding services are unchanged. See the
 [native validation record](validation/2026-11-05-rust-std/README.md).
 
@@ -526,7 +535,7 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 
 ## Next work
 
-Extend the restricted std profile with real entropy, native filesystem APIs,
+Extend the restricted std profile with independent random suppliers, fuller native filesystem APIs,
 standard-stream startup and broader Unix contracts. Basic std file operations now use service-backed C descriptors. Metadata,
 positioned I/O and durability still require native service contracts.
 Provider C11 thread/TCB lifecycle,

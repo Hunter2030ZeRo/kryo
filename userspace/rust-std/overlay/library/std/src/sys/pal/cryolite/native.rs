@@ -3,6 +3,7 @@ use crate::ffi::{c_int, c_void};
 pub(crate) const TIMED_OUT: i64 = -10;
 
 unsafe extern "C" {
+    pub(crate) fn __cryolite_rust_random(buffer: *mut u8, bytes: usize) -> c_int;
     pub(crate) fn __cryolite_rust_abort() -> !;
     pub(crate) fn __cryolite_rust_clock() -> u64;
     pub(crate) fn __cryolite_rust_sleep_until(deadline: u64);

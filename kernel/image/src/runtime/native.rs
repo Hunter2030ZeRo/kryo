@@ -229,6 +229,12 @@ pub(crate) fn dispatch<'objects>(
                 Ok(Some(0))
             }
             Call::ClockRead => Ok(Some(now())),
+            Call::RandomWords => {
+                tasks.resources_mut(caller).unwrap().context.r8 = 0;
+                let words = super::random::words(context.rdi, context.rsi)?;
+                tasks.resources_mut(caller).unwrap().context.r8 = words[1];
+                Ok(Some(words[0]))
+            }
             Call::SleepUntil => {
                 if context.rdi <= now() {
                     return Ok(Some(0));

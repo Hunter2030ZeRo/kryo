@@ -189,6 +189,28 @@ pub fn clock() -> Result<u64, Error> {
     invoke(Call::ClockRead, 0, 0)
 }
 
+/// Reads two words from the kernel's CPU random-byte source.
+/// Unsupported hardware and temporary source exhaustion remain kernel errors.
+pub fn random_words() -> Result<[u64; 2], Error> {
+    let status;
+    let first;
+    let second;
+    unsafe {
+        asm!(
+            "int 0x80",
+            inlateout("rax") Call::RandomWords as u64 => status,
+            in("rdi") 0u64,
+            in("rsi") 0u64,
+            lateout("rdx") first,
+            lateout("r8") second,
+            lateout("r9") _, lateout("r10") _, lateout("r11") _,
+            options(nostack),
+        );
+    }
+    check(status)?;
+    Ok([first, second])
+}
+
 pub fn virtio_info(device: Handle, selector: u64) -> Result<u64, Error> {
     invoke(Call::VirtioInfo, device.raw(), selector)
 }

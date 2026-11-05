@@ -111,10 +111,15 @@ def libc_checks(log, enabled):
     }
 
 
-def std_checks(log, enabled):
+def std_checks(log, enabled, cpu=None):
     if not enabled:
         return {}
     log = kernel_log(log)
+    available = re.findall(r"(?m)^RUSTSTDRANDOM: CPU source and HashMap OK runs=2$", log)
+    unavailable = re.findall(r"(?m)^RUSTSTDRANDOM: unavailable source rejected OK runs=2$", log)
+    random_check = (len(unavailable) == 1 and not available
+                    if cpu == "Haswell-noTSX,-rdrand"
+                    else len(available) == 1 and not unavailable)
     return {
         "rust_std_runtime": len(re.findall(
             r"(?m)^RUSTSTD: allocator threads synchronization TLS monotonic time OK runs=2$", log)) == 1,
@@ -124,6 +129,7 @@ def std_checks(log, enabled):
             r"(?m)^RUSTSTD: native abort termination OK$", log)) == 1,
         "rust_std_files": len(re.findall(
             r"(?m)^RUSTSTDFILE: read write seek clones and closure OK runs=2$", log)) == 1,
+        "rust_std_random": random_check,
     }
 
 
@@ -338,7 +344,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
         checks.update(cpu_checks(log, cpus))
         checks.update(abi_checks(raw_log, abi_probe))
         checks.update(libc_checks(raw_log, libc_probe))
-        checks.update(std_checks(raw_log, std_probe))
+        checks.update(std_checks(raw_log, std_probe, cpu))
         checks.update(pci_checks(log, pci_probe or block_probe))
         if block_probe:
             checks.update(block_checks(log, block_readonly, normal))
@@ -366,7 +372,7 @@ def observed_checks(log, cpu=None, normal=False, cpus=1, pci_probe=False, block_
     checks.update(cpu_checks(log, cpus))
     checks.update(abi_checks(raw_log, abi_probe))
     checks.update(libc_checks(raw_log, libc_probe))
-    checks.update(std_checks(raw_log, std_probe))
+    checks.update(std_checks(raw_log, std_probe, cpu))
     checks.update(memory_checks(log, normal))
     checks.update(pci_checks(log, pci_probe or block_probe))
     if block_probe:
@@ -573,7 +579,7 @@ def main():
     selection = parser.add_mutually_exclusive_group()
     selection.add_argument("--profile", choices=("debug", "release"), default="debug")
     selection.add_argument("--all", action="store_true", help="test debug and release once each")
-    parser.add_argument("--cpu", choices=("max", "Haswell-noTSX", "qemu64"), help="QEMU CPU; default: max (x86-64-v3 required; qemu64 is unsupported)")
+    parser.add_argument("--cpu", choices=("max", "Haswell-noTSX", "Haswell-noTSX,-rdrand", "qemu64"), help="QEMU CPU; default: max (x86-64-v3 required; qemu64 is unsupported)")
     parser.add_argument("--cpus", type=int, choices=(1, 2, 4, 8, 16, 32, 64, 65, 128, 192, 255), default=1, help="number of guest CPUs")
     parser.add_argument("--memory", type=parse_memory, default="512M", help="guest RAM, for example 128G; demand-backed")
     parser.add_argument("--rss-limit-mib", type=int, default=2048, help="stop own emulator above this measured resident-memory limit")

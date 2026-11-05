@@ -1,0 +1,91 @@
+{
+  "source_inputs_sha256": {
+    "userspace/libc/mlibc/sysdeps/cryolite/rust.cpp": "5385249a8794dd801825d7adfd4dfd4a4097eb7429d929c4ff4dfad191850e9b",
+    "userspace/libc/abi/include/cryolite/errno.h": "152d027e3078350fb8e5a6660d1a4bdad194f4a54722f5315193f6d396ab5a9b",
+    "userspace/libsys/include/cryolite/native.h": "801ec2ff4b735cb8ebb6d7bb98d5116f5431426bc2287759649c7298d29ebf1e"
+  },
+  "function_body_sha256": "a05e2c0312dfcf577b56250ce06e9d87c59e3c0a77e311d02d2b48bce8e8c9cf",
+  "harness_sha256": "ef2adc205e98be65161ca2f7777f15209b553da6b1ec4c5a6e4f251b462989dd",
+  "groups": [
+    "empty requests do not access null or unreadable pointers or call the source",
+    "oversized and nonempty-null requests fail before accessing the source",
+    "all lengths from zero through 256 copy only the requested prefix",
+    "partial native-word tails and unaligned destinations preserve guards",
+    "the 256-byte limit uses exactly sixteen native calls",
+    "successful all-zero words are accepted",
+    "Busy and Unsupported preserve the destination at every batch position",
+    "unexpected native errors map to EIO without publishing partial bytes",
+    "a later independent request can succeed after a source failure"
+  ],
+  "cases": 314,
+  "checks": [
+    {
+      "name": "-O0-compile",
+      "command": [
+        "clang++",
+        "-std=c++23",
+        "-O0",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fsanitize=address,undefined",
+        "-I",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/kryo/userspace/libc/abi/include",
+        "-I",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/kryo/userspace/libsys/include",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/random-host/random-runtime.cpp",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/random-host/random-O0"
+      ],
+      "exit_code": 0,
+      "log": "O0-compile.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "-O0-run",
+      "command": [
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/random-host/random-O0"
+      ],
+      "exit_code": 0,
+      "log": "O0-run.log",
+      "log_sha256": "fd06d1b76ff4a779805d5d5ab4091c51bb196715cd33f17ca4719cd9c34b9fef"
+    },
+    {
+      "name": "-O2-compile",
+      "command": [
+        "clang++",
+        "-std=c++23",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-fno-builtin",
+        "-fno-omit-frame-pointer",
+        "-fsanitize=address,undefined",
+        "-I",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/kryo/userspace/libc/abi/include",
+        "-I",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/kryo/userspace/libsys/include",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/random-host/random-runtime.cpp",
+        "-o",
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/random-host/random-O2"
+      ],
+      "exit_code": 0,
+      "log": "O2-compile.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "-O2-run",
+      "command": [
+        "/home/entity27th/\ubb38\uc11c/ChatGPT/\ud504\ub85c\uc81d\ud2b8 Kryo/entropy-work/random-host/random-O2"
+      ],
+      "exit_code": 0,
+      "log": "O2-run.log",
+      "log_sha256": "fd06d1b76ff4a779805d5d5ab4091c51bb196715cd33f17ca4719cd9c34b9fef"
+    }
+  ],
+  "leak_sanitizer": "disabled: this bounded bridge allocates no heap storage",
+  "scope": "host-only execution of the verbatim runtime bridge with deterministic native-call doubles; no CPU instruction, native ABI execution or entropy-quality proof"
+}

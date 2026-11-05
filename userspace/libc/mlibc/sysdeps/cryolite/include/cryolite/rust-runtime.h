@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 __attribute__((noreturn)) void __cryolite_rust_abort(void);
+int __cryolite_rust_random(void *buffer, size_t bytes);
 uint64_t __cryolite_rust_clock(void);
 void __cryolite_rust_sleep_until(uint64_t deadline);
 void __cryolite_rust_yield(void);

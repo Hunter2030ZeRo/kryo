@@ -29,10 +29,13 @@
 //! ReplyCaps: RDI=endpoint, RSI=reply token, RDX=grant count (1..2).
 //! R8..R15 carry message/source grants as for CallCaps. Preflight failure
 //! preserves a live token; successful inline data and grants commit together.
+//! RandomWords: RDI=RSI=0; returns two CPU random words in RDX/R8.
+//! Failure zeros both words; unsupported hardware and temporary exhaustion differ.
 
 pub const ABI_VERSION: u32 = 0;
 pub const NATIVE_THREAD_VERSION: u64 = 1;
 pub const DEBUG_WRITE_MAX: usize = 256;
+pub const RANDOM_WORDS: usize = 2;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u64)]
@@ -104,6 +107,7 @@ pub enum Call {
     CallExchangeUntil = 64,
     ReplyCaps = 65,
     EndpointGateCreate = 66,
+    RandomWords = 67,
 }
 
 impl TryFrom<u64> for Call {
@@ -178,6 +182,7 @@ impl TryFrom<u64> for Call {
             64 => Ok(Self::CallExchangeUntil),
             65 => Ok(Self::ReplyCaps),
             66 => Ok(Self::EndpointGateCreate),
+            67 => Ok(Self::RandomWords),
             _ => Err(Error::InvalidCall),
         }
     }
@@ -197,6 +202,7 @@ pub enum Error {
     InvalidReply = 9,
     TimedOut = 10,
     Busy = 11,
+    Unsupported = 12,
 }
 
 impl Error {
@@ -222,7 +228,7 @@ mod tests {
     #[test]
     fn unknown_calls_are_errors_and_status_does_not_overlap_handle_results() {
         assert_eq!(Call::try_from(u64::MAX), Err(Error::InvalidCall));
-        for number in 0..=65 {
+        for number in 0..=67 {
             assert_eq!(Call::try_from(number).unwrap() as u64, number);
         }
         assert_eq!(Error::InvalidHandle.status(), (-2i64) as u64);

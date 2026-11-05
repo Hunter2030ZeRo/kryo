@@ -21,8 +21,9 @@ class PciEvidenceTests(unittest.TestCase):
         retired = "RUSTSTD: process and backing retirement OK\n"
         aborted = "RUSTSTD: native abort termination OK\n"
         files = "RUSTSTDFILE: read write seek clones and closure OK runs=2\n"
+        random = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
         self.assertEqual(std_checks("", False), {})
-        self.assertTrue(all(std_checks(ready + retired + aborted + files, True).values()))
+        self.assertTrue(all(std_checks(ready + retired + aborted + files + random, True).values()))
         for invalid in (ready, retired, ready + retired, ready + aborted, retired + aborted,
                         ready + ready + retired + aborted,
                         ready + retired + retired + aborted,
@@ -31,12 +32,31 @@ class PciEvidenceTests(unittest.TestCase):
                         "USERDIAG: process=0x1 bytes=0 text=" + ready + retired + aborted,
                         ready + retired + "USERDIAG: process=0x1 bytes=0 text=" + aborted,
                         "USERLOG: process=0x1 event=227 value=1\n"):
-            self.assertFalse(all(std_checks(invalid + files, True).values()))
-        self.assertFalse(all(std_checks(ready + retired + aborted, True).values()))
+            self.assertFalse(all(std_checks(invalid + files + random, True).values()))
+        self.assertFalse(all(std_checks(ready + retired + aborted + random, True).values()))
         for invalid in ("", files + files, files.replace("runs=2", "runs=1"),
                         "USERDIAG: process=0x1 bytes=0 text=" + files,
                         "USERLOG: process=0x1 event=230 value=1\n"):
             self.assertFalse(std_checks(invalid, True)["rust_std_files"])
+
+    def test_rust_std_random_evidence_matches_selected_cpu(self):
+        available = "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
+        unavailable = "RUSTSTDRANDOM: unavailable source rejected OK runs=2\n"
+        masked = "Haswell-noTSX,-rdrand"
+        self.assertTrue(std_checks(available, True)["rust_std_random"])
+        self.assertTrue(std_checks(unavailable, True, masked)["rust_std_random"])
+        self.assertFalse(std_checks(unavailable, True)["rust_std_random"])
+        self.assertFalse(std_checks(available, True, masked)["rust_std_random"])
+        for marker, cpu in [(available, None), (unavailable, masked)]:
+            for invalid in ("", marker + marker, marker.replace("runs=2", "runs=1"),
+                            available + unavailable,
+                            "USERDIAG: process=0x1 bytes=0 text=" + marker,
+                            "USERLOG: process=0x1 event=231 value=1\n"):
+                self.assertFalse(std_checks(invalid, True, cpu)["rust_std_random"])
+
+    def test_masked_cpu_random_has_separate_evidence_directory(self):
+        self.assertNotEqual(run_label("debug", "Haswell-noTSX", std_probe=True),
+                            run_label("debug", "Haswell-noTSX,-rdrand", std_probe=True))
 
     def test_rust_std_has_separate_evidence_directory(self):
         self.assertNotEqual(run_label("debug", libc_probe=True),

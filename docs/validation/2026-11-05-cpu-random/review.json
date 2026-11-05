@@ -1,0 +1,15 @@
+{
+  "status": "clear",
+  "blockers": [],
+  "scope": "CPU random mechanism, SDK, C bridge, std backend and native probes",
+  "independent_checks": [
+    "314 host source-body cases O0/O2 ASan+UBSan",
+    "34 parser tests",
+    "supported, masked CPU, SMP4 normal QEMU evidence"
+  ],
+  "limits": [
+    "CPU-only bootstrap trust",
+    "no hardware entropy assessment",
+    "no general public libc getrandom port"
+  ]
+}

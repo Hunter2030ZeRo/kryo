@@ -9,6 +9,7 @@ pub(crate) mod interrupts;
 pub(crate) mod isa;
 pub(crate) mod paging;
 pub(crate) mod pci;
+pub(crate) mod random;
 pub(crate) mod smp;
 mod tss;
 pub(crate) mod virtio;

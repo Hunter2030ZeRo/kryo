@@ -1,0 +1,121 @@
+   Compiling kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/entropy-work/kryo/hal)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.78s
+     Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-hal/1e449565418ba506/out/kryo_hal-1e449565418ba506)
+
+running 84 tests
+test arch::x86_64::acpi::tests::legacy_and_extended_roots_find_checked_hpet ... ok
+test arch::x86_64::acpi::tests::extended_checksum_and_root_shape_cannot_be_ignored ... ok
+test arch::x86_64::acpi::tests::gas_layout_and_address_are_constrained ... ok
+test arch::x86_64::acpi::tests::root_bounds_missing_tables_and_reader_errors_propagate ... ok
+test arch::x86_64::acpi::tests::truncated_and_corrupt_firmware_is_rejected ... ok
+test arch::x86_64::apic::tests::deadline_conversion_rounds_up_and_bounds_hardware_count ... ok
+test arch::x86_64::acpi::tests::duplicate_hpet_and_changed_length_fail_closed ... ok
+test arch::x86_64::apic::tests::base_decoder_separates_address_mode_and_boot_cpu ... ok
+test arch::x86_64::apic::tests::delivered_timer_epoch_distinguishes_other_wakeups ... ok
+test arch::x86_64::apic::tests::delivery_epoch_never_wraps ... ok
+test arch::x86_64::apic::tests::idle_requires_disabled_interrupts_and_an_armed_controller ... ok
+test arch::x86_64::apic::tests::stopped_or_exhausted_calibration_is_rejected ... ok
+test arch::x86_64::clock::tests::clock_mapping_requires_a_full_aligned_kernel_page ... ok
+test arch::x86_64::clock::tests::clock_requires_64bit_counter_and_valid_declared_period ... ok
+test arch::x86_64::clock::tests::counter_conversion_checks_wrap_and_overflow ... ok
+test arch::x86_64::clock::tests::restoring_configuration_retains_the_running_counter_value ... ok
+test arch::x86_64::context::extended::tests::incomplete_cpu_support_and_unbounded_components_are_rejected ... ok
+test arch::x86_64::context::extended::tests::latent_xcr0_must_fit_the_preserved_feature_set ... ok
+test arch::x86_64::context::extended::tests::selection_supports_legacy_sse_and_bounded_avx ... ok
+test arch::x86_64::context::tests::assembly_register_layout_matches_the_saved_prefix ... ok
+test arch::x86_64::context::tests::bases_and_kernel_stacks_cannot_escape_their_address_ranges ... ok
+test arch::x86_64::context::extended::tests::state_storage_is_aligned_and_initial_registers_are_deterministic ... ok
+test arch::x86_64::context::extended::tests::kernel_fp_areas_are_private_and_aligned_for_every_cpu ... ok
+test arch::x86_64::context::tests::flags_cannot_grant_privilege_or_override_preemption ... ok
+test arch::x86_64::cpu::tests::registration_preserves_sparse_apic_identity_and_slot_lifetime ... ok
+test arch::x86_64::cpu::tests::reverse_lookup_preserves_every_id_and_rejects_reassignment ... ok
+test arch::x86_64::context::tests::cpu_run_slots_are_distinct_and_cache_line_aligned ... ok
+test arch::x86_64::context::tests::user_addresses_and_initial_alignment_are_validated ... ok
+test arch::x86_64::cpu::tests::unrepresentable_ids_and_slots_do_not_publish_entries ... ok
+test arch::x86_64::hpet_device::tests::claim_requires_second_64bit_fsb_timer_and_no_active_source ... ok
+test arch::x86_64::hpet_device::tests::route_is_a_fixed_bsp_destination_and_device_vector ... ok
+test arch::x86_64::hpet_device::tests::restoration_keeps_clock_and_saved_retirement_metadata ... ok
+test arch::x86_64::isa::tests::admission_does_not_depend_on_bootloader_osxsave_enablement ... ok
+test arch::x86_64::isa::tests::every_baseline_feature_is_required ... ok
+test arch::x86_64::isa::tests::xsave_admission_preserves_the_fixed_thread_storage_bound ... ok
+test arch::x86_64::isa::tests::unavailable_leaves_are_not_queried ... ok
+test arch::x86_64::paging::boot::tests::scratch_address_indices_do_not_share_kernel_image_slot ... ok
+test arch::x86_64::context::tests::tls_update_checks_the_base_before_changing_saved_state ... ok
+test arch::x86_64::paging::boot::tests::table_frames_must_be_distinct_from_each_other_and_root ... ok
+test arch::x86_64::cpu::tests::last_logical_cpu_supports_the_last_directed_xapic_id ... ok
+test arch::x86_64::paging::direct_map::tests::direct_map_checks_full_frame ... ok
+test arch::x86_64::paging::direct_map::tests::last_kernel_page_fits_and_addition_cannot_wrap ... ok
+test arch::x86_64::paging::direct_map::tests::physical_width_and_alignment_are_checked ... ok
+test arch::x86_64::cpu::tests::cpu_sets_cross_word_boundaries_without_aliasing_or_tail_bits ... ok
+test arch::x86_64::paging::direct_map::tests::frame_copy_bounds_reject_overflow_and_cross_page_access ... ok
+test arch::x86_64::hpet_device::tests::register_authority_has_exact_offsets_and_values ... ok
+test arch::x86_64::paging::kernel_map::tests::huge_split_preserves_physical_extent_and_permissions ... ok
+test arch::x86_64::paging::kernel_map::tests::large_pat_entries_are_rejected_without_reinterpretation ... ok
+test arch::x86_64::paging::region::tests::initial_region_may_contain_only_supervisor_nx_uc_device_leaves ... ok
+test arch::x86_64::paging::kernel_map::tests::only_the_verified_additional_root_slot_is_allowed ... ok
+test arch::x86_64::paging::region::tests::parent_retirement_remains_retryable_after_link_was_removed ... ok
+test arch::x86_64::paging::region::tests::initial_region_parent_links_are_exact_and_have_no_extra_branches ... ok
+test arch::x86_64::paging::region::tests::additional_leaf_retains_identity_through_a_missing_acknowledgement ... ok
+test arch::x86_64::paging::region::tests::ram_and_mmio_are_supervisor_writable_nx ... ok
+test arch::x86_64::paging::region::tests::region_bounds_leave_room_for_guards_and_reject_image_slot ... ok
+test arch::x86_64::paging::region::tests::unmap_keeps_physical_identity_until_every_flush_acknowledges ... ok
+test arch::x86_64::paging::user::tests::missing_table_frames_and_aliases_are_rejected_before_mutation ... ok
+test arch::x86_64::paging::user::tests::permissions_never_allow_write_and_execute ... ok
+test arch::x86_64::paging::user::tests::user_range_excludes_null_kernel_and_noncanonical_addresses ... ok
+test arch::x86_64::pci::tests::address_and_offsets_cannot_escape_conventional_configuration ... ok
+test arch::x86_64::pci::tests::config_failure_returns_error_without_partial_inventory ... ok
+test arch::x86_64::random::tests::a_later_failure_clears_every_sampled_byte ... ok
+test arch::x86_64::random::tests::availability_queries_only_an_admitted_feature_leaf ... ok
+test arch::x86_64::random::tests::carry_failure_has_a_finite_retry_budget ... ok
+test arch::x86_64::random::tests::carry_success_accepts_zero_and_copies_a_partial_final_word ... ok
+test arch::x86_64::random::tests::each_word_can_succeed_on_the_last_attempt ... ok
+test arch::x86_64::random::tests::empty_fill_does_not_require_a_source ... ok
+test arch::x86_64::random::tests::unavailable_and_excessive_requests_do_not_sample_or_change_output ... ok
+test arch::x86_64::smp::tests::acknowledgements_require_every_target_across_words_and_current_epoch ... ok
+test arch::x86_64::smp::tests::early_wake_is_only_for_offline_aps_without_user_leases ... ok
+test arch::x86_64::smp::tests::leases_reject_duplicate_ownership_across_words ... ok
+test arch::x86_64::virtio::tests::configuration_window_and_regions_are_bounded ... ok
+test arch::x86_64::virtio::tests::duplicate_regions_and_enabled_interrupts_fail ... ok
+test arch::x86_64::virtio::tests::failed_or_reset_needed_status_never_becomes_ready ... ok
+test arch::x86_64::virtio::tests::initialization_phases_reject_early_register_access ... ok
+test arch::x86_64::virtio::tests::malformed_lengths_bars_and_regions_fail ... ok
+test arch::x86_64::virtio::tests::missing_cyclic_or_misaligned_capabilities_fail ... ok
+test arch::x86_64::virtio::tests::only_selected_device_features_and_split_ring_transport_are_allowed ... ok
+test arch::x86_64::virtio::tests::reserved_vendor_capabilities_are_ignored ... ok
+test arch::x86_64::virtio::tests::queue_checks_sizes_alignment_and_full_range_overflow ... ok
+test arch::x86_64::pci::tests::empty_segment_only_reads_function_zero_identity ... ok
+test arch::x86_64::pci::tests::single_function_header_does_not_probe_other_functions ... ok
+test arch::x86_64::pci::tests::multifunction_and_nonzero_bus_inventory_preserves_raw_registers ... ok
+test arch::x86_64::pci::tests::unknown_header_never_reads_possible_nonbar_registers ... ok
+
+test result: ok. 84 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/build/kryo-interfaces/bc104644feab6f38/out/kryo_interfaces-bc104644feab6f38)
+
+running 12 tests
+test block::tests::rejects_bad_versions_unknown_operations_zero_ids_and_stale_instances ... ok
+test startup::tests::wire_kinds_and_record_limits_are_explicit ... ok
+test syscall::tests::unknown_calls_are_errors_and_status_does_not_overlap_handle_results ... ok
+test block::tests::validates_full_fixed_block_and_capability_count ... ok
+test file::tests::rejects_invalid_flags_and_modes_without_silent_downgrades ... ok
+test file::tests::checks_full_loan_ranges_before_shared_access ... ok
+test file::tests::namespace_and_file_authority_come_from_the_gate ... ok
+test block::tests::readonly_device_rejects_mutation_after_gate_validation ... ok
+test block::tests::each_gate_carries_its_own_authority ... ok
+test file::tests::signed_seek_rejects_negative_and_overflow_before_state_changes ... ok
+test file::tests::rejects_versions_ids_operations_and_capability_counts ... ok
+test virtio::tests::records_have_fixed_width_and_alignment ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_hal
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests kryo_interfaces
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

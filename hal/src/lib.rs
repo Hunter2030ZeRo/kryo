@@ -46,6 +46,9 @@ pub use arch::x86_64::paging::{
 pub use arch::x86_64::pci::{
     PciAddress, PciConfigRead, PciError, PciFunction, read_pci_config, scan_pci, scan_pci_with,
 };
+pub use arch::x86_64::random::{
+    CPU_RANDOM_MAX, RandomError, cpu_random_available, fill_cpu_random,
+};
 pub use arch::x86_64::virtio::{VirtioError, VirtioPci, VirtioQueue};
 pub use debug::console::{emergency_write_hex, emergency_write_str, print};
 pub use io::framebuffer::Framebuffer32;

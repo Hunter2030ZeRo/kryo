@@ -77,11 +77,14 @@ def main():
     output = (arguments.output or ROOT / "build/rust-std-probe.elf").resolve()
     package_image(artifact, output, mapped_headers=True)
     metadata = {
-        "scope": "experimental restricted std: allocation, threads, futex synchronization, TLS, monotonic time and basic service-backed file I/O; no entropy, wall clock, metadata, positioned I/O, durability, network or process spawning",
+        "scope": "experimental restricted std: allocation, threads, futex synchronization, TLS, monotonic time and basic service-backed file I/O and optional CPU random output; no wall clock, metadata, positioned I/O, durability, network or process spawning",
         "profile": arguments.profile, **versions,
         "rust_sources": pins, "target_sha256": digest(target),
         "build_tool_sha256": digest(Path(__file__)),
         "codegen": {"cpu": "x86-64-v3", "mmx": False, "panic": "abort"},
+        "random_source": {"kind": "CPU RDRAND", "trust": "CPU-only bootstrap",
+                          "native_result_bytes": 16, "bridge_atomic_max": 256,
+                          "entropy_quality_validated": False},
         "overlay_inputs_sha256": (build / "rust/overlay-inputs.sha256").read_text().strip(),
         "provider": json.loads((provider / "libc-probe.build.json").read_text()),
         "probe_sources": {p.relative_to(probe).as_posix(): digest(p)

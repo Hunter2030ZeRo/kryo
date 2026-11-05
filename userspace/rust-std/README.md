@@ -55,8 +55,11 @@ sets CLOEXEC; descriptors 0, 1 and 2 are not automatically bound.
 - Network, environment mutation, process spawning, pipes and broad Unix
   extensions remain unsupported. BetAFS and its host FileDevice are not
   executable from this limited file surface alone.
-- There is no entropy backend. RandomState/ordinary HashMap seeding and random
-  APIs fail explicitly. Timestamps and addresses are not random seeds.
+- RandomState/HashMap uses the optional BSP CPU random source. The initial
+  profile trusts CPU RDRAND output alone; unsupported hardware or temporary
+  exhaustion fails explicitly. The infallible std API panics on such failure.
+  Independent suppliers and hardware entropy assessment remain separate work.
+  Timestamps and addresses are not random seeds.
 - Instant uses the native monotonic clock. SystemTime cannot supply wall-clock
   time. Available CPU count and native thread naming are not implemented.
 - Panics abort. Stack unwinding, backtraces, dynamic linking/TLS, signals,
@@ -74,3 +77,5 @@ These are QEMU functional checks, not hardware performance measurements.
 
 The file probe uses the volatile validation service, not a mounted filesystem.
 See [the file contract](../../docs/decisions/0044-native-std-files.md).
+
+The CPU source and its trust boundary follow [ADR 0045](../../docs/decisions/0045-cpu-random-bootstrap.md).

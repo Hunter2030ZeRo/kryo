@@ -3,6 +3,7 @@
 extern crate cryolite_allocator as _;
 
 mod files;
+mod random;
 
 use std::alloc::{Layout, alloc, dealloc};
 use std::cell::RefCell;
@@ -192,6 +193,7 @@ fn main() {
         std::process::abort();
     }
     allocation();
+    random::check_random();
     files::check_files();
     synchronization();
     thread_lifecycle();

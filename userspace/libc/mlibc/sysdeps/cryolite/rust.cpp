@@ -1,11 +1,43 @@
 #include <limits.h>
+#include <errno.h>
 #include <stdint.h>
+#include <string.h>
 #include <threads.h>
 #include <cryolite/native.h>
 #include <cryolite/rust-runtime.h>
 #include <mlibc/threads.hpp>
 
 static_assert(sizeof(tss_t) == sizeof(uintptr_t));
+
+extern "C" int __cryolite_rust_random(void *buffer, size_t bytes) {
+    if (bytes > 256 || (bytes && !buffer))
+        return EINVAL;
+    if (!bytes)
+        return 0;
+    unsigned char staged[256];
+    size_t filled = 0;
+    int error = 0;
+    while (filled < bytes) {
+        auto result = kryo_random_words();
+        if (result.status) {
+            error = result.status == KRYO_STATUS_UNSUPPORTED ? ENOTSUP
+                  : result.status == KRYO_STATUS_BUSY ? EAGAIN : EIO;
+            break;
+        }
+        auto count = bytes - filled;
+        if (count > sizeof(result.words))
+            count = sizeof(result.words);
+        memcpy(staged + filled, result.words, count);
+        filled += count;
+        for (volatile auto &word : result.words)
+            word = 0;
+    }
+    if (!error)
+        memcpy(buffer, staged, bytes);
+    for (volatile auto &byte : staged)
+        byte = 0;
+    return error;
+}
 
 extern "C" uint64_t __cryolite_debug_handle();
 

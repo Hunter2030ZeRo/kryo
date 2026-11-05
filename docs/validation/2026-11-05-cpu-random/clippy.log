@@ -1,0 +1,5 @@
+   Compiling kryo v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/entropy-work/kryo/kernel/image)
+    Checking kryo-core v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/entropy-work/kryo/kernel/core)
+    Checking kryo-interfaces v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/entropy-work/kryo/interfaces)
+    Checking kryo-hal v0.1.0 (/home/entity27th/문서/ChatGPT/프로젝트 Kryo/entropy-work/kryo/hal)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.14s

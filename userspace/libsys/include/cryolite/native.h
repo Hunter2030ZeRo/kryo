@@ -16,6 +16,11 @@ typedef struct kryo_result {
     kryo_u64 value;
 } kryo_result;
 
+typedef struct kryo_random_result {
+    kryo_status status;
+    kryo_u64 words[2];
+} kryo_random_result;
+
 typedef struct kryo_message {
     kryo_u64 words[4];
 } kryo_message;
@@ -80,7 +85,8 @@ enum kryo_status_code {
     KRYO_STATUS_CANCELLED = -8,
     KRYO_STATUS_INVALID_REPLY = -9,
     KRYO_STATUS_TIMED_OUT = -10,
-    KRYO_STATUS_BUSY = -11
+    KRYO_STATUS_BUSY = -11,
+    KRYO_STATUS_UNSUPPORTED = -12
 };
 
 enum kryo_call {
@@ -130,7 +136,8 @@ enum kryo_call {
     KRYO_CALL_CALL_EXCHANGE = 63,
     KRYO_CALL_CALL_EXCHANGE_UNTIL = 64,
     KRYO_CALL_REPLY_CAPS = 65,
-    KRYO_CALL_ENDPOINT_GATE_CREATE = 66
+    KRYO_CALL_ENDPOINT_GATE_CREATE = 66,
+    KRYO_CALL_RANDOM_WORDS = 67
 };
 
 enum {
@@ -155,6 +162,7 @@ enum {
     KRYO_MEMORY_READ_ONLY = 0,
     KRYO_MEMORY_READ_WRITE = 1,
     KRYO_DEBUG_WRITE_MAX = 256,
+    KRYO_RANDOM_WORDS = 2,
     KRYO_PARK_WOKEN = 0,
     KRYO_PARK_CHANGED = 1,
     KRYO_STARTUP_VERSION = 1,
@@ -194,6 +202,23 @@ static inline kryo_result kryo_call3(kryo_u64 call, kryo_u64 first,
 
 static inline kryo_result kryo_yield(void) {
     return kryo_call3(KRYO_CALL_YIELD, 0, 0, 0);
+}
+
+/* RDRAND output is a CPU random-byte source, not independently sampled seed bits. */
+static inline kryo_random_result kryo_random_words(void) {
+    kryo_u64 call = KRYO_CALL_RANDOM_WORDS;
+    kryo_u64 first = 0, reserved_first = 0, reserved_second = 0;
+    register kryo_u64 second __asm__("r8") = 0;
+    __asm__ volatile("int $0x80"
+                     : "+a"(call), "+D"(reserved_first), "+S"(reserved_second),
+                       "+d"(first), "+r"(second)
+                     :
+                     : "r9", "r10", "r11", "cc", "memory");
+    kryo_random_result result;
+    result.status = (kryo_status)call;
+    result.words[0] = first;
+    result.words[1] = second;
+    return result;
 }
 
 /* Finish runtime cleanup first; this terminates the whole process. */

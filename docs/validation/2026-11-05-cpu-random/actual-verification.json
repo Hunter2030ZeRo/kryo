@@ -1,0 +1,12 @@
+{
+  "source_apply": "48 reviewed source/evidence files matched hashes",
+  "repository": "/home/entity27th/kryo",
+  "base_head": "73311a189e27a8bfb8df371d1edd1cbfde927eb3",
+  "kernel_check": "passed",
+  "std_build": "passed",
+  "std_image_bytes": 477456,
+  "std_image_sha256": "e09df8b6a5727124ad066fa3ebb53169bc61c671ca25e1f96833cb4cf212d90c",
+  "git_diff_check": "passed",
+  "workspace_fmt": "passed",
+  "qemu_scope": "source-matched isolated builds; actual repository separately rebuilt"
+}

@@ -1,0 +1,26 @@
+{
+  "debug-Haswell-noTSX-abi-libc-std": {
+    "status": "passed",
+    "checks": 88,
+    "std_image_bytes": 477456,
+    "std_image_sha256": "fdccf1810b0c76f12da119e5313718f3fe372c2c1bae8aa48f2e979e0cdf5540",
+    "mode": "boot-tests",
+    "random_source_available": true
+  },
+  "debug-Haswell-noTSX,-rdrand-std": {
+    "status": "passed",
+    "checks": 69,
+    "std_image_bytes": 477672,
+    "std_image_sha256": "3a30e566bd24242d46662f0c08b3a6ceb482f4b3d21e4115e774e52ac1164cd9",
+    "mode": "boot-tests",
+    "random_source_available": false
+  },
+  "release-normal-smp4-abi-libc-std-block-rw": {
+    "status": "passed",
+    "checks": 48,
+    "std_image_bytes": 318864,
+    "std_image_sha256": "488f29d841404a63a5b31a98ebd41f34017b24712db9edb4998c4152c09b9150",
+    "mode": "normal",
+    "random_source_available": true
+  }
+}

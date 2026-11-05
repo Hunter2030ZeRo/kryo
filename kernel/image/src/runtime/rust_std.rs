@@ -20,8 +20,17 @@ pub(crate) fn check(
         Err(crate::boot::ModuleError::Missing) => return,
         Err(error) => panic!("Invalid Rust std probe module: {:?}", error),
     };
+    let random_available = kryo_hal::cpu_random_available();
     for instance in 1..=3 {
-        run(pool, direct, memory, region, image, instance);
+        run(
+            pool,
+            direct,
+            memory,
+            region,
+            image,
+            instance,
+            random_available,
+        );
     }
     kryo_hal::emergency_write_str("RUSTSTD: native abort termination OK\n");
     kryo_hal::emergency_write_str(
@@ -29,6 +38,11 @@ pub(crate) fn check(
     );
     kryo_hal::emergency_write_str("RUSTSTD: process and backing retirement OK\n");
     kryo_hal::emergency_write_str("RUSTSTDFILE: read write seek clones and closure OK runs=2\n");
+    kryo_hal::emergency_write_str(if random_available {
+        "RUSTSTDRANDOM: CPU source and HashMap OK runs=2\n"
+    } else {
+        "RUSTSTDRANDOM: unavailable source rejected OK runs=2\n"
+    });
 }
 
 fn run(
@@ -38,6 +52,7 @@ fn run(
     region: &mut KernelRegion,
     image: &'static [u8],
     instance: u64,
+    random_available: bool,
 ) {
     let abort = instance == 3;
     let before = pool.stats();
@@ -144,6 +159,7 @@ fn run(
         let mut calls = CallStats::default();
         let mut events = [false; 5];
         let mut files_seen = false;
+        let mut random_seen = false;
         let mut abort_seen = false;
         let mut contention_started = false;
         let mut contention_finished = false;
@@ -182,7 +198,9 @@ fn run(
                 );
                 assert_eq!(source, task, "Unexpected child Rust std diagnostic");
                 assert_ne!(event, 229, "Rust std probe failed at stage {}", value);
-                assert_eq!(value, 1, "Invalid Rust std completion event {}", event);
+                if event != 231 {
+                    assert_eq!(value, 1, "Invalid Rust std completion event {}", event);
+                }
                 match event {
                     220..=224 if !abort => {
                         let index = (event - 220) as usize;
@@ -211,6 +229,11 @@ fn run(
                     230 if !abort => {
                         assert!(!files_seen, "Duplicate Rust std file event");
                         files_seen = true;
+                    }
+                    231 if !abort => {
+                        assert!(!random_seen, "Duplicate Rust std random event");
+                        assert_eq!(value, if random_available { 1 } else { 2 });
+                        random_seen = true;
                     }
                     _ => panic!("Unexpected Rust std event {}", event),
                 }
@@ -258,6 +281,7 @@ fn run(
                 "Rust std contention proof did not finish"
             );
             assert!(files_seen, "Missing Rust std file completion event");
+            assert!(random_seen, "Missing Rust std random completion event");
         }
         assert_eq!(
             calls.threads_created,
