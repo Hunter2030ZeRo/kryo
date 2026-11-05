@@ -1,4 +1,4 @@
-mod files;
+pub(crate) mod files;
 
 use super::{
     BootFramePool, CallStats, IpcRuntime, KernelMemory, KernelObject, KernelRegion, Objects,

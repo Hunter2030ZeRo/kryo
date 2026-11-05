@@ -1,0 +1,10 @@
+{
+  "status": "clear",
+  "blockers": [],
+  "scope": "basic std file adapter and volatile Ring3 peer; source review and both QEMU configurations",
+  "limits": [
+    "not BetAFS",
+    "not durable storage",
+    "no metadata/positioned I/O"
+  ]
+}

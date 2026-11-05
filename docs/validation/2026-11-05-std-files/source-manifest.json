@@ -1,0 +1,20 @@
+{
+  "docs/architecture.md": "6bd3dcb273031561352264b1da304e815b0969369ccdc56cba1d71e55a6eb7e0",
+  "docs/status.md": "db784d5502771f52beb522d85740d347d738176ac63a91a539974c1f3b7b6f1a",
+  "kernel/image/src/runtime/libc.rs": "b1ceb7a00791862932cf00046fc2761daf9446ae6ff84b9607564ca9c04816c9",
+  "kernel/image/src/runtime/libc/files.rs": "739f6774edc4fdd347f13781de842d03c28593f352e6eaf5d19dd343a646ff80",
+  "kernel/image/src/runtime/rust_std.rs": "cb6c559cd6453a73fa93989b7ace8551d04de4516c02796ff8aa6e3824b22fc8",
+  "tools/boot_smoke.py": "1246696eca925bab4b9eb96a7ecfc42bb96e0beadac9a9e5692bd7413a8b5f76",
+  "tools/build_std.py": "2b62be93a26c87e61709a4d499bbb87fc44a80cfe46c67ddd98536ef7540f081",
+  "tools/std_overlay.py": "ee38017bac78d38de9a3e6bb9b723574fffbc339e6be71f768d7ec3d46ef63da",
+  "tools/test_boot_smoke.py": "0fbbee1c0b882ba06dd7388e7aa48dbe4d5f5e8efebcc3f783a8be8361aae922",
+  "userspace/rust-std/README.md": "8882c75ba0761d21273c4974aa968b0af0a185e7b21cccacfda0395408934990",
+  "userspace/rust-std/overlay/libc/src/cryolite.rs": "20ea5c6a54b063015d1c9d824bee733c6e84ce37e7b55327d474e8b72aa8cce3",
+  "userspace/rust-std/overlay/library/std/src/os/cryolite/fd.rs": "095e1d02086714c1ed88f7f54e8c3ddfa0adfece7c4dd663c6e037fb150465f9",
+  "userspace/rust-std/overlay/library/std/src/os/cryolite/unix.rs": "4437e979d3f4cf84628a11fb545d1da58a008da59a28d901a3ec02a0e9584267",
+  "userspace/rust-std/probe/src/main.rs": "e829a2c4fae68608dd90b7740c1f7ee372218c3fb4148a71229871df8b7e098c",
+  "userspace/rust-std/probe/src/files.rs": "7adefdedc8b657ded4223b520f29a3525b3168dba567970d139ece76ede7bded",
+  "userspace/rust-std/overlay/library/std/src/sys/fs/cryolite.rs": "fe3bd829dd5d545223d1a17e971d76b88da16ca5b7f5d02b578b59f568a9347b",
+  "userspace/rust-std/overlay/library/std/src/os/cryolite/fs.rs": "b324c0468907505364a60b5ecb2a01030d217d6900991b7fcdac64d8a3bb6670",
+  "docs/decisions/0044-native-std-files.md": "e9c9f394cd003ff840e9276b24c5ebb895fca33e7fca8661a1d64597cd6acb05"
+}

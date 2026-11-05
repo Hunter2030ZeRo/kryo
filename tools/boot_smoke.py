@@ -122,6 +122,8 @@ def std_checks(log, enabled):
             r"(?m)^RUSTSTD: process and backing retirement OK$", log)) == 1,
         "rust_std_abort": len(re.findall(
             r"(?m)^RUSTSTD: native abort termination OK$", log)) == 1,
+        "rust_std_files": len(re.findall(
+            r"(?m)^RUSTSTDFILE: read write seek clones and closure OK runs=2$", log)) == 1,
     }
 
 

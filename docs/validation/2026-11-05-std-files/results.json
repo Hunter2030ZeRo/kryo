@@ -1,0 +1,16 @@
+{
+  "debug-Haswell-noTSX-abi-libc-std": {
+    "status": "passed",
+    "checks": 87,
+    "std_image_bytes": 447976,
+    "std_image_sha256": "1ae13fa4928bb98b0b2121189801b8fa321b241b8b4a0889e35c23bd76af98f3",
+    "mode": "boot-tests"
+  },
+  "release-normal-smp4-abi-libc-std-block-rw": {
+    "status": "passed",
+    "checks": 47,
+    "std_image_bytes": 300904,
+    "std_image_sha256": "41e780b5528c8266a6fdb5d1867ce2ad50ff2489ed825872f6ef6cf2b8cafc57",
+    "mode": "normal"
+  }
+}

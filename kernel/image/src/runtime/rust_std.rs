@@ -28,6 +28,7 @@ pub(crate) fn check(
         "RUSTSTD: allocator threads synchronization TLS monotonic time OK runs=2\n",
     );
     kryo_hal::emergency_write_str("RUSTSTD: process and backing retirement OK\n");
+    kryo_hal::emergency_write_str("RUSTSTDFILE: read write seek clones and closure OK runs=2\n");
 }
 
 fn run(
@@ -47,7 +48,7 @@ fn run(
         let mut tasks = Tasks::growing();
         let mut ipc = IpcRuntime::growing(&objects);
         let account = Budget::new(Limits {
-            shared_pages: 0,
+            shared_pages: if abort { 0 } else { 8 },
             private_pages: 8192,
             reserved_pages: 65536,
             handles: 16,
@@ -92,18 +93,41 @@ fn run(
             .insert(debug, Rights::WRITE | Rights::DUP)
             .unwrap()
             .as_raw();
+        let (service, namespace) = if abort {
+            (None, 0)
+        } else {
+            let (service, namespace) = super::libc::files::prepare(
+                pool, direct, memory, region, &mut tasks, &mut ipc, &objects,
+            );
+            let namespace = resources
+                .process
+                .handles
+                .insert(namespace, Rights::SEND)
+                .unwrap()
+                .as_raw();
+            (Some(service), namespace)
+        };
+        let entries = [
+            Entry {
+                role: 1,
+                handle: debug,
+                kind: WireKind::DebugConsole,
+                rights: (Rights::WRITE | Rights::DUP).bits(),
+            },
+            Entry {
+                role: kryo_interfaces::file::NAMESPACE_ROLE,
+                handle: namespace,
+                kind: WireKind::EndpointGate,
+                rights: Rights::SEND.bits(),
+            },
+        ];
         let startup = super::startup::install_record(
             Metadata {
                 service: 52,
                 instance,
                 argument: 0,
             },
-            &[Entry {
-                role: 1,
-                handle: debug,
-                kind: WireKind::DebugConsole,
-                rights: (Rights::WRITE | Rights::DUP).bits(),
-            }],
+            &entries[..if abort { 1 } else { 2 }],
             &mut resources.process.handles,
             &objects,
         )
@@ -114,18 +138,23 @@ fn run(
             .spawn(resources)
             .unwrap_or_else(|_| panic!("Cannot publish Rust std probe"));
         let owner = tasks.process_for(task).unwrap();
+        if let Some(service) = &service {
+            tasks.wake(service.task).unwrap();
+        }
         let mut calls = CallStats::default();
         let mut events = [false; 5];
+        let mut files_seen = false;
         let mut abort_seen = false;
         let mut contention_started = false;
         let mut contention_finished = false;
         let mut mutex_wait_seen = false;
         let mut status = None;
+        let mut service_status = None;
         let mut retired = 0;
         let deadline = kryo_hal::monotonic_time()
             .unwrap()
             .saturating_add(30_000_000_000);
-        while status.is_none() {
+        while status.is_none() || (service.is_some() && service_status.is_none()) {
             assert!(
                 kryo_hal::monotonic_time().unwrap() < deadline,
                 "Rust std probe stalled"
@@ -179,10 +208,25 @@ fn run(
                         assert!(!abort_seen, "Duplicate Rust std abort event");
                         abort_seen = true;
                     }
+                    230 if !abort => {
+                        assert!(!files_seen, "Duplicate Rust std file event");
+                        files_seen = true;
+                    }
                     _ => panic!("Unexpected Rust std event {}", event),
                 }
             }
-            status = tasks.terminal(owner);
+            if status.is_none() {
+                status = tasks.terminal(owner);
+            }
+            if let Some(service) = &service
+                && service_status.is_none()
+            {
+                service_status = tasks.terminal(service.owner);
+                if let Some(result) = service_status {
+                    assert_eq!(result.reason, ExitReason::Exited, "Std file peer faulted");
+                    assert_eq!(result.code, 0, "Std file peer failed");
+                }
+            }
             while let Some(id) = tasks.next_dying(None) {
                 if status.is_none() {
                     assert_ne!(id, task, "Rust std main exited before its children");
@@ -213,6 +257,7 @@ fn run(
                 contention_finished,
                 "Rust std contention proof did not finish"
             );
+            assert!(files_seen, "Missing Rust std file completion event");
         }
         assert_eq!(
             calls.threads_created,
@@ -222,9 +267,12 @@ fn run(
         ipc.settle(&mut tasks);
         assert_eq!(
             retired,
-            if abort { 1 } else { 6 },
+            if abort { 1 } else { 7 },
             "Rust std threads did not retire"
         );
+        if let Some(service) = &service {
+            assert_eq!(service.channels.live_count(), 0, "Std file gates survived");
+        }
         assert_eq!(tasks.live_count(), 0);
         assert!(
             ipc.words.is_empty(),

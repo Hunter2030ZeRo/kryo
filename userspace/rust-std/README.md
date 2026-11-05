@@ -8,7 +8,8 @@ services keep their current targets.
 The port provides allocation through the existing fallible Talc heap,
 Vec/String/Arc, native threads with requested stack sizes, join and detach,
 compiler TLS with destructors, upstream futex synchronization, startup arguments
-and monotonic time. A narrow C bridge reuses the pinned mlibc C11 lifecycle;
+and monotonic time. Basic File/OpenOptions, read/write/seek, shared-cursor cloning
+and descriptor conversion use the existing native file service. A narrow C bridge reuses the pinned mlibc C11 lifecycle;
 it does not implement pthreads or use Linux system calls.
 
 The std-linked allocator is an rlib in the same Rust compilation. Its `std`
@@ -41,15 +42,19 @@ Cargo revision and must be reviewed when updating it.
 
 The experimental target declares the Unix family but remains `std=false` and
 requires `#![feature(restricted_std)]`. Its initial `std::os::unix` surface is
-limited to byte strings and descriptor ownership. Missing Unix extensions are
+limited to byte strings, descriptor ownership and open options. Missing Unix extensions are
 not imported from another operating system. Descriptor cloning starts at 3 and
 sets CLOEXEC; descriptors 0, 1 and 2 are not automatically bound.
 
 ## Limits
 
-- Filesystem, network, environment mutation, process spawning, pipes and broad
-  Unix extensions use unsupported implementations. A std build alone does not
-  make BetAFS or its host FileDevice executable here.
+- Basic file I/O uses byte paths within an explicitly granted namespace. Metadata,
+  directories, positioned I/O, file-length mutation and storage synchronization
+  remain unsupported. `stream_len` fails without moving a shared cursor.
+  `File::flush` has no buffer to drain and does not imply durable storage.
+- Network, environment mutation, process spawning, pipes and broad Unix
+  extensions remain unsupported. BetAFS and its host FileDevice are not
+  executable from this limited file surface alone.
 - There is no entropy backend. RandomState/ordinary HashMap seeding and random
   APIs fail explicitly. Timestamps and addresses are not random seeds.
 - Instant uses the native monotonic clock. SystemTime cannot supply wall-clock
@@ -66,3 +71,6 @@ allocation failure and recovery, deadlines, then complete process/backing
 retirement. Its trusted completion lines are separate from user diagnostics.
 An additional process verifies direct native abort and its complete retirement.
 These are QEMU functional checks, not hardware performance measurements.
+
+The file probe uses the volatile validation service, not a mounted filesystem.
+See [the file contract](../../docs/decisions/0044-native-std-files.md).

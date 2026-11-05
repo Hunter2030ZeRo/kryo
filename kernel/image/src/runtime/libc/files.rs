@@ -9,15 +9,15 @@ use kryo_core::process::ProcessId;
 use kryo_core::task::TaskId;
 use kryo_hal::DirectMap;
 
-pub(super) struct Service {
+pub(crate) struct Service {
     pub task: TaskId,
     pub owner: ProcessId,
     pub channels: ChannelBudget,
 }
 
-/// The optional libc probe receives a separate memory-backed validation peer.
+/// Optional runtime probes receive a separate memory-backed validation peer.
 /// Neither this fixture nor its authority is installed in normal services.
-pub(super) fn prepare<'kernel, 'objects>(
+pub(crate) fn prepare<'kernel, 'objects>(
     pool: &'static BootFramePool,
     direct: DirectMap,
     memory: &'kernel RefCell<KernelMemory>,

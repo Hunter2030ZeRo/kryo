@@ -1,6 +1,7 @@
 //! Capability-backed Cryolite file descriptor ownership.
 #![stable(feature = "os_fd", since = "1.66.0")]
-use crate::{fmt, io, marker::PhantomData, mem};
+use crate::sys::{AsInner, FromInner, IntoInner};
+use crate::{fmt, fs, io, marker::PhantomData, mem};
 
 #[stable(feature = "rust1", since = "1.0.0")]
 pub type RawFd = i32;
@@ -183,6 +184,48 @@ impl<T: AsRawFd + ?Sized> AsRawFd for &T {
 impl<T: AsRawFd + ?Sized> AsRawFd for &mut T {
     fn as_raw_fd(&self) -> RawFd {
         T::as_raw_fd(self)
+    }
+}
+
+#[stable(feature = "rust1", since = "1.0.0")]
+impl AsRawFd for fs::File {
+    fn as_raw_fd(&self) -> RawFd {
+        self.as_inner().as_raw_fd()
+    }
+}
+
+#[stable(feature = "io_safety", since = "1.63.0")]
+impl AsFd for fs::File {
+    fn as_fd(&self) -> BorrowedFd<'_> {
+        self.as_inner().as_fd()
+    }
+}
+
+#[stable(feature = "from_raw_os", since = "1.1.0")]
+impl FromRawFd for fs::File {
+    unsafe fn from_raw_fd(fd: RawFd) -> Self {
+        Self::from_inner(unsafe { FromRawFd::from_raw_fd(fd) })
+    }
+}
+
+#[stable(feature = "into_raw_os", since = "1.4.0")]
+impl IntoRawFd for fs::File {
+    fn into_raw_fd(self) -> RawFd {
+        self.into_inner().into_raw_fd()
+    }
+}
+
+#[stable(feature = "io_safety", since = "1.63.0")]
+impl From<fs::File> for OwnedFd {
+    fn from(file: fs::File) -> Self {
+        file.into_inner().into_inner()
+    }
+}
+
+#[stable(feature = "io_safety", since = "1.63.0")]
+impl From<OwnedFd> for fs::File {
+    fn from(fd: OwnedFd) -> Self {
+        Self::from_inner(FromInner::from_inner(fd))
     }
 }
 

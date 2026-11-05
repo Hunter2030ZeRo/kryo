@@ -73,7 +73,7 @@ def apply(library, libc):
         pub(super) use cryolite::get;
         use cryolite::{create, destroy};""", occurrence=4)
     for name, body in {
-        "fs": "mod unsupported; use unsupported as imp;",
+        "fs": "mod unsupported; mod cryolite; use cryolite as imp;",
         "env": "mod unsupported; pub use unsupported::*;",
         "process": "mod unsupported; use unsupported as imp;",
         "pipe": "mod unsupported; pub use unsupported::{Pipe, pipe};",

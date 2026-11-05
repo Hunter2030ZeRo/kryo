@@ -180,8 +180,9 @@ pending. [ADR 0040](decisions/0040-service-backed-files.md) defines this boundar
 The experimental Rust std profile now supplies native allocation, threads,
 TLS destruction, futex synchronization and monotonic time in Ring 3. A separate
 restricted Unix-family target uses Cryolite-specific implementations and owned
-ABI bindings. The first Unix extension surface covers byte strings and file
-descriptor ownership; general file and hosted APIs remain pending. Generic Unix startup and
+ABI bindings. Basic std File operations now use the service-backed descriptor contract; the
+Unix extension surface includes byte strings, descriptor ownership and open
+options. Metadata, positioned I/O, durability and general hosted APIs remain pending. Generic Unix startup and
 pthread paths cannot be enabled before their contracts exist. The bootstrap
 target remains std=false; [ADR 0041](decisions/0041-cryolite-rust-std.md) records
 the required subsystem dispatch and actual Ring 3 validation. The restricted

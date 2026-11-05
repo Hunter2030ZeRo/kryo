@@ -2,12 +2,19 @@
 
 Snapshot: 2026-11-05. The [design contract](design-contract.md) defines requirements; this file records implemented behavior.
 
+The [native std file profile](decisions/0044-native-std-files.md) connects File,
+OpenOptions, Read/Write/Seek, descriptor ownership and shared-cursor clones to
+the existing Ring 3 file-service contract. Multi-page reads/writes and final
+capability closure are covered in the [file validation record](validation/2026-11-05-std-files/README.md).
+Metadata, positioned I/O, length mutation, durability and mounted BetAFS remain
+separate work.
+
 The [restricted Rust std profile](../userspace/rust-std/README.md) builds the
 pinned library sources with native allocation, threads, futex synchronization,
 TLS destructors and monotonic time. It uses a separate experimental Unix-family
 target and one shared C/Rust Talc heap. The [implementation decision](decisions/0043-restricted-native-rust-std.md)
-records the source and lifecycle boundaries. Full Unix extensions, native file
-APIs, entropy, wall clock, hosted ABI and upstream target support remain pending.
+records the source and lifecycle boundaries. Full Unix extensions, metadata, positioned I/O, durable file synchronization,
+entropy, wall clock, hosted ABI and upstream target support remain pending.
 The bootstrap target and existing freestanding services are unchanged. See the
 [native validation record](validation/2026-11-05-rust-std/README.md).
 
@@ -520,8 +527,8 @@ remain incomplete. [ADR 0021](decisions/0021-native-elf-abi.md) distinguishes fo
 ## Next work
 
 Extend the restricted std profile with real entropy, native filesystem APIs,
-standard-stream startup and broader Unix contracts. Service-backed descriptors
-exist in the C runtime; general std file integration remains pending.
+standard-stream startup and broader Unix contracts. Basic std file operations now use service-backed C descriptors. Metadata,
+positioned I/O and durability still require native service contracts.
 Provider C11 thread/TCB lifecycle,
 static TLS and the fallible Talc heap are implemented; pthreads, dynamic TLS
 and complete standard libraries remain separate work. Connect the initial

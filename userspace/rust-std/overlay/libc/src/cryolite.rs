@@ -24,6 +24,18 @@ pub const STDIN_FILENO: c_int = 0;
 pub const STDOUT_FILENO: c_int = 1;
 pub const STDERR_FILENO: c_int = 2;
 pub const FD_CLOEXEC: c_int = 1;
+pub const O_RDONLY: c_int = 0x00000;
+pub const O_WRONLY: c_int = 0x00001;
+pub const O_RDWR: c_int = 0x00002;
+pub const O_ACCMODE: c_int = 0x0000f;
+pub const O_CREAT: c_int = 0x00010;
+pub const O_EXCL: c_int = 0x00020;
+pub const O_TRUNC: c_int = 0x00040;
+pub const O_APPEND: c_int = 0x00080;
+pub const O_CLOEXEC: c_int = 0x00800;
+pub const SEEK_SET: c_int = 0;
+pub const SEEK_CUR: c_int = 1;
+pub const SEEK_END: c_int = 2;
 pub const E2BIG: c_int = 1;
 pub const EACCES: c_int = 2;
 pub const EADDRINUSE: c_int = 3;
@@ -133,6 +145,12 @@ extern "C" {
     pub fn memmove(dst: *mut c_void, src: *const c_void, size: size_t) -> *mut c_void;
     pub fn memset(dst: *mut c_void, value: c_int, size: size_t) -> *mut c_void;
     pub fn __errno_location() -> *mut c_int;
+    pub fn __cryolite_file_open(
+        path: *const c_char,
+        flags: c_int,
+        mode: mode_t,
+        output: *mut c_int,
+    ) -> c_int;
     pub fn __cryolite_file_read(
         fd: c_int,
         buffer: *mut c_void,
@@ -146,6 +164,12 @@ extern "C" {
         count: *mut ssize_t,
     ) -> c_int;
     pub fn __cryolite_file_close(fd: c_int) -> c_int;
+    pub fn __cryolite_file_seek(
+        fd: c_int,
+        offset: off_t,
+        whence: c_int,
+        output: *mut off_t,
+    ) -> c_int;
     pub fn __cryolite_file_dup(
         fd: c_int,
         minimum: c_int,

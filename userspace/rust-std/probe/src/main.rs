@@ -2,6 +2,8 @@
 
 extern crate cryolite_allocator as _;
 
+mod files;
+
 use std::alloc::{Layout, alloc, dealloc};
 use std::cell::RefCell;
 use std::os::unix::ffi::OsStrExt;
@@ -190,6 +192,7 @@ fn main() {
         std::process::abort();
     }
     allocation();
+    files::check_files();
     synchronization();
     thread_lifecycle();
     monotonic_time();
